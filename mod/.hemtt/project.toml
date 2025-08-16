@@ -1,0 +1,4 @@
+name = "Forge Mod"
+author = "IDSolutions"
+prefix = "forge_mod"
+mainprefix = "z"
