@@ -13,7 +13,7 @@ This repository contains the Arma 3 mods that make up the Forge collection, orga
 ### Initial Setup
 If you're cloning this repository for the first time:
 ```bash
-git clone --recurse-submodules <repository-url>
+git clone --recurse-submodules https://github.com/InnovativeDevSolutions/forge
 ```
 
 Or if you already cloned without submodules:
@@ -43,7 +43,7 @@ git submodule update --remote server
 
 ### Adding New Submodules
 ```bash
-git submodule add <repository-url> <path>
+git submodule add https://github.com/InnovativeDevSolutions/forge <path>
 ```
 
 ### Submodule Information
