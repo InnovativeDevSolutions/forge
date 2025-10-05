@@ -2,6 +2,17 @@
 
 This repository contains the Arma 3 mods that make up the Forge collection, organized using Git submodules.
 
+## Features
+
+### Arsenal Module
+- **Fast weapon/item unlock system** using Redis Sets
+- **Virtual Arsenal integration** for persistent unlocks
+- **Batch operations** for efficient bulk unlocks
+- **Access control** for mission prerequisites
+- **Performance optimized** with O(1) membership checks
+
+See [docs/ARSENAL_API.md](docs/ARSENAL_API.md) for complete API documentation.
+
 ## Structure
 
 - `client/` - Client-side mod (Git submodule)
