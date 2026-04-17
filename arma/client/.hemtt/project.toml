@@ -1,0 +1,24 @@
+name = "forge-client"
+author = "J.Schmidt"
+prefix = "forge_client"
+mainprefix = "forge"
+
+[version]
+path = "addons/main/script_version.hpp"
+git_hash = 0
+
+[files]
+include = [
+    "mod.cpp",
+    "meta.cpp",
+    "icon_64_ca.paa",
+    "icon_128_ca.paa",
+    "icon_128_highlight_ca.paa",
+    "title_ca.paa",
+    "LICENSE.md",
+    "README.md",
+]
+exclude = []
+
+[properties]
+author = "J.Schmidt"

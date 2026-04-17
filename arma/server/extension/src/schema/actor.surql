@@ -1,0 +1,15 @@
+DEFINE TABLE IF NOT EXISTS actor SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS uid ON actor TYPE string;
+DEFINE FIELD IF NOT EXISTS name ON actor TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS loadout ON actor TYPE any;
+DEFINE FIELD IF NOT EXISTS position ON actor TYPE option<array>;
+DEFINE FIELD IF NOT EXISTS direction ON actor TYPE number;
+DEFINE FIELD IF NOT EXISTS stance ON actor TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS email ON actor TYPE string;
+DEFINE FIELD IF NOT EXISTS phone_number ON actor TYPE string;
+DEFINE FIELD IF NOT EXISTS state ON actor TYPE string;
+DEFINE FIELD IF NOT EXISTS holster ON actor TYPE bool;
+DEFINE FIELD IF NOT EXISTS rank ON actor TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS organization ON actor TYPE string;
+DEFINE FIELD OVERWRITE updated_at ON actor TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS actor_uid ON actor COLUMNS uid UNIQUE;

@@ -1,0 +1,43 @@
+# Forge Server Extension
+
+Forge Server is an arma-rs extension for Arma 3 server-side persistence and
+domain services. It exposes game-facing commands and stores durable state in
+SurrealDB.
+
+## Architecture
+
+SQF modules call `forge_server` through `fnc_extCall`. Small requests use the
+direct `callExtension` path, while large payloads are staged through the
+transport layer.
+
+```text
+SQF module
+  -> extension bridge
+  -> domain command
+  -> service layer
+  -> repository
+  -> SurrealDB
+```
+
+## Configuration
+
+Copy `config.example.toml` to `config.toml` next to the extension DLL.
+
+```toml
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+username = "root"
+password = "root"
+connect_timeout_ms = 5000
+```
+
+For install links and Forge-specific setup steps, see
+[SurrealDB Setup](../../../docs/surrealdb-setup.md).
+
+## References
+
+- [API Reference](./api-reference.md)
+- [Usage Examples](./usage-examples.md)
+- [Framework Module Guides](../../../docs/README.md)

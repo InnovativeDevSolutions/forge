@@ -1,0 +1,24 @@
+[package]
+name = "forge-server"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "forge_server_x64"
+crate-type = ["cdylib"]
+
+[dependencies]
+arma-rs = { workspace = true }
+base64 = "0.22.1"
+chrono = { workspace = true }
+forge-icom = { path = "../../../bin/icom" }
+forge-models = { path = "../../../lib/models", features = ["actor"] }
+forge-repositories = { path = "../../../lib/repositories" }
+forge-services = { path = "../../../lib/services" }
+forge-shared = { path = "../../../lib/shared" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+surrealdb = { version = "3", default-features = false, features = ["protocol-http", "rustls"] }
+tokio = { workspace = true }
+toml = "1.1.2"
+uuid = { workspace = true }

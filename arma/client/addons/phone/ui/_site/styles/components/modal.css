@@ -1,0 +1,61 @@
+/* Modal */
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+
+    .modal {
+        background: var(--bg-primary);
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px;
+        max-width: 300px;
+        width: 100%;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+        h2 {
+            margin-bottom: 16px;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+
+            button {
+                width: 100%;
+            }
+            
+            /* Style delete buttons differently */
+            button[aria-label="Delete"] {
+                background: #ff4444;
+                border-color: #ff4444;
+            }
+            
+            button[aria-label="Delete"]:hover {
+                background: #ff3333;
+                border-color: #ff3333;
+            }
+            
+            button[aria-label="Delete"]:active {
+                background: #ff2222;
+                border-color: #ff2222;
+            }
+        }
+    }
+}

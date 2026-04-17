@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project name="FFE">
+    <Package name="Store">
+        <Key ID="STR_forge_client_store_displayName">
+            <English>Store</English>
+        </Key>
+    </Package>
+</Project>

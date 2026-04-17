@@ -1,0 +1,100 @@
+# Client CAD Usage Guide
+
+The client CAD addon provides the map and dispatch UI for groups, active
+tasks, task assignment, dispatch orders, support requests, and task
+acknowledge/decline workflows.
+
+## Open CAD UI
+
+```sqf
+call forge_client_cad_fnc_openUI;
+```
+
+The CAD UI opens `RscMapUI` and loads separate browser controls for:
+
+- top bar
+- bottom bar
+- side panel
+- dispatcher board
+
+The native Arma map remains part of the same display.
+
+## Repository and Bridge
+
+`forge_client_cad_fnc_initRepository` caches the hydrated CAD payload,
+selected mode, dispatch view, session data, groups, tasks, requests, and
+assignments.
+
+`forge_client_cad_fnc_initUIBridge` owns:
+
+- ready state for side panel, top bar, and dispatcher board
+- operations vs dispatch mode
+- board vs map dispatch view
+- hydrate requests
+- task assignment, acknowledge, and decline requests
+- dispatch order create/close requests
+- support request submit/close requests
+- group status, role, and profile requests
+- map focus actions
+
+## Browser Events
+
+| Event | Client behavior |
+| --- | --- |
+| `cad::topbar::ready` | Mark top bar ready and push top bar state. |
+| `cad::ready` | Mark side panel ready and request hydrate. |
+| `cad::dispatcher::ready` | Mark dispatcher board ready and push hydrate data. |
+| `cad::mode::set` | Switch between operations and dispatch mode. |
+| `cad::dispatchView::set` | Switch dispatch board/map view. |
+| `cad::refresh` | Request fresh CAD hydrate data. |
+| `cad::tasks::assign` | Assign a task to a group. |
+| `cad::tasks::acknowledge` | Acknowledge assigned task. |
+| `cad::tasks::decline` | Decline assigned task. |
+| `cad::dispatchOrder::create` | Create dispatch order. |
+| `cad::dispatchOrder::close` | Close dispatch order. |
+| `cad::supportRequest::submit` | Submit support request. |
+| `cad::supportRequest::close` | Close support request. |
+| `cad::groups::status` | Update group status. |
+| `cad::groups::role` | Update group role. |
+| `cad::groups::profile` | Update status and role together. |
+| `cad::groups::focus` | Center map on a group. |
+| `cad::tasks::focus` | Center map on a task. |
+| `cad::requests::focus` | Center map on a support request. |
+| `map::zoomIn` | Zoom native map in. |
+| `map::zoomOut` | Zoom native map out. |
+| `map::search` | Placeholder status update. |
+| `map::close` | Dispose bridge state and close the display. |
+
+## Response Events
+
+The bridge pushes:
+
+| Event | Purpose |
+| --- | --- |
+| `cad::hydrate` | Full hydrated CAD payload to the side panel. |
+| `cad::assignment::response` | Task assignment/acknowledge/decline result. |
+| `cad::group::response` | Group status/role/profile result. |
+| `cad::request::response` | Support request result. |
+
+Dispatcher board controls also receive direct `ExecJS` status and hydrate
+calls.
+
+## Task Compatibility
+
+CAD task visibility depends on server-side task catalog entries. Tasks created
+through Eden Forge task modules or `forge_server_task_fnc_startTask` are the
+normal CAD-compatible task sources because they register task catalog data.
+
+Direct handler or task-function calls only work with CAD when the task catalog
+entry already exists.
+
+## Authorization Notes
+
+Only dispatcher sessions can enter dispatch mode. If the hydrated session is
+not a dispatcher, the bridge forces the UI back to operations mode.
+
+## Related Guides
+
+- [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
+- [Task Usage Guide](./TASK_USAGE_GUIDE.md)
+- [Client Common Usage Guide](./CLIENT_COMMON_USAGE_GUIDE.md)

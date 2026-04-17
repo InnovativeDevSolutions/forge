@@ -1,0 +1,98 @@
+# Forge Server Common
+
+## Overview
+The common addon provides shared SQF utilities used by server-side Forge
+addons. It contains lightweight helpers only; gameplay domain state belongs in
+the specific domain addons or the Rust extension.
+
+## Dependencies
+- `forge_server_main`
+
+## Main Components
+- `fnc_baseStore.sqf` provides shared hash-map object behavior such as JSON
+  conversion.
+- `fnc_eventBus.sqf` provides a framework-wide in-process event bus for
+  cross-addon notifications.
+- `fnc_log.sqf` standardizes server log messages.
+- `fnc_getPlayer.sqf` resolves online players by UID.
+- `fnc_formatNumber.sqf` formats numeric values for notifications and UI text.
+- `fnc_generateHash.sqf` and `fnc_generateSecureData.sqf` provide hashing and
+  random data helpers.
+- `fnc_timeToSeconds.sqf` converts time values into seconds.
+
+## Notes
+Keep this addon free of domain-specific behavior. If a helper needs actor,
+bank, org, task, store, or CAD state, it belongs in that addon instead.
+
+## Event Bus
+The event bus is initialized as `forge_server_common_EventBus` during store
+bootstrap. It is synchronous and in-process: listeners run immediately when an
+event is emitted.
+
+### Event Naming
+Use lower-case dot-separated names:
+
+- `<domain>.<entity>.<action>` for domain events, such as `cad.assignment.assigned`
+- `<domain>.<action>` for simple lifecycle events, such as `task.started`
+
+Prefer past-tense action names for events that report completed state changes:
+`created`, `started`, `assigned`, `acknowledged`, `declined`, `completed`,
+`failed`, `cleared`, `updated`, `closed`.
+
+Payloads should be hash maps and should include stable identifiers first:
+`taskID`, `requestID`, `groupID`, `uid`, `orgID`, or `accountID` as appropriate.
+The event bus adds `event`, `source`, and `timestamp` when the event is emitted.
+
+### Current Events
+Task lifecycle:
+- `task.created`
+- `task.started`
+- `task.completed`
+- `task.failed`
+- `task.cleared`
+
+Task rewards and notifications:
+- `task.reward.requested`
+- `task.reward.applied`
+- `task.reward.failed`
+- `task.rating.applied`
+- `task.rating.failed`
+- `task.notification.requested`
+- `task.reward.notification.requested`
+
+CAD state:
+- `cad.assignment.assigned`
+- `cad.assignment.created`
+- `cad.assignment.acknowledged`
+- `cad.assignment.declined`
+- `cad.assignment.closed`
+- `cad.request.submitted`
+- `cad.request.closed`
+- `cad.group.updated`
+
+Client sync and notification requests:
+- `notification.requested`
+- `bank.account.sync.requested`
+- `org.sync.requested`
+- `locker.sync.requested`
+- `locker.va.sync.requested`
+- `garage.vgarage.sync.requested`
+
+```sqf
+private _token = EGVAR(common,EventBus) call ["on", [
+    "task.completed",
+    {
+        params ["_event"];
+        ["INFO", format ["Task completed: %1", _event getOrDefault ["taskID", ""]]] call EFUNC(common,log);
+    },
+    "example"
+]];
+
+EGVAR(common,EventBus) call ["emit", [
+    "task.completed",
+    createHashMapFromArray [["taskID", "task_001"]],
+    createHashMapFromArray [["source", "task"]]
+]];
+
+EGVAR(common,EventBus) call ["off", [_token]];
+```

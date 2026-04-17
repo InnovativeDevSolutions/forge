@@ -1,0 +1,10 @@
+# Forge Server Configuration
+# Copy this file to config.toml and place it beside forge_server_x64.dll.
+
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+username = "root"
+password = "root"
+connect_timeout_ms = 5000

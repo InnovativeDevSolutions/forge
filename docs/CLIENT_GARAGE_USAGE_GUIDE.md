@@ -1,0 +1,114 @@
+# Client Garage Usage Guide
+
+The client garage addon provides player vehicle storage UI, vehicle
+store/retrieve actions, selected nearby vehicle service requests, vehicle
+context building, and the virtual garage view.
+
+## Open Garage UI
+
+```sqf
+call forge_client_garage_fnc_openUI;
+```
+
+The garage UI opens `RscGarage`, loads `ui/_site/index.html`, and routes
+browser events through `forge_client_garage_fnc_handleUIEvents`.
+
+## Open Virtual Garage
+
+```sqf
+call forge_client_garage_fnc_openVG;
+```
+
+The virtual garage resolves the active interaction object near the player,
+discovers nearby `garage*` markers placed in Eden, chooses the matching spawn
+lane for the selected vehicle type, opens the BIS garage interface, and
+restricts the available vehicle lists from the virtual garage repository. When
+the BIS garage closes, only the vehicle selected in that virtual garage session
+is finalized and spawned onto the resolved lane.
+
+## Client Services
+
+| Service | Purpose |
+| --- | --- |
+| `GarageRepository` | Player garage view state. |
+| `VGRepository` | Virtual garage unlock view state. |
+| `GarageHelperService` | Vehicle names, hit points, and payload helpers. |
+| `GarageContextService` | Nearby/current vehicle context. |
+| `GaragePayloadService` | Browser hydrate payload construction. |
+| `GarageActionService` | Store/retrieve request handling and selected nearby vehicle refuel/repair request forwarding. |
+| `GarageUIBridge` | Browser ready, hydrate, and sync delivery. |
+
+## Browser Events
+
+| Event | Client behavior |
+| --- | --- |
+| `garage::ready` | Mark browser ready and send `garage::hydrate`. |
+| `garage::refresh` | Send current garage payload as `garage::sync`. |
+| `garage::vehicle::retrieve::request` | Forward retrieve request through the action service. |
+| `garage::vehicle::store::request` | Forward store request through the action service. |
+| `garage::vehicle::refuel::request` | Forward selected nearby vehicle refuel request to the server economy service. |
+| `garage::vehicle::repair::request` | Forward selected nearby vehicle repair request to the server economy service. |
+| `garage::close` | Dispose bridge screen state and close the display. |
+
+## Browser Response Events
+
+| Event | Purpose |
+| --- | --- |
+| `garage::hydrate` | Initial vehicle and session payload. |
+| `garage::sync` | Refreshed vehicle payload. |
+| `garage::service::success` | Browser notice for accepted refuel/repair requests. |
+| `garage::service::failure` | Browser notice for rejected refuel/repair requests. |
+
+Server action responses are handled by the action service and notification
+flow.
+
+## Vehicle Service
+
+The selected vehicle detail panel includes refuel and repair actions for nearby
+world vehicles. Stored records must be retrieved first because server economy
+services operate on live vehicle objects, not stored garage records.
+
+Refuel requests use the server economy `RefuelService` event. Repair requests
+use the server economy `RepairService` event. Both services are billed by the
+server economy addon through organization funds.
+
+## Mission Setup
+
+Garage interactions are normally surfaced through the actor menu when nearby
+objects have garage variables such as:
+
+```sqf
+_object setVariable ["isGarage", true, true];
+_object setVariable ["garageType", "cars", true];
+```
+
+When using the server garage auto-init flow, editor-placed objects whose
+variable names contain `garage` are marked as garage interaction points and
+their `garageType` can be inferred from the name.
+
+Virtual garage spawn lanes are resolved from empty markers placed in Eden. The
+marker name should contain `garage` and one of the six supported category names:
+`cars`, `armor`, `helis`, `planes`, `naval`, or `other`. Markers are matched to
+the nearby interaction object by proximity, and names that include the garage
+object's variable name are preferred when multiple garages exist.
+
+Vehicle spawning is strict by category. If the active garage site does not have
+a matching local marker for the vehicle category being retrieved or spawned from
+the virtual garage, the request is blocked and the player is shown a message.
+
+Nearby world vehicles are not used as virtual garage spawn candidates. They are
+only checked to determine whether the resolved spawn position is blocked. If
+any vehicle is within 5 meters of the spawn marker when the virtual garage is
+opened, the session is blocked and the player is shown a warning.
+
+## Authoritative State
+
+The client gathers vehicle context and sends store/retrieve requests. Stored
+vehicle state, validation, spawning, removal, and persistence are owned by the
+server garage addon and extension.
+
+## Related Guides
+
+- [Garage Usage Guide](./GARAGE_USAGE_GUIDE.md)
+- [Client Actor Usage Guide](./CLIENT_ACTOR_USAGE_GUIDE.md)
+- [Client Notifications Usage Guide](./CLIENT_NOTIFICATIONS_USAGE_GUIDE.md)

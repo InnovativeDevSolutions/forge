@@ -1,0 +1,92 @@
+# Client Common Usage Guide
+
+The client `common` addon contains shared browser UI bridge declarations and
+common client-side browser integration patterns.
+
+## Purpose
+
+Use `forge_client_common` when a browser-backed feature UI needs reusable
+screen lifecycle behavior:
+
+- active browser control tracking
+- browser ready state
+- pending event queues
+- `ExecJS` payload delivery
+- shared bridge object inheritance through `createHashMapObject`
+
+Feature addons still own their app-specific events and server RPC mapping.
+
+## Shared Bridge
+
+Initialize the bridge declarations with:
+
+```sqf
+private _webUIDeclarations = call forge_client_common_fnc_initWebUIBridge;
+private _bridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
+```
+
+Feature bridges can inherit from the shared declaration:
+
+```sqf
+GVAR(MyUIBridgeBaseClass) = compileFinal createHashMapFromArray [
+    ["#base", _bridgeDeclaration],
+    ["#type", "MyUIBridgeBaseClass"],
+    ["handleReady", compileFinal {
+        params [["_control", controlNull, [controlNull]]];
+
+        _self call ["setActiveBrowserControl", [_control]];
+        _self call ["sendEvent", ["myAddon::hydrate", createHashMap, _control]];
+    }]
+];
+```
+
+## Event Delivery
+
+`sendEvent` builds this payload:
+
+```json
+{
+  "event": "myAddon::event",
+  "data": {}
+}
+```
+
+If the browser control is missing or not ready, the payload is queued on the
+screen object. When the screen marks ready, `flushPendingEvents` delivers the
+queue.
+
+## Screen Lifecycle
+
+The shared screen object tracks:
+
+| Field | Purpose |
+| --- | --- |
+| `control` | Active browser control. |
+| `readyState` | Whether the browser app has sent its ready event. |
+| `pendingEvents` | Outbound events waiting for a ready browser. |
+
+Call `handleClose` or `dispose` when a display closes so stale controls and
+queued events are cleared.
+
+## Current Consumers
+
+The common bridge pattern is used by the newer bank, CAD, garage, and
+organization client bridges. Store currently keeps its own bridge object and
+browser bridge function names.
+
+## Usage Rules
+
+- Keep bridge inheritance in feature addons thin and explicit.
+- Keep shared code generic; do not add bank, CAD, org, or store-specific logic
+  to `common`.
+- Prefer namespaced events such as `garage::sync`.
+- Send hash maps or arrays that can be safely serialized with `toJSON`.
+- Avoid direct extension calls from the client bridge; send CBA server events.
+
+## Related Guides
+
+- [Client Usage Guide](./CLIENT_USAGE_GUIDE.md)
+- [Client Bank Usage Guide](./CLIENT_BANK_USAGE_GUIDE.md)
+- [Client CAD Usage Guide](./CLIENT_CAD_USAGE_GUIDE.md)
+- [Client Garage Usage Guide](./CLIENT_GARAGE_USAGE_GUIDE.md)
+- [Client Organization Usage Guide](./CLIENT_ORG_USAGE_GUIDE.md)

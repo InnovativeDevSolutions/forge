@@ -1,0 +1,237 @@
+# Client Usage Guide
+
+Forge Client contains the Arma client-side addons that open player interfaces,
+handle browser events, cache client-visible state, and forward authoritative
+requests to the server addons.
+
+Use this guide as the entry point for client-side integration. Domain data,
+validation, persistence, rewards, ownership, and checkout behavior remain
+server-side responsibilities.
+
+## Client Responsibilities
+
+- Open Arma displays and `CT_WEBBROWSER` controls.
+- Load browser UI assets from each addon's `ui/_site` folder.
+- Receive browser alerts through `JSDialog` handlers.
+- Translate browser events into local actions or CBA server events.
+- Cache display state in client repositories.
+- Push server responses back into browser UIs with `ExecJS`.
+- Provide local-only utility state where the feature is intentionally local.
+
+## Authoritative Boundaries
+
+Client repositories are view state. They are useful for rendering, local UI
+decisions, and short-lived session behavior, but they should not be treated as
+durable state.
+
+Authoritative state lives in:
+
+- server SQF addons for mission and player workflow ownership
+- the `forge_server` extension for durable and hot-state domain logic
+- SurrealDB where the extension persists durable domain records
+
+## Common Runtime Flow
+
+Most browser-backed client addons follow this shape:
+
+1. The addon creates a display, finds a browser control, and registers a
+`JSDialog` event handler.
+2. The browser loads an HTML entrypoint from `ui/_site`.
+3. The browser sends JSON alerts with an `event` name and `data` payload.
+4. `fnc_handleUIEvents.sqf` parses the alert and routes the event.
+5. A bridge object or repository sends a CBA server event when server data is
+needed.
+6. Server responses are caught in `XEH_postInitClient.sqf`.
+7. The bridge sends browser update events back through `ExecJS`.
+
+Browser alert payload:
+
+```json
+{
+  "event": "module::action",
+  "data": {}
+}
+```
+
+## Open UI Entry Points
+
+<table>
+<thead>
+  <tr>
+    <th>
+      UI
+    </th>
+    
+    <th>
+      Entry point
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>
+      Actor menu
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_actor_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Bank
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_bank_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      ATM
+    </td>
+    
+    <td>
+      <code>
+        [true] call forge_client_bank_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      CAD
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_cad_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Garage
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_garage_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Virtual garage
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_garage_fnc_openVG;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Organization portal
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_org_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Phone
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_phone_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      Store
+    </td>
+    
+    <td>
+      <code>
+        call forge_client_store_fnc_openUI;
+      </code>
+    </td>
+  </tr>
+</tbody>
+</table>
+
+Notifications are normally opened during client initialization and then updated
+through the notification event/service.
+
+## Addon Guides
+
+- [Client Main Usage Guide](/client-addons/main)
+- [Client Common Usage Guide](/client-addons/common)
+- [Client Actor Usage Guide](/client-addons/actor)
+- [Client Bank Usage Guide](/client-addons/bank)
+- [Client CAD Usage Guide](/client-addons/cad)
+- [Client Garage Usage Guide](/client-addons/garage)
+- [Client Locker Usage Guide](/client-addons/locker)
+- [Client Notifications Usage Guide](/client-addons/notifications)
+- [Client Organization Usage Guide](/client-addons/organization)
+- [Client Phone Usage Guide](/client-addons/phone)
+- [Client Store Usage Guide](/client-addons/store)
+
+## Extension Calls
+
+Client addons should usually call server SQF events, not the `forge_server`
+extension directly. The server addon owns validation context and converts the
+request into extension commands.
+
+Example:
+
+```sqf
+[SRPC(bank,requestDeposit), [getPlayerUID player, 100]] call CFUNC(serverEvent);
+```
+
+Direct extension calls from client code bypass server authorization boundaries
+and should be avoided.
+
+## Browser Bridge Notes
+
+`forge_client_common_fnc_initWebUIBridge` provides reusable bridge and screen
+objects for newer browser UIs. It queues outbound events until a browser screen
+is ready, then delivers payloads through:
+
+```sqf
+_control ctrlWebBrowserAction ["ExecJS", format ["ForgeBridge.receive(%1)", _json]];
+```
+
+Feature addons still own their event names, request payloads, and response
+mapping.
+
+## Development Checklist
+
+- Keep feature-specific behavior in the owning addon.
+- Send authoritative changes to the server addon.
+- Use namespaced browser events such as `bank::deposit::request`.
+- Treat `profileNamespace` as local player preference or utility state only.
+- Make browser-ready events request the current server state before rendering
+stale data.
+- Queue or ignore bridge responses when the display is closed.
+- Keep mission object setup on the mission/server side and client display logic
+on the client side.

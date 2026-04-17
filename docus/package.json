@@ -1,0 +1,20 @@
+{
+  "name": "forge-docus",
+  "private": true,
+  "scripts": {
+    "sync:content": "node ../tools/sync-docus-docs.mjs",
+    "predev": "npm run sync:content",
+    "dev": "nuxt dev --extends docus",
+    "prebuild": "npm run sync:content",
+    "build": "nuxt build --extends docus"
+  },
+  "dependencies": {
+    "@takumi-rs/core": "^1.0.15",
+    "better-sqlite3": "^12.9.0",
+    "docus": "^5.10.0",
+    "nuxt": "^4.4.2"
+  },
+  "overrides": {
+    "esbuild": "0.27.7"
+  }
+}

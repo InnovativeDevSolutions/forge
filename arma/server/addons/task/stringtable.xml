@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project name="FFE">
+    <Package name="Task">
+        <Key ID="STR_forge_server_task_displayName">
+            <English>Task</English>
+        </Key>
+        <Key ID="STR_forge_server_task_enableEventLogs">
+            <English>Enable Event Logs</English>
+        </Key>
+        <Key ID="STR_forge_server_task_enableEventLogsTooltip">
+            <English>Log task event bus lifecycle, reward, rating, and notification events for debugging.</English>
+        </Key>
+        <Key ID="STR_forge_server_task_enableGenerator">
+            <English>Enable Generator</English>
+        </Key>
+        <Key ID="STR_forge_server_task_enableGeneratorTooltip">
+            <English>Enable Task Generator</English>
+        </Key>
+    </Package>
+</Project>

@@ -1,0 +1,36 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock
+debug/
+target/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Misc
+node_modules/
+docus/.nuxt/
+docus/.output/
+docus/.data/
+docus/.nitro/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Arma
+arma/ui/map-viewer/

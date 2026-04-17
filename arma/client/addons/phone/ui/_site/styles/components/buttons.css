@@ -1,0 +1,24 @@
+/* Button Styles */
+.button {
+    background: #007aff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin: 10px 5px;
+
+    &:hover {
+        background: #0056cc;
+    }
+
+    &.secondary {
+        background: #6c757d;
+
+        &:hover {
+            background: #545b62;
+        }
+    }
+}

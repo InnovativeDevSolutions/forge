@@ -1,0 +1,70 @@
+/* Navigation Bar */
+.navigation-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--nav-bg);
+    border-bottom: 1px solid var(--border-color);
+    min-height: 50px;
+    position: relative;
+    z-index: 1;
+}
+
+.navigation-bar .nav-back-button {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.navigation-bar .nav-back-button:hover {
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.navigation-bar .nav-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    flex: 1;
+    text-align: center;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.navigation-bar .nav-spacer {
+    width: 64px;
+}
+
+.navigation-bar .nav-button {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-size: 24px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    position: relative;
+    z-index: 2;
+}
+
+.navigation-bar .nav-button:hover {
+    opacity: 0.8;
+}
+
+.navigation-bar .nav-button:active {
+    opacity: 0.6;
+}
+
+.navigation-bar .nav-button.add-button {
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--accent-color);
+}

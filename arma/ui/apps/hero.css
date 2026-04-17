@@ -1,0 +1,41 @@
+.org-page-header {
+    text-align: left;
+    margin-bottom: 0;
+}
+
+.org-page-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.org-page-kicker {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.org-page-title {
+    margin: 0;
+}
+
+.org-page-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.org-page-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+@media (max-width: 960px) {
+    .org-page-heading {
+        gap: 0.3rem;
+    }
+}
