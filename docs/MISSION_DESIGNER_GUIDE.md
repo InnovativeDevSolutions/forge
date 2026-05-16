@@ -34,13 +34,17 @@ case-sensitive in some initializers, so use lower-case names.
 Recommended object names:
 
 ```text
-forge_bank_main
-forge_atm_01
-forge_store_general
-forge_locker_base
-forge_garage_cars_main
-forge_garage_helis_airfield
+atm
+bank
+store
+locker
+garage_hq
+garage_hq_2
 ```
+
+The example mission uses short lower-case names. Keep single-use objects simple,
+add an index when there may be multiple copies, and include a site label for
+garage objects so related spawn markers can share the same prefix.
 
 Avoid using `forge_locker_box` as an editor-placed locker variable name. That
 name is reserved by the client-side virtual arsenal box.
@@ -80,17 +84,35 @@ from Eden markers.
 
 ![Garage spawn marker variable name](images/eden/garage_spawn_1_mrkr_var.jpg)
 
+Additional garage sites use the same pattern: place another garage interaction
+object, give it a `garage` variable name that identifies the site, then place
+matching category spawn markers near that garage.
+
+![Second garage object placement](images/eden/garage_obj_2.jpg)
+
+![Second garage object variable name](images/eden/garage_obj_2_var.jpg)
+
+![Second garage site spawn markers](images/eden/garage_spawn_2_mrkrs.jpg)
+
 Create empty markers near each garage site. Marker names must contain `garage`
 and one supported garage category:
 
 ```text
-forge_garage_cars_main_spawn
-forge_garage_armor_main_spawn
-forge_garage_helis_airfield_spawn
-forge_garage_planes_airfield_spawn
-forge_garage_naval_dock_spawn
-forge_garage_other_base_spawn
+garage_hq_cars
+garage_hq_armor
+garage_hq_helis
+garage_hq_helis_1
+garage_hq_planes
+garage_hq_naval
+garage_hq_other
 ```
+
+This convention keeps the site and category visible in the marker name:
+`garage_hq_planes` is the planes spawn marker for `garage_hq`, while
+`garage_hq_2` can use another nearby set of `garage_hq_*` category markers for
+the second HQ garage area. If two garage objects of the same category are close
+to each other, include the full object name in the marker prefix, such as
+`garage_hq_2_planes`.
 
 Use these rules:
 
@@ -207,6 +229,31 @@ interaction that calls:
 Tasks show in CAD only when they are created through a CAD-compatible task
 creation path.
 
+## CEO and Dispatch Slots
+
+Forge grants dispatch-board permissions from the player's Eden unit variable
+name when that player belongs to the default organization.
+
+Use these exact lower-case variable names:
+
+| Slot | Eden Unit Variable Name | Permissions |
+| --- | --- | --- |
+| CEO | `ceo` | Can administer the default organization, use default organization funds where supported, and use the CAD dispatch board. |
+| Dispatch | `dispatch` | Can use the CAD dispatch board. |
+
+![CEO unit placement](images/eden/ceo_unit.jpg)
+
+![CEO unit variable name](images/eden/ceo_unit_var.jpg)
+
+![Dispatch unit placement](images/eden/dispatch_unit.jpg)
+
+![Dispatch unit variable name](images/eden/dispatch_unit_var.jpg)
+
+The CEO slot is intentionally broader than the dispatch slot. Use it for the
+player who should administrate the default organization. Use the dispatch slot
+for players who need dispatcher tools without default organization
+administration rights.
+
 ## Task and CAD Setup
 
 Mission designers should use Forge Eden task modules for CAD-visible work.
@@ -320,7 +367,7 @@ Run this checklist in a local multiplayer test:
 ## Eden Screenshot Set
 
 The live docs should include real Eden screenshots for mission designers. When
-capturing them, save the images under `docus/publicimages/eden/` and use these
+capturing them, save the images under `docus/public/images/eden/` and use these
 filenames so the docs can reference stable assets:
 
 | File | Capture |
@@ -331,7 +378,10 @@ filenames so the docs can reference stable assets:
 | `locker_obj.jpg`, `locker_obj_var.jpg` | Locker container placement and variable name. |
 | `garage_obj.jpg`, `garage_obj_var.jpg` | Garage interaction object placement and variable name. |
 | `garage_spawn_mrkrs.jpg`, `garage_spawn_1_mrkr_var.jpg` | Garage category spawn markers and marker variable naming. |
+| `garage_obj_2.jpg`, `garage_obj_2_var.jpg`, `garage_spawn_2_mrkrs.jpg` | Additional garage site placement, variable name, and spawn markers. |
 | `med_spawn_obj.jpg`, `med_spawn_obj_var.jpg` | Medical spawn object placement and variable name. |
+| `ceo_unit.jpg`, `ceo_unit_var.jpg` | CEO playable unit placement and variable name. |
+| `dispatch_unit.jpg`, `dispatch_unit_var.jpg` | Dispatch playable unit placement and variable name. |
 | `blacklist_mrkr.jpg`, `blacklist_mrkr_var.jpg` | Mission-manager blacklist marker placement and marker variable naming. |
 | `create_task_mod.jpg`, `create_task_mod_params.jpg` | Generic Forge task module placement and parameters. |
 | `attack_task_mod.jpg`, `attack_task_mod_params.jpg`, `attack_task_tgts.jpg` | Attack task module placement, parameters, and target sync. |
