@@ -40,6 +40,10 @@ const generatedPages = [
     target: '2.server-extension/3.common.md'
   },
   {
+    source: 'docs/ICOM_USAGE_GUIDE.md',
+    target: '2.server-extension/4.icom.md'
+  },
+  {
     source: 'docs/ACTOR_USAGE_GUIDE.md',
     target: '3.server-modules/1.actor.md'
   },
@@ -291,6 +295,18 @@ Documentation Areas
 
   #description
   Extension architecture, command surface, and SQF usage examples.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-network
+  to: /server-extension/icom
+  ---
+  #title
+  ICOM [Events]{.text-primary}
+
+  #description
+  Inter-server event routing through the Forge ICOM hub and extension commands.
   :::
 
   :::u-page-feature

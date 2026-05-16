@@ -148,6 +148,18 @@ Documentation Areas
 
   :::u-page-feature
   ---
+  icon: i-lucide-network
+  to: /server-extension/icom
+  ---
+  #title
+  ICOM [Events]{.text-primary}
+
+  #description
+  Inter-server event routing through the Forge ICOM hub and extension commands.
+  :::
+
+  :::u-page-feature
+  ---
   icon: i-lucide-layers-3
   to: /server-modules
   ---

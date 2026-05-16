@@ -1,0 +1,195 @@
+# ICOM Usage Guide
+
+ICOM is the Forge inter-server communication helper. It lets multiple Arma 3
+servers exchange generic JSON events through a central TCP hub instead of
+connecting directly to each other.
+
+## Runtime Shape
+
+```text
+Arma server SQF
+  -> forge_server extension icom:* command
+  -> ICOM client inside the extension
+  -> forge-icom TCP hub
+  -> target server extension
+  -> forge_icom_event CBA server event
+```
+
+The ICOM hub lives in `bin/icom`. The Arma server extension integrates with it
+through `arma/server/extension/src/icom.rs`.
+
+## Components
+
+| Component | Path | Role |
+| --- | --- | --- |
+| ICOM hub binary | `bin/icom` | Standalone TCP router for connected servers. |
+| ICOM client library | `bin/icom/src/client.rs` | Rust client used by the Forge server extension and examples. |
+| Extension command group | `arma/server/extension/src/icom.rs` | Exposes `icom:*` commands to SQF and forwards inbound events to Arma. |
+| SQF callback bridge | `arma/server/addons/main/XEH_preInit.sqf` | Receives extension callbacks and re-emits `forge_icom_event` through CBA. |
+
+## Build and Run the Hub
+
+Build the release binary:
+
+```powershell
+cargo build --release -p forge-icom
+```
+
+Run it during development:
+
+```powershell
+cargo run -p forge-icom
+```
+
+The default bind address is `0.0.0.0:9090`.
+
+## Hub Configuration
+
+Copy `bin/icom/config.example.toml` to `config.toml` beside the `forge-icom`
+executable or into the working directory used to launch it.
+
+```toml
+[server]
+host = "0.0.0.0"
+port = 9090
+```
+
+Use `127.0.0.1` for same-machine testing. Use `0.0.0.0` when remote Arma
+servers need to connect, and secure the port at the firewall or host network
+layer.
+
+## Extension Commands
+
+ICOM commands are exposed through the `icom` command group in `forge_server`.
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `icom:connect` | `address`, `server_id` | `Connection initiated` or `ERROR: Already connected`. |
+| `icom:send_event` | `target_server`, `event_name`, `data_json` | `OK` or `ERROR: <reason>`. |
+| `icom:broadcast` | `event_name`, `data_json` | `OK` or `ERROR: <reason>`. |
+
+The current extension connects when `icom:connect` is called. Start the ICOM hub
+first, then connect each Arma server with a unique `server_id`.
+
+```sqf
+private _result = "forge_server" callExtension [
+    "icom:connect",
+    ["127.0.0.1:9090", "server_1"]
+];
+diag_log format ["[ICOM] Connect result: %1", _result select 0];
+```
+
+## Send an Event
+
+Send a targeted event to one connected server:
+
+```sqf
+private _data = createHashMapFromArray [
+    ["coords", [1234, 5678, 0]],
+    ["supplies", ["ammo_box", "medical_supplies"]]
+];
+
+"forge_server" callExtension [
+    "icom:send_event",
+    ["server_2", "supply_drop", toJSON _data]
+];
+```
+
+Broadcast to every connected server except the sender:
+
+```sqf
+private _alert = createHashMapFromArray [
+    ["message", "Server restart in 5 minutes"],
+    ["severity", "warning"]
+];
+
+"forge_server" callExtension [
+    "icom:broadcast",
+    ["global_alert", toJSON _alert]
+];
+```
+
+## Receive Events
+
+Inbound ICOM events are forwarded to SQF as the CBA server event
+`forge_icom_event`.
+
+```sqf
+["forge_icom_event", {
+    params ["_eventName", "_data"];
+
+    switch (_eventName) do {
+        case "supply_drop": {
+            private _coords = _data getOrDefault ["coords", []];
+            private _supplies = _data getOrDefault ["supplies", []];
+            diag_log format ["[ICOM] Supply drop at %1: %2", _coords, _supplies];
+        };
+        case "global_alert": {
+            private _message = _data getOrDefault ["message", ""];
+            if (_message isNotEqualTo "") then {
+                [_message] remoteExec ["hint", 0];
+            };
+        };
+        default {
+            diag_log format ["[ICOM] Unhandled event: %1 | %2", _eventName, _data];
+        };
+    };
+}] call CBA_fnc_addEventHandler;
+```
+
+## Message Protocol
+
+The hub uses newline-delimited JSON. The first message from each client is a
+registration payload:
+
+```json
+{
+  "type": "register",
+  "server_id": "server_1"
+}
+```
+
+Targeted events use `type: "event"`:
+
+```json
+{
+  "type": "event",
+  "target_server": "server_2",
+  "event_name": "supply_drop",
+  "data": {
+    "coords": [1234, 5678, 0]
+  }
+}
+```
+
+Broadcasts use `type: "broadcast"` and are routed to all connected servers
+except the sender.
+
+## Operational Notes
+
+- Server IDs must be unique. If the same ID reconnects, the hub replaces the old
+  connection.
+- Event names are mission/application contracts. ICOM only routes them; it does
+  not validate gameplay meaning.
+- Always send valid JSON in the `data_json` argument.
+- `icom:send_event` and `icom:broadcast` return quickly after scheduling async
+  work in the extension. Check extension and ICOM hub logs for delivery errors.
+- Keep event payloads small and stable. Use IDs or compact data where possible.
+
+## Testing
+
+Start the hub:
+
+```powershell
+cargo run -p forge-icom
+```
+
+Run example clients in separate terminals:
+
+```powershell
+cargo run -p forge-icom --example server_1_client
+cargo run -p forge-icom --example server_2_client
+```
+
+For Arma testing, start the hub, connect the server with `icom:connect`, register
+a `forge_icom_event` handler, then send an event from another connected server.

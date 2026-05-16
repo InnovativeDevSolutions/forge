@@ -203,7 +203,7 @@ See [Owned Storage Usage Guide](./OWNED_STORAGE_USAGE_GUIDE.md) for examples.
 | Command Group | Purpose |
 | --- | --- |
 | `store:checkout` | Run store checkout behavior. |
-| `icom:connect`, `icom:broadcast`, `icom:send_event` | ICom connection and event forwarding. |
+| `icom:connect`, `icom:broadcast`, `icom:send_event` | ICOM connection and event forwarding. See [ICOM Usage Guide](./ICOM_USAGE_GUIDE.md). |
 | `terrain:exportSVG` | Export terrain data as SVG. |
 | `transport:invoke`, `transport:invoke_stored` | Invoke commands through transport. |
 | `transport:request:append`, `transport:request:clear` | Manage stored request chunks. |

@@ -212,7 +212,7 @@ client.listen_for_events(|msg| {
 
 The Forge server extension includes full ICOM integration:
 
-1. **Initialization**: Connects to ICOM on extension startup (or manually via `icom:connect`)
+1. **Initialization**: Connect with `icom:connect` after the ICOM hub is running.
 2. **Event Listener**: Spawns background task to receive events continuously
 3. **Callback System**: Forwards events to Arma via CBA event handlers
 4. **Extension Commands**: Provides SQF commands to send/receive events
@@ -221,7 +221,7 @@ The Forge server extension includes full ICOM integration:
 
 - The extension uses `try_read()` to avoid deadlocks when accessing context from async tasks
 - Broadcast events are **not** sent back to the originating server
-- Connection can be initiated manually if automatic startup connection fails
+- Connection is initiated through the `icom:connect` extension command.
 
 ### SQF Usage
 

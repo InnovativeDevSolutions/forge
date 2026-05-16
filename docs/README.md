@@ -23,6 +23,7 @@ collects framework-level documentation for those pieces.
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
 - [Economy Usage Guide](./ECONOMY_USAGE_GUIDE.md)
 - [Garage Usage Guide](./GARAGE_USAGE_GUIDE.md)
+- [ICOM Usage Guide](./ICOM_USAGE_GUIDE.md)
 - [Locker Usage Guide](./LOCKER_USAGE_GUIDE.md)
 - [Organization Usage Guide](./ORG_USAGE_GUIDE.md)
 - [Owned Storage Usage Guide](./OWNED_STORAGE_USAGE_GUIDE.md)

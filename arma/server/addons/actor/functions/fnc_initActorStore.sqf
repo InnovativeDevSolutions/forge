@@ -163,7 +163,7 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
         private _phoneNumber = _actor getOrDefault ["phone_number", ""];
         private _emailAddress = _actor getOrDefault ["email", ""];
         private _welcomeEmail = format [
-            "Welcome to your first day on the job. You have been issued a phone with a new number of %1 and an email address of %2",
+            "Welcome to your first day on the job. Forge Dynamics has issued you a work phone with phone number %1 and email address %2. Keep these details handy for field communications and future assignments.",
             _phoneNumber,
             _emailAddress
         ];
@@ -183,8 +183,8 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
         };
 
         private _messages = [
-            "Welcome to your first day on the job. You have been issued starting equipment and a small amount of RP and credit from Forge Dynamics. These are the only free things you will get for this identity, so save them, and use them wisely. You are responsible for all purchases going forward.",
-            "Cash in your Earnings at any laptop by Accessing the Bank and then Deposit Earnings. Do this before leaving the game session!"
+            "Welcome to your first day on the job. Forge Dynamics has issued your starting equipment and a small account credit. These are the only free supplies you will receive for this identity, so use them wisely. You are responsible for all purchases going forward.",
+            "Deposit your Earnings before leaving the session. Access the Bank from any laptop, then select Deposit Earnings."
         ];
 
         {

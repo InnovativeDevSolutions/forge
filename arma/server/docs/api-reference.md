@@ -27,6 +27,7 @@ Game systems should call the domain APIs instead of raw database operations:
 - `store:*`
 - `task:*`
 - `cad:*`
+- `icom:*`
 - `owned:garage:*`
 - `owned:locker:*`
 - `transport:*`
@@ -47,3 +48,4 @@ needed by `forge_server_addons_extension_fnc_extCall`.
 - [Phone](../../../docs/PHONE_USAGE_GUIDE.md)
 - [Store](../../../docs/STORE_USAGE_GUIDE.md)
 - [Task](../../../docs/TASK_USAGE_GUIDE.md)
+- [ICOM](../../../docs/ICOM_USAGE_GUIDE.md)

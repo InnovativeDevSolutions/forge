@@ -119,15 +119,6 @@ private _playerJoinData = createHashMapFromArray [
 
 
 // ============================================================================
-// STEP 3: Test the connection
-// ============================================================================
-
-// Test if ICOM is working
-"forge_server" callExtension ["icom:test_callback", []];
-// Should trigger forge_icom_event with a handshake event
-
-
-// ============================================================================
 // TIPS AND BEST PRACTICES
 // ============================================================================
 

@@ -40,4 +40,5 @@ For install links and Forge-specific setup steps, see
 
 - [API Reference](./api-reference.md)
 - [Usage Examples](./usage-examples.md)
+- [ICOM Usage Guide](../../../docs/ICOM_USAGE_GUIDE.md)
 - [Framework Module Guides](../../../docs/README.md)
