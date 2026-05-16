@@ -9,6 +9,9 @@ Organization hot state is owned by the extension. SQF coordinates Arma-facing
 events, UI payloads, membership syncs, and integration with actor, bank, store,
 and task flows.
 
+Organization registration charges a $50,000 personal funds fee before the
+player is assigned to the new organization.
+
 ## Dependencies
 - `forge_server_main`
 - `forge_server_common`

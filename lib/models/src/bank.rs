@@ -56,6 +56,8 @@ pub struct BankCheckoutContext {
 #[serde(rename_all = "camelCase")]
 pub struct BankPinContext {
     pub mode: String,
+    #[serde(default)]
+    pub atm_authorized: bool,
 }
 
 impl Bank {

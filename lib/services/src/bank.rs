@@ -310,6 +310,46 @@ impl<R: BankRepository, H: BankHotRepository> BankHotStateService<R, H> {
         Ok(())
     }
 
+    pub fn change_pin(
+        &self,
+        key: String,
+        current_pin: String,
+        new_pin: String,
+        context: BankPinContext,
+    ) -> Result<BankMutationResult, String> {
+        let mode = context.mode.trim();
+        if !mode.eq_ignore_ascii_case("bank") {
+            return Err("PIN changes are only available from the full bank interface.".to_string());
+        }
+
+        if !is_four_digit_pin(&current_pin) {
+            return Err("Enter your current four-digit PIN.".to_string());
+        }
+        if !is_four_digit_pin(&new_pin) {
+            return Err("Choose a new four-digit PIN.".to_string());
+        }
+        if current_pin == new_pin {
+            return Err("Choose a different PIN from your current PIN.".to_string());
+        }
+
+        let mut bank = self.get_bank(key)?;
+        if current_pin != bank.pin.to_string() {
+            return Err("Current PIN is incorrect.".to_string());
+        }
+
+        bank.pin = new_pin
+            .parse::<u64>()
+            .map_err(|error| format!("Invalid new PIN: {}", error))?;
+        bank.validate()
+            .map_err(|e| format!("Validation failed: {}", e))?;
+        self.repository.save(&bank)?;
+
+        Ok(BankMutationResult {
+            account: bank.clone(),
+            patch: build_patch(&bank, &["pin"])?,
+        })
+    }
+
     pub fn save_bank(&self, key: String) -> Result<Bank, String> {
         let bank = self
             .repository
@@ -400,6 +440,10 @@ fn build_patch(bank: &Bank, fields: &[&str]) -> Result<HashMap<String, Value>, S
         patch.insert((*field).to_string(), current_bank_field_value(bank, field)?);
     }
     Ok(patch)
+}
+
+fn is_four_digit_pin(pin: &str) -> bool {
+    pin.len() == 4 && pin.chars().all(|character| character.is_ascii_digit())
 }
 
 fn validate_atm_access(context: &BankOperationContext, action: &str) -> Result<(), String> {

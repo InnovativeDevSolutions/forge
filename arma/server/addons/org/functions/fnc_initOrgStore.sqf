@@ -780,6 +780,91 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
 
         true
     }],
+    ["syncBankPatch", compileFinal {
+        params [["_uid", "", [""]], ["_patch", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "" || { _patch isEqualTo createHashMap }) exitWith { false };
+
+        if (isNil QEGVAR(common,EventBus)) then {
+            EGVAR(bank,BankMessenger) call ["sendAccountSync", [_uid, _patch]];
+        } else {
+            EGVAR(common,EventBus) call ["emit", [
+                "bank.account.sync.requested",
+                createHashMapFromArray [
+                    ["uid", _uid],
+                    ["account", +_patch]
+                ],
+                createHashMapFromArray [["source", "org"]]
+            ]];
+        };
+
+        true
+    }],
+    ["chargeRegistrationFee", compileFinal {
+        params [["_uid", "", [""]], ["_amount", 50000, [0]]];
+
+        private _result = createHashMapFromArray [
+            ["success", false],
+            ["message", "Unable to charge the organization registration fee."],
+            ["patch", createHashMap],
+            ["refundPatch", createHashMap]
+        ];
+
+        if (_uid isEqualTo "" || { _amount <= 0 }) exitWith { _result };
+        if (isNil QEGVAR(bank,BankStore)) exitWith {
+            _result set ["message", "Bank service is unavailable for organization registration."];
+            _result
+        };
+
+        private _account = EGVAR(bank,BankStore) call ["get", [_uid, ""]];
+        if (_account isEqualTo createHashMap) then {
+            _account = EGVAR(bank,BankStore) call ["init", [_uid]];
+        };
+        if (_account isEqualTo createHashMap) exitWith {
+            _result set ["message", "Bank account could not be loaded for organization registration."];
+            _result
+        };
+
+        private _currentBank = _account getOrDefault ["bank", 0];
+        private _currentCash = _account getOrDefault ["cash", 0];
+        if ((_currentBank + _currentCash) < _amount) exitWith {
+            _result set ["message", format ["You need at least $%1 in personal funds to create an organization.", [_amount] call EFUNC(common,formatNumber)]];
+            _result
+        };
+
+        private _bankCharge = _amount min _currentBank;
+        private _cashCharge = _amount - _bankCharge;
+        private _patch = createHashMapFromArray [
+            ["bank", _currentBank - _bankCharge],
+            ["cash", _currentCash - _cashCharge]
+        ];
+        private _refundPatch = createHashMapFromArray [
+            ["bank", _currentBank],
+            ["cash", _currentCash]
+        ];
+
+        private _appliedPatch = EGVAR(bank,BankStore) call ["mset", [_uid, _patch, true]];
+        if (_appliedPatch isEqualTo createHashMap) exitWith {
+            _result set ["message", "Organization registration fee could not be charged."];
+            _result
+        };
+
+        _result set ["success", true];
+        _result set ["message", ""];
+        _result set ["patch", _appliedPatch];
+        _result set ["refundPatch", _refundPatch];
+        _result
+    }],
+    ["refundRegistrationFee", compileFinal {
+        params [["_uid", "", [""]], ["_refundPatch", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "" || { _refundPatch isEqualTo createHashMap } || { isNil QEGVAR(bank,BankStore) }) exitWith { false };
+
+        private _patch = EGVAR(bank,BankStore) call ["mset", [_uid, _refundPatch, true]];
+        if (_patch isEqualTo createHashMap) exitWith { false };
+
+        _self call ["syncBankPatch", [_uid, _patch]]
+    }],
     ["updateOrgTreasuryFunds", compileFinal {
         params [["_orgID", "", [""]], ["_funds", 0, [0]]];
 
@@ -1201,24 +1286,36 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
             ["existingOrgId", _existingOrgID]
         ];
 
+        private _registrationFee = 50000;
+        private _feeCharge = _self call ["chargeRegistrationFee", [_uid, _registrationFee]];
+        if !(_feeCharge getOrDefault ["success", false]) exitWith {
+            _result set ["message", _feeCharge getOrDefault ["message", "Organization registration fee could not be charged."]];
+            _result
+        };
+        private _refundPatch = _feeCharge getOrDefault ["refundPatch", createHashMap];
+
         ["org:hot:register", [toJSON _context]] call EFUNC(extension,extCall) params ["_rawResult", "_isSuccess"];
         if !_isSuccess exitWith {
+            _self call ["refundRegistrationFee", [_uid, _refundPatch]];
             _result set ["message", "Organization service was unavailable during registration."];
             _result
         };
 
         if !(_rawResult isEqualType "") exitWith {
+            _self call ["refundRegistrationFee", [_uid, _refundPatch]];
             _result set ["message", "Organization service returned an invalid registration response."];
             _result
         };
 
         if ((_rawResult find "Error:") == 0) exitWith {
+            _self call ["refundRegistrationFee", [_uid, _refundPatch]];
             _result set ["message", _rawResult select [7]];
             _result
         };
 
         private _envelope = fromJSON _rawResult;
         if !(_envelope isEqualType createHashMap) exitWith {
+            _self call ["refundRegistrationFee", [_uid, _refundPatch]];
             _result set ["message", "Organization service returned malformed registration data."];
             _result
         };
@@ -1232,10 +1329,12 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
 
         private _actorPatch = _self call ["applyActorOrganization", [_uid, _envelope getOrDefault ["actorOrganization", _orgID], _actor]];
         if (_actorPatch isEqualTo createHashMap) exitWith {
+            _self call ["refundRegistrationFee", [_uid, _refundPatch]];
             _result set ["message", "Failed to assign the player to the new organization."];
             _result
         };
 
+        _self call ["syncBankPatch", [_uid, _feeCharge getOrDefault ["patch", createHashMap]]];
         _result set ["success", true];
         _result set ["message", _envelope getOrDefault ["message", ""]];
         _result set ["org", _envelope getOrDefault ["org", createHashMap]];

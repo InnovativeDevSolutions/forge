@@ -2,7 +2,8 @@
 
 The bank module stores player account balances, earnings, PINs, and transaction
 strings. The hot-state API also owns the active banking workflows used by the
-UI: deposit, withdraw, transfer, checkout charge, and PIN validation.
+UI: deposit, withdraw, transfer, checkout charge, PIN validation, and PIN
+changes.
 
 ## Storage Model
 
@@ -73,6 +74,7 @@ private _result = "forge_server" callExtension ["bank:create", [
 | `bank:hot:transfer` | `source_uid`, `target_uid`, `amount`, `context_json` | Transfer result JSON. |
 | `bank:hot:charge_checkout` | `uid`, `amount`, `context_json` | `{ account, patch }`. |
 | `bank:hot:validate_pin` | `uid`, `pin`, `context_json` | `{}` on success. |
+| `bank:hot:change_pin` | `uid`, `current_pin`, `new_pin`, `context_json` | `{ account, patch }`. |
 | `bank:hot:save` | `uid` | Current hot bank JSON and async durable save. |
 | `bank:hot:remove` | `uid` | `OK`. |
 
@@ -151,6 +153,25 @@ private _context = createHashMapFromArray [["mode", "atm"]];
 private _result = "forge_server" callExtension ["bank:hot:validate_pin", [
     getPlayerUID player,
     "1234",
+    toJSON _context
+]];
+```
+
+## PIN Changes
+
+PIN changes require the current PIN and a different four-digit new PIN. The
+command is only valid from the full bank interface.
+
+```sqf
+private _context = createHashMapFromArray [
+    ["mode", "bank"],
+    ["atmAuthorized", false]
+];
+
+private _result = "forge_server" callExtension ["bank:hot:change_pin", [
+    getPlayerUID player,
+    "1234",
+    "5678",
     toJSON _context
 ]];
 ```

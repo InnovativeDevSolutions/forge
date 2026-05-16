@@ -3,7 +3,8 @@
 ## Overview
 The organization addon provides the client organization portal UI and bridge for
 organization hydrate, registration, membership, invitations, credit lines,
-leave/disband actions, assets, fleet, and treasury display.
+leave/disband actions, assets, fleet, and treasury display. Registration shows
+the $50,000 personal funds requirement enforced by the server org addon.
 
 ## Dependencies
 - `forge_client_common`

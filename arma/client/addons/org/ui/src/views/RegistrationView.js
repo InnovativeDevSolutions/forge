@@ -177,7 +177,7 @@ ${scopeSelector} .form-feedback.is-error {
                 h(
                     "p",
                     null,
-                    "Complete the form to add your organization to the Global Organization Registry.",
+                    "Complete the form to add your organization to the Global Organization Registry. Registration requires at least $50,000 in personal funds.",
                 ),
                 h(
                     "ul",
@@ -258,7 +258,11 @@ ${scopeSelector} .form-feedback.is-error {
                 h(
                     "div",
                     { className: "price-tag" },
-                    h("span", { className: "price-label" }, "Registration Fee"),
+                    h(
+                        "span",
+                        { className: "price-label" },
+                        "Required Registration Fee",
+                    ),
                     h("span", { className: "price-value" }, "$50,000"),
                 ),
             ),

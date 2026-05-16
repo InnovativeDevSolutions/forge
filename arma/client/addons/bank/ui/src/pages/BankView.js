@@ -352,6 +352,73 @@
                         : "Deposit Earnings",
                 ),
             ),
+            h(
+                "section",
+                { className: "bank-page-section" },
+                h(
+                    "div",
+                    { className: "bank-section-header" },
+                    h(
+                        "div",
+                        null,
+                        h("span", { className: "bank-eyebrow" }, "Security"),
+                        h(
+                            "h2",
+                            { className: "bank-section-title" },
+                            "Change ATM PIN",
+                        ),
+                    ),
+                ),
+                h(
+                    "div",
+                    { className: "bank-form-stack" },
+                    h("input", {
+                        id: "bank-current-pin",
+                        className: "bank-input",
+                        type: "password",
+                        inputMode: "numeric",
+                        maxLength: "4",
+                        placeholder: "Current PIN",
+                    }),
+                    h("input", {
+                        id: "bank-new-pin",
+                        className: "bank-input",
+                        type: "password",
+                        inputMode: "numeric",
+                        maxLength: "4",
+                        placeholder: "New PIN",
+                    }),
+                    h("input", {
+                        id: "bank-confirm-pin",
+                        className: "bank-input",
+                        type: "password",
+                        inputMode: "numeric",
+                        maxLength: "4",
+                        placeholder: "Confirm new PIN",
+                    }),
+                    h(
+                        "button",
+                        {
+                            type: "button",
+                            className: "bank-btn bank-btn-primary",
+                            disabled: pending("changepin"),
+                            onClick: () => {
+                                const sent = actions.requestChangePin(
+                                    readInputValue("bank-current-pin"),
+                                    readInputValue("bank-new-pin"),
+                                    readInputValue("bank-confirm-pin"),
+                                );
+                                if (sent) {
+                                    clearInputValue("bank-current-pin");
+                                    clearInputValue("bank-new-pin");
+                                    clearInputValue("bank-confirm-pin");
+                                }
+                            },
+                        },
+                        pending("changepin") ? "Updating PIN..." : "Update PIN",
+                    ),
+                ),
+            ),
         );
     }
 

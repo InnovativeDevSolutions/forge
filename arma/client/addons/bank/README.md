@@ -3,7 +3,7 @@
 ## Overview
 The bank addon provides the client banking UI and browser bridge for account
 hydrate, deposits, withdrawals, transfers, PIN entry, earnings deposits, and
-credit-line repayment.
+credit-line repayment. It also exposes PIN changes from the full bank UI.
 
 ## Dependencies
 - `forge_client_common`
@@ -27,6 +27,7 @@ credit-line repayment.
 - `bank::depositEarnings::request`
 - `bank::repayCreditLine::request`
 - `bank::pin::request`
+- `bank::pin::change::request`
 - `bank::close`
 
 ## Runtime Notes

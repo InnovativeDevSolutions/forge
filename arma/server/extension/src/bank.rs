@@ -58,6 +58,7 @@ pub fn group() -> Group {
                 .command("deposit_earnings", deposit_earnings_hot_bank)
                 .command("transfer", transfer_hot_bank)
                 .command("validate_pin", validate_pin_hot_bank)
+                .command("change_pin", change_pin_hot_bank)
                 .command("save", save_hot_bank)
                 .command("remove", remove_hot_bank),
         )
@@ -313,6 +314,28 @@ pub(crate) fn validate_pin_hot_bank(
 
     match HOT_BANK_SERVICE.validate_pin(resolved_uid, pin, context) {
         Ok(_) => "{}".to_string(),
+        Err(error) => format!("Error: {}", error),
+    }
+}
+
+pub(crate) fn change_pin_hot_bank(
+    call_context: CallContext,
+    key: String,
+    current_pin: String,
+    new_pin: String,
+    json_context: String,
+) -> String {
+    let resolved_uid = match resolve_uid(&key, &call_context) {
+        Some(uid) => uid,
+        None => return format!("Error: Failed to resolve UID for key: {}", key),
+    };
+    let context = match parse_pin_context(json_context) {
+        Ok(value) => value,
+        Err(error) => return format!("Error: {}", error),
+    };
+
+    match HOT_BANK_SERVICE.change_pin(resolved_uid, current_pin, new_pin, context) {
+        Ok(result) => serialize_hot_bank_mutation(result),
         Err(error) => format!("Error: {}", error),
     }
 }

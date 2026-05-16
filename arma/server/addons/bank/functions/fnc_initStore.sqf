@@ -496,6 +496,34 @@ GVAR(BankBaseStore) = compileFinal createHashMapFromArray [
             true
         }
     }],
+    ["changePin", compileFinal {
+        params [["_uid", "", [""]], ["_currentPin", "", [""]], ["_newPin", "", [""]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+
+        private _current = _currentPin;
+        private _next = _newPin;
+        if !(_current isEqualType "") then { _current = str _current; };
+        if !(_next isEqualType "") then { _next = str _next; };
+
+        private _changed = _self call [
+            "runMutation",
+            [
+                _uid,
+                "bank:hot:change_pin",
+                [_uid, _current, _next, toJSON (GVAR(BankPayloadBuilder) call ["buildOperationContext", [_uid]])],
+                true,
+                ""
+            ]
+        ];
+
+        if (_changed) then {
+            GVAR(BankMessenger) call ["sendAlert", [_uid, "success", "Bank PIN updated."]];
+            _self call ["hydrateSession", [_uid, "", false]];
+        };
+
+        _changed
+    }],
     ["withdraw", compileFinal {
         params [["_uid", "", [""]], ["_amount", 0, [0]]];
 

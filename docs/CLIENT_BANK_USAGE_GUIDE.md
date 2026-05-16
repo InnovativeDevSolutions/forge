@@ -33,8 +33,8 @@ state.
 - bank/ATM mode
 - browser ready handling
 - account hydrate and sync responses
-- deposit, withdrawal, transfer, earnings deposit, credit repayment, and PIN
-  requests
+- deposit, withdrawal, transfer, earnings deposit, credit repayment, PIN
+  validation, and PIN change requests
 - browser notice delivery
 
 ## Browser Events
@@ -49,6 +49,7 @@ state.
 | `bank::depositEarnings::request` | Request earnings deposit. |
 | `bank::repayCreditLine::request` | Request credit-line repayment. |
 | `bank::pin::request` | Forward PIN validation request. |
+| `bank::pin::change::request` | Forward current and new PIN values for a PIN change. |
 | `bank::close` | Dispose bridge screen state and close the display. |
 
 ## Browser Response Events
@@ -76,6 +77,10 @@ Example deposit flow:
 Balances, PIN authorization, transfers, checkout charges, credit lines, and
 persistence are server-owned. The client should only display account data and
 request mutations through server events.
+
+PIN changes are available from the full bank UI only. The browser validates the
+current, new, and confirmation fields, but the server extension remains
+authoritative and persists the updated PIN.
 
 ## Related Guides
 

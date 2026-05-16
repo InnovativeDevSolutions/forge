@@ -149,6 +149,53 @@
         return true;
     }
 
+    function normalizePin(value) {
+        return String(value || "")
+            .replace(/\D/g, "")
+            .slice(0, 4);
+    }
+
+    function requestChangePin(currentPinValue, newPinValue, confirmPinValue) {
+        const currentPin = normalizePin(currentPinValue);
+        const newPin = normalizePin(newPinValue);
+        const confirmPin = normalizePin(confirmPinValue);
+        const bridge = BankApp.bridge;
+
+        if (!bridge || typeof bridge.requestChangePin !== "function") {
+            showNotice("error", "PIN change bridge is unavailable.");
+            return false;
+        }
+        if (currentPin.length !== 4) {
+            showNotice("error", "Enter your current four-digit PIN.");
+            return false;
+        }
+        if (newPin.length !== 4) {
+            showNotice("error", "Choose a new four-digit PIN.");
+            return false;
+        }
+        if (newPin !== confirmPin) {
+            showNotice("error", "New PIN confirmation does not match.");
+            return false;
+        }
+        if (currentPin === newPin) {
+            showNotice(
+                "error",
+                "Choose a different PIN from your current PIN.",
+            );
+            return false;
+        }
+
+        store.startAction("changepin");
+        const sent = bridge.requestChangePin({ currentPin, newPin });
+        if (!sent) {
+            store.finishAction();
+            showNotice("error", "PIN change bridge is unavailable.");
+            return false;
+        }
+
+        return true;
+    }
+
     function appendPinDigit(digit) {
         const nextDigit = String(digit || "").trim();
         if (!nextDigit) {
@@ -276,6 +323,7 @@
         closeBank,
         refreshBank,
         requestAtmAmount,
+        requestChangePin,
         requestDeposit,
         requestDepositEarnings,
         requestRepayCreditLine,

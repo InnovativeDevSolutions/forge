@@ -45,6 +45,9 @@ Rules validated by the Rust service:
 - `funds`, reputation, and credit line amounts cannot be negative.
 - Player registration is rejected when the player already belongs to a
   non-default organization.
+- Player registration through the server org addon requires a $50,000 personal
+  funds registration fee. The fee is charged from the player's bank balance
+  first, then on-hand cash if needed.
 
 ## Durable Commands
 
@@ -158,6 +161,10 @@ private _fleet = createHashMapFromArray [
 | `org:hot:remove` | `org_id` | `OK`. |
 
 ## Register from UI Context
+
+The server-side `forge_server_org` registration flow charges the $50,000
+registration fee before completing organization creation. If the organization
+service rejects the registration, the bank charge is refunded.
 
 ```sqf
 private _context = createHashMapFromArray [

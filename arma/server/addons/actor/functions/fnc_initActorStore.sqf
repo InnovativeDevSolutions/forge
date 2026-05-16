@@ -4,7 +4,7 @@
  * File: fnc_initActorStore.sqf
  * Author: IDSolutions
  * Date: 2025-12-17
- * Last Update: 2026-04-05
+ * Last Update: 2026-05-16
  * Public: Yes
  *
  * Description:
@@ -149,6 +149,108 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
 
         _uids select { _x isEqualType "" && { _x isNotEqualTo "" } }
     }],
+    ["sendNewActorWelcomeComms", compileFinal {
+        params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+        if (isNil QEGVAR(phone,PhoneStore)) exitWith {
+            ["WARNING", format ["Unable to send new actor welcome comms for %1: phone store is unavailable.", _uid]] call EFUNC(common,log);
+            false
+        };
+
+        EGVAR(phone,PhoneStore) call ["init", [_uid]];
+
+        private _phoneNumber = _actor getOrDefault ["phone_number", ""];
+        private _emailAddress = _actor getOrDefault ["email", ""];
+        private _welcomeEmail = format [
+            "Welcome to your first day on the job. You have been issued a phone with a new number of %1 and an email address of %2",
+            _phoneNumber,
+            _emailAddress
+        ];
+
+        private _player = [_uid] call EFUNC(common,getPlayer);
+        private _emailObj = EGVAR(phone,PhoneStore) call [
+            "sendEmail",
+            ["field_commander", _uid, "Job Orientation", _welcomeEmail]
+        ];
+
+        if (
+            _emailObj isEqualType createHashMap
+            && { _emailObj isNotEqualTo createHashMap }
+            && { !(isNull _player) }
+        ) then {
+            ["forge_client_phone_responseEmailReceived", [_emailObj], _player] call CFUNC(targetEvent);
+        };
+
+        private _messages = [
+            "Welcome to your first day on the job. You have been issued starting equipment and a small amount of RP and credit from Forge Dynamics. These are the only free things you will get for this identity, so save them, and use them wisely. You are responsible for all purchases going forward.",
+            "Cash in your Earnings at any laptop by Accessing the Bank and then Deposit Earnings. Do this before leaving the game session!"
+        ];
+
+        {
+            private _messageObj = EGVAR(phone,PhoneStore) call [
+                "sendMessage",
+                ["field_commander", _uid, _x]
+            ];
+            if (
+                _messageObj isEqualType createHashMap
+                && { _messageObj isNotEqualTo createHashMap }
+                && { !(isNull _player) }
+            ) then {
+                ["forge_client_phone_responseMessageReceived", [_messageObj], _player] call CFUNC(targetEvent);
+            };
+        } forEach _messages;
+
+        true
+    }],
+    ["grantNewActorStartingBankCredit", compileFinal {
+        params [["_uid", "", [""]], ["_amount", 2000, [0]]];
+
+        if (_uid isEqualTo "" || { _amount <= 0 }) exitWith { false };
+        if (isNil QEGVAR(bank,BankStore) || { isNil QEGVAR(bank,BankMessenger) }) exitWith {
+            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank store or messenger is unavailable.", _uid]] call EFUNC(common,log);
+            false
+        };
+
+        private _account = EGVAR(bank,BankStore) call ["get", [_uid, ""]];
+        if (_account isEqualTo createHashMap) then {
+            _account = EGVAR(bank,BankStore) call ["init", [_uid]];
+        };
+        if (_account isEqualTo createHashMap) exitWith {
+            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank account could not be initialized.", _uid]] call EFUNC(common,log);
+            false
+        };
+
+        private _currentBank = _account getOrDefault ["bank", 0];
+        if !(_currentBank isEqualType 0) then { _currentBank = 0; };
+
+        private _patch = EGVAR(bank,BankStore) call [
+            "mset",
+            [
+                _uid,
+                createHashMapFromArray [["bank", _currentBank + _amount]],
+                true
+            ]
+        ];
+        if (_patch isEqualTo createHashMap) exitWith {
+            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank account update failed.", _uid]] call EFUNC(common,log);
+            false
+        };
+
+        EGVAR(bank,BankMessenger) call ["sendAccountSync", [_uid, _patch]];
+
+        true
+    }],
+    ["bootstrapNewActor", compileFinal {
+        params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+
+        _self call ["sendNewActorWelcomeComms", [_uid, _actor]];
+        _self call ["grantNewActorStartingBankCredit", [_uid, 2000]];
+
+        true
+    }],
     ["loadHotActor", compileFinal {
         params [["_uid", "", [""]], ["_initialize", false, [false]]];
 
@@ -199,6 +301,13 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
             ["ERROR", format ["Actor create for %1 failed: %2", _uid, _createResult]] call EFUNC(common,log);
             false
         };
+
+        private _createdActor = fromJSON _createResult;
+        if !(_createdActor isEqualType createHashMap) then {
+            _createdActor = +_actor;
+        };
+        _createdActor = GVAR(ActorModel) call ["migrate", [_createdActor]];
+        _self call ["bootstrapNewActor", [_uid, _createdActor]];
 
         true
     }],

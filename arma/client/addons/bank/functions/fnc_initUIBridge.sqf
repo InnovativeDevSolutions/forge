@@ -63,6 +63,17 @@ GVAR(BankUIBridgeBaseClass) = compileFinal createHashMapFromArray [
         [SRPC(bank,requestDeposit), [getPlayerUID player, _amount]] call CFUNC(serverEvent);
         true
     }],
+    ["handleChangePinRequest", compileFinal {
+        params [["_data", createHashMap, [createHashMap]]];
+
+        private _currentPin = _data getOrDefault ["currentPin", ""];
+        private _newPin = _data getOrDefault ["newPin", ""];
+        if !(_currentPin isEqualType "") then { _currentPin = str _currentPin; };
+        if !(_newPin isEqualType "") then { _newPin = str _newPin; };
+
+        [SRPC(bank,requestChangePin), [getPlayerUID player, _currentPin, _newPin]] call CFUNC(serverEvent);
+        true
+    }],
     ["handleRepayCreditLineRequest", compileFinal {
         params [["_data", createHashMap, [createHashMap]]];
 

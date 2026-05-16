@@ -46,7 +46,7 @@ ${scopeSelector} .home-feedback {
                 h(
                     "p",
                     null,
-                    "Establish your Task Force, PMC, or Milsim unit with the Global Organization Network. Receive your official unit designator and TO&E authorization instantly.",
+                    "Establish your Task Force, PMC, or Milsim unit with the Global Organization Network. Registration requires $50,000 in personal funds.",
                 ),
                 h(
                     "button",

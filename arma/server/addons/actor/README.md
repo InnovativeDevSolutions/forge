@@ -12,6 +12,8 @@ life state, phone number, email, organization, and holster state.
 - `forge_server_main`
 - `forge_server_common`
 - `forge_server_extension` at runtime for actor extension calls
+- `forge_server_phone` for new actor welcome email and messages
+- `forge_server_bank` for new actor starting bank credit
 - `forge_client_actor` for response RPCs
 
 ## Main Components
@@ -23,6 +25,9 @@ life state, phone number, email, organization, and holster state.
 
 ## Runtime Behavior
 - Missing persistent actors can be created from live player snapshots.
+- Newly created actors receive a Field Commander job orientation email, two
+  Field Commander text messages, and a `$2,000` starting credit in their bank
+  account.
 - Hot actor reads are migrated and hydrated before use.
 - `saveHotState` in the main addon snapshots and saves actor state on player
   disconnect and mission end.

@@ -78,6 +78,11 @@ switch (_event) do {
             GVAR(BankUIBridge) call ["handleSubmitPinRequest", [_data]];
         };
     };
+    case "bank::pin::change::request": {
+        if !(isNil QGVAR(BankUIBridge)) then {
+            GVAR(BankUIBridge) call ["handleChangePinRequest", [_data]];
+        };
+    };
     default {
         hint format ["Unhandled bank UI event: %1", _event];
     };

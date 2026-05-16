@@ -32,6 +32,12 @@ PREP_RECOMPILE_END;
     GVAR(BankSessionManager) call ["submitPin", [_uid, _pin]];
 }] call CFUNC(addEventHandler);
 
+[QGVAR(requestChangePin), {
+    params [["_uid", "", [""]], ["_currentPin", "", [""]], ["_newPin", "", [""]]];
+
+    GVAR(BankStore) call ["changePin", [_uid, _currentPin, _newPin]];
+}] call CFUNC(addEventHandler);
+
 [QGVAR(requestTransfer), {
     params [["_uid", "", [""]], ["_target", "", [""]], ["_from", "", [""]], ["_amount", 0, [0]]];
 

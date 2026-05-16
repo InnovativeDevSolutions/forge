@@ -49,6 +49,9 @@
         requestRefresh() {
             return bridge.send("bank::refresh", {});
         },
+        requestChangePin(payload) {
+            return bridge.send("bank::pin::change::request", payload);
+        },
         requestSubmitPin(payload) {
             return bridge.send("bank::pin::request", payload);
         },

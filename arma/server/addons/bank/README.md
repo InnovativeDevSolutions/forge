@@ -3,7 +3,8 @@
 ## Overview
 The bank addon owns the SQF bridge for player accounts, cash and bank balances,
 PIN/session handling, transfers, checkout charging, earnings deposits, and
-credit-line repayment.
+credit-line repayment. It also verifies and persists player-requested ATM PIN
+changes.
 
 Account truth lives in the extension hot cache. SQF handles Arma-facing
 validation, client messaging, session state, and payment integration with other
@@ -28,7 +29,7 @@ server addons.
 ## Supported Operations
 - initialize and hydrate player bank state
 - deposit, withdraw, transfer, and deposit earnings
-- validate PIN-backed sessions
+- validate PIN-backed sessions and change ATM PINs
 - charge checkout previews and committed purchases
 - repay organization credit lines with rollback on failure
 - save hot bank state to durable storage

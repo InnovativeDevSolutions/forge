@@ -118,6 +118,16 @@ pub(super) fn route(
                 arguments[2].clone(),
             ))
         }
+        "bank:hot:change_pin" => {
+            expect_arg_count(function_name, &arguments, 4)?;
+            Ok(bank::change_pin_hot_bank(
+                call_context,
+                arguments[0].clone(),
+                arguments[1].clone(),
+                arguments[2].clone(),
+                arguments[3].clone(),
+            ))
+        }
         "bank:hot:save" => {
             expect_arg_count(function_name, &arguments, 1)?;
             Ok(bank::save_hot_bank(call_context, arguments[0].clone()))
