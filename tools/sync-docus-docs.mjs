@@ -327,9 +327,10 @@ icon: i-lucide-rocket
   },
   {
     target: '1.getting-started/0.index.md',
-    content: `# Getting Started
-
-Use this section as the main entry point for the Forge framework.
+    content: `---
+title: Getting Started
+description: Use this section as the main entry point for the Forge framework.
+---
 
 Forge combines:
 
@@ -425,9 +426,10 @@ icon: i-lucide-layers-3
   },
   {
     target: '3.server-modules/0.index.md',
-    content: `# Server Module Guides
-
-These pages document the authoritative server-side workflows in Forge.
+    content: `---
+title: Server Module Guides
+description: These pages document the authoritative server-side workflows in Forge.
+---
 
 Most modules follow the same shape:
 
@@ -559,7 +561,7 @@ for (const page of generatedPages) {
   const sourceRel = toPosix(page.source);
   const sourcePath = path.join(repoRoot, page.source);
   const rawContent = await fs.readFile(sourcePath, 'utf8');
-  const content = rewriteMarkdownLinks(rawContent, sourceRel);
+  const content = prepareGeneratedPageContent(rewriteMarkdownLinks(rawContent, sourceRel));
   await writeContentFile(page.target, content);
 }
 
@@ -593,6 +595,151 @@ function rewriteMarkdownLinks(content, sourceRel) {
 
     return `](${route}${targetHash ? `#${targetHash}` : ''})`;
   });
+}
+
+function prepareGeneratedPageContent(content) {
+  const title = extractFirstH1(content);
+  const description = extractLeadParagraph(content);
+  const body = stripMatchingLeadParagraph(stripFirstH1(content), description).trimStart();
+  const frontmatter = [
+    '---',
+    title ? `title: ${yamlString(title)}` : undefined,
+    description ? `description: ${yamlString(description)}` : undefined,
+    '---'
+  ].filter(Boolean).join('\n');
+
+  return `${frontmatter}\n\n${body}`;
+}
+
+function extractFirstH1(content) {
+  const match = content.match(/^#\s+(.+?)\s*#*\s*$/m);
+  return match ? match[1].trim() : '';
+}
+
+function extractLeadParagraph(content) {
+  const lines = stripFirstH1(content).split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      continue;
+    }
+
+    if (!isParagraphStart(line)) {
+      continue;
+    }
+
+    const paragraph = [];
+    for (let paragraphIndex = index; paragraphIndex < lines.length; paragraphIndex += 1) {
+      const paragraphLine = lines[paragraphIndex].trim();
+      if (!paragraphLine) {
+        break;
+      }
+
+      paragraph.push(paragraphLine);
+    }
+
+    return normalizeParagraph(paragraph.join(' '));
+  }
+
+  return '';
+}
+
+function stripFirstH1(content) {
+  const lines = content.split(/\r?\n/);
+  const headingIndex = lines.findIndex((line) => /^#\s+.+/.test(line.trim()));
+  if (headingIndex === -1) {
+    return content;
+  }
+
+  lines.splice(headingIndex, 1);
+  while (headingIndex < lines.length && !lines[headingIndex].trim()) {
+    lines.splice(headingIndex, 1);
+  }
+
+  return lines.join('\n');
+}
+
+function stripMatchingLeadParagraph(content, description) {
+  if (!description) {
+    return content;
+  }
+
+  const lines = content.split(/\r?\n/);
+  let startIndex = 0;
+  while (startIndex < lines.length && !lines[startIndex].trim()) {
+    startIndex += 1;
+  }
+
+  if (startIndex < lines.length && /^##\s+overview\s*$/i.test(lines[startIndex].trim())) {
+    const sectionStart = startIndex;
+    startIndex += 1;
+    while (startIndex < lines.length && !lines[startIndex].trim()) {
+      startIndex += 1;
+    }
+
+    let sectionEnd = startIndex;
+    const sectionLines = [];
+    while (sectionEnd < lines.length && !/^#{2,}\s+/.test(lines[sectionEnd].trim())) {
+      if (lines[sectionEnd].trim()) {
+        sectionLines.push(lines[sectionEnd].trim());
+      }
+
+      sectionEnd += 1;
+    }
+
+    if (normalizeParagraph(sectionLines.join(' ')) === description) {
+      while (sectionEnd < lines.length && !lines[sectionEnd].trim()) {
+        sectionEnd += 1;
+      }
+
+      return [...lines.slice(0, sectionStart), ...lines.slice(sectionEnd)].join('\n');
+    }
+
+    startIndex = sectionStart;
+  }
+
+  if (startIndex >= lines.length || !isParagraphStart(lines[startIndex].trim())) {
+    return content;
+  }
+
+  let endIndex = startIndex;
+  const paragraph = [];
+  while (endIndex < lines.length && lines[endIndex].trim()) {
+    paragraph.push(lines[endIndex].trim());
+    endIndex += 1;
+  }
+
+  if (normalizeParagraph(paragraph.join(' ')) !== description) {
+    return content;
+  }
+
+  while (endIndex < lines.length && !lines[endIndex].trim()) {
+    endIndex += 1;
+  }
+
+  return [...lines.slice(0, startIndex), ...lines.slice(endIndex)].join('\n');
+}
+
+function isParagraphStart(line) {
+  return !(
+    line.startsWith('#') ||
+    line.startsWith('![') ||
+    line.startsWith('```') ||
+    line.startsWith(':::') ||
+    line.startsWith('::') ||
+    line.startsWith('|') ||
+    /^[-*+]\s+/.test(line) ||
+    /^\d+\.\s+/.test(line)
+  );
+}
+
+function normalizeParagraph(value) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function yamlString(value) {
+  return JSON.stringify(value);
 }
 
 function toRoute(target) {

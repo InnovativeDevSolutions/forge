@@ -29,7 +29,7 @@ request and response chunks through the extension transport module.
 ### Client Addons
 
 Client addons live under `arma/client/addons`. They own local player UX,
-keybinds, browser UI dialogs, and UI-to-SQF event handling. When a client needs`
+keybinds, browser UI dialogs, and UI-to-SQF event handling. When a client needs
 durable or authoritative state, it routes work to the matching server addon
 instead of touching persistence directly.
 

@@ -3,7 +3,10 @@ const baseURL =
   (process.env.NODE_ENV === 'production' ? '/forge/' : '/');
 const siteUrl =
   process.env.DOCS_SITE_URL ||
-  'https://innovativedevsolutions.github.io';
+  'https://innovativedevsolutions.github.io/forge';
+
+process.env.NUXT_SITE_URL ||= siteUrl;
+process.env.NUXT_PUBLIC_SITE_URL ||= siteUrl;
 
 export default defineNuxtConfig({
   extends: ['docus'],

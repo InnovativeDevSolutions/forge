@@ -4,7 +4,7 @@ const repoUrl =
 const repoBranch = process.env.DOCS_REPO_BRANCH || 'master';
 const siteUrl =
   process.env.DOCS_SITE_URL ||
-  'https://innovativedevsolutions.github.io';
+  'https://innovativedevsolutions.github.io/forge';
 
 export default defineAppConfig({
   site: {
