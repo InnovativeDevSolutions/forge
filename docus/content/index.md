@@ -136,6 +136,18 @@ Documentation Areas
 
   :::u-page-feature
   ---
+  icon: i-lucide-map
+  to: /getting-started/mission-designer
+  ---
+  #title
+  Mission [Designers]{.text-primary}
+
+  #description
+  Eden object placement, garage markers, and CAD-compatible task setup.
+  :::
+
+  :::u-page-feature
+  ---
   icon: i-lucide-server-cog
   to: /server-extension
   ---

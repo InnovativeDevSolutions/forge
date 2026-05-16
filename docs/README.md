@@ -13,6 +13,9 @@ collects framework-level documentation for those pieces.
   crates.
 - [Development Guide](./DEVELOPMENT_GUIDE.md): how to add or change a module
   without breaking the framework boundaries.
+- [Mission Designer Guide](./MISSION_DESIGNER_GUIDE.md): how to place Eden
+  objects, garage markers, and CAD-compatible task modules for playable
+  missions.
 - [SurrealDB Setup](./surrealdb-setup.md): where to get SurrealDB or
   Surrealist and how to connect Forge to it for local or live use.
 

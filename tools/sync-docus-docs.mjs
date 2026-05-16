@@ -20,8 +20,12 @@ const generatedPages = [
     target: '1.getting-started/3.development.md'
   },
   {
+    source: 'docs/MISSION_DESIGNER_GUIDE.md',
+    target: '1.getting-started/4.mission-designer.md'
+  },
+  {
     source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/4.surrealdb-setup.md'
+    target: '1.getting-started/5.surrealdb-setup.md'
   },
   {
     source: 'arma/server/docs/README.md',
@@ -287,6 +291,18 @@ Documentation Areas
 
   :::u-page-feature
   ---
+  icon: i-lucide-map
+  to: /getting-started/mission-designer
+  ---
+  #title
+  Mission [Designers]{.text-primary}
+
+  #description
+  Eden object placement, garage markers, and CAD-compatible task setup.
+  :::
+
+  :::u-page-feature
+  ---
   icon: i-lucide-server-cog
   to: /server-extension
   ---
@@ -392,6 +408,16 @@ npm run build:webui
   to: /getting-started/development
   ---
   See the rules for adding modules and changing boundaries without regressions.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-map
+  title: Mission Designer Guide
+  to: /getting-started/mission-designer
+  ---
+  Place Eden interaction objects, garage markers, and Forge task modules for
+  playable missions.
   :::
 
   :::u-page-card

@@ -51,7 +51,7 @@ mission object variables:
 
 | Variable | Action |
 | --- | --- |
-| `storeType` | store |
+| `isStore` | store |
 | `isAtm` | ATM |
 | `isBank` | bank |
 | `isGarage` | garage |
