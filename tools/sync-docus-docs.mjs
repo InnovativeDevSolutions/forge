@@ -421,7 +421,7 @@ npm run build:webui
   {
     target: '2.server-extension/.navigation.yml',
     content: `title: Forge Server Extension
-icon: i-lucide-puzzle
+icon: i-lucide-server-cog
 `
   },
   {
