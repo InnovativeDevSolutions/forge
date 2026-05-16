@@ -419,6 +419,12 @@ npm run build:webui
 `
   },
   {
+    target: '2.server-extension/.navigation.yml',
+    content: `title: Forge Server Extension
+icon: i-lucide-puzzle
+`
+  },
+  {
     target: '3.server-modules/.navigation.yml',
     content: `title: Server Modules
 icon: i-lucide-layers-3
