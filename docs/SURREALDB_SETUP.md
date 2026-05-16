@@ -14,7 +14,23 @@ hosting the live Arma server.
 Official SurrealDB resources:
 
 - [SurrealDB install page](https://surrealdb.com/install)
-- [SurrealDB CLI `start` reference](https://surrealdb.com/docs/reference/cli/surrealdb-cli/commands/start)
+- [SurrealDB CLI `start` reference](https://surrealdb.com/docs/surrealdb/cli/start)
+
+Forge also includes helper scripts under `arma/server/surrealdb`:
+
+```powershell
+cd arma/server/surrealdb
+.\UpdateMe.bat
+.\RunMe.bat
+```
+
+On Linux or macOS:
+
+```bash
+cd arma/server/surrealdb
+./setup.sh
+./run.sh
+```
 
 Install SurrealDB with the official method for your platform:
 
@@ -37,8 +53,11 @@ For Forge, start a persistent local database instead of the default in-memory
 mode:
 
 ```powershell
-surreal start surrealkv://forge.db --bind 127.0.0.1:8000 --user root --pass root
+surreal start --user root --pass root --bind 127.0.0.1:8000 rocksdb://forge.db
 ```
+
+`root`/`root` is only the local development default. For a public or shared
+server, set a real password and keep `config.toml` aligned.
 
 Then copy `arma/server/extension/config.example.toml` to `config.toml` next to
 `forge_server_x64.dll` and keep the values aligned with the database you
@@ -75,9 +94,9 @@ or live server and you are not changing Forge source code.
 
 Official SurrealDB resources:
 
-- [Surrealist installation](https://surrealdb.com/docs/explore/surrealist/installation)
+- [Surrealist installation](https://surrealdb.com/docs/surrealist/installation)
 - [Surrealist web app](https://app.surrealdb.com)
-- [Surrealist local database serving](https://surrealdb.com/docs/explore/surrealist/concepts/local-database-serving)
+- [Surrealist local database serving](https://surrealdb.com/docs/surrealist/concepts/local-database-serving)
 
 Recommended approach:
 

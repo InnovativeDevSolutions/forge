@@ -39,6 +39,7 @@ needed by `forge_server_addons_extension_fnc_extCall`.
 - [Actor](../../../docs/ACTOR_USAGE_GUIDE.md)
 - [Bank](../../../docs/BANK_USAGE_GUIDE.md)
 - [CAD](../../../docs/CAD_USAGE_GUIDE.md)
+- [Economy](../../../docs/ECONOMY_USAGE_GUIDE.md)
 - [Garage](../../../docs/GARAGE_USAGE_GUIDE.md)
 - [Locker](../../../docs/LOCKER_USAGE_GUIDE.md)
 - [Organization](../../../docs/ORG_USAGE_GUIDE.md)

@@ -26,11 +26,12 @@ Local utility app state is stored in `profileNamespace`:
 - alarms
 - theme/preferences
 
-## Phone Class
+## Phone Repository
 
-`forge_client_phone_fnc_initClass` creates `GVAR(PhoneClass)`.
+`forge_client_phone_fnc_initRepository` creates `GVAR(PhoneRepository)`.
 
-The phone class currently owns local notes, events, and settings helpers.
+The phone repository owns local notes, events, clocks, alarms, and settings
+helpers.
 Contacts, messages, and emails continue to use server-backed request/response
 events.
 

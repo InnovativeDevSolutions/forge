@@ -2,7 +2,7 @@
 
 ## Overview
 The phone addon provides the in-game phone UI for contacts, SMS messages, and
-email. It keeps a local `PhoneClass` facade for view state and sends all
+email. It keeps a local `PhoneRepository` facade for view state and sends all
 authoritative operations to the server phone addon.
 
 ## Dependencies
@@ -11,7 +11,7 @@ authoritative operations to the server phone addon.
 - notifications for contact/message/email feedback
 
 ## Main Components
-- `fnc_initClass.sqf` initializes the local phone facade.
+- `fnc_initRepository.sqf` initializes the local phone repository.
 - `fnc_handleUIEvents.sqf` translates browser events into server phone RPCs.
 - `fnc_openUI.sqf` opens `RscPhone`.
 - `ui/_site` contains the browser phone UI source.

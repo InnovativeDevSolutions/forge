@@ -94,9 +94,9 @@ or live server and you are not changing Forge source code.
 
 Official SurrealDB resources:
 
-- [Surrealist installation](https://surrealdb.com/docs/explore/surrealist/installation)
+- [Surrealist installation](https://surrealdb.com/docs/surrealist/installation)
 - [Surrealist web app](https://app.surrealdb.com)
-- [Surrealist local database serving](https://surrealdb.com/docs/explore/surrealist/concepts/local-database-serving)
+- [Surrealist local database serving](https://surrealdb.com/docs/surrealist/concepts/local-database-serving)
 
 Recommended approach:
 
