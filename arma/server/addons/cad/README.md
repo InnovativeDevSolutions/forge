@@ -48,6 +48,16 @@ The addon listens to and emits events through the event bus:
 
 Successful mutations may invalidate CAD state globally so clients refresh their views.
 
+## Contract Lifecycle
+CAD assignment and task acceptance are intentionally separate. Dispatch
+assignment reserves a contract for a group and marks the CAD assignment
+`assigned`; it does not start task logic. The assigned group leader must
+acknowledge the assignment before the task is accepted and ownership is bound.
+If the leader declines, CAD removes the assignment and the contract returns to
+the open board. Task status follows the same lifecycle: `available` on
+creation, `assigned` after dispatch assignment, and `active` after
+acknowledgement.
+
 ## Notes
-CAD hydrate payloads include active task catalog entries from `TaskStore` and
+CAD hydrate payloads include assignable task catalog entries from `TaskStore` and
 organization context from `ActorStore`.

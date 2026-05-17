@@ -126,6 +126,14 @@ private _result = "forge_server" callExtension ["cad:orders:create_from_context"
 
 ## Assignment Workflow
 
+Task contracts have two separate phases. Dispatch assignment reserves a
+contract for a group and sets the CAD assignment state to `assigned`, but it
+does not accept or start the task. The assigned group leader must acknowledge
+the assignment before task ownership is bound and task logic starts. If the
+leader declines, the CAD assignment is removed and the contract returns to the
+open board. Task status follows the same lifecycle: `available` on creation,
+`assigned` after dispatch assignment, and `active` after acknowledgement.
+
 ```sqf
 private _assignment = createHashMapFromArray [
     ["groupId", "bravo"],

@@ -49,7 +49,7 @@ impl<R: TaskRepository> TaskStateService<R> {
         let mut active_entries = Vec::new();
 
         for (task_id, status) in active_statuses {
-            if status != "active" {
+            if !matches!(status.as_str(), "available" | "assigned" | "active") {
                 continue;
             }
 
@@ -129,8 +129,11 @@ impl<R: TaskRepository> TaskStateService<R> {
             return Err("Missing task ID or requester UID.".to_string());
         }
 
-        if self.get_status(entry_id.clone())? != "active" {
-            return Err("Task is no longer active.".to_string());
+        if !matches!(
+            self.get_status(entry_id.clone())?.as_str(),
+            "assigned" | "active"
+        ) {
+            return Err("Task is not assigned or active.".to_string());
         }
 
         if let Some(existing) = self.repository.get_ownership(&entry_id)?
@@ -381,9 +384,21 @@ mod tests {
     }
 
     #[test]
-    fn list_active_catalog_only_returns_active_entries() {
+    fn list_active_catalog_returns_assignable_and_active_entries() {
         let service = TaskStateService::new(InMemoryTaskRepository::new());
 
+        service
+            .upsert_catalog_entry(
+                "task-available".to_string(),
+                r#"{"title":"Available"}"#.to_string(),
+            )
+            .expect("available catalog upsert should succeed");
+        service
+            .upsert_catalog_entry(
+                "task-assigned".to_string(),
+                r#"{"title":"Assigned"}"#.to_string(),
+            )
+            .expect("assigned catalog upsert should succeed");
         service
             .upsert_catalog_entry(
                 "task-active".to_string(),
@@ -393,6 +408,12 @@ mod tests {
         service
             .upsert_catalog_entry("task-done".to_string(), r#"{"title":"Done"}"#.to_string())
             .expect("done catalog upsert should succeed");
+        service
+            .set_status("task-available".to_string(), "available".to_string())
+            .expect("available status update should succeed");
+        service
+            .set_status("task-assigned".to_string(), "assigned".to_string())
+            .expect("assigned status update should succeed");
         service
             .set_status("task-active".to_string(), "active".to_string())
             .expect("active status update should succeed");
@@ -404,10 +425,14 @@ mod tests {
             .list_active_catalog()
             .expect("active catalog should build");
 
-        assert_eq!(active_catalog.len(), 1);
-        assert_eq!(
-            active_catalog[0].get("taskId").and_then(Value::as_str),
-            Some("task-active")
-        );
+        let task_ids: Vec<_> = active_catalog
+            .iter()
+            .filter_map(|entry| entry.get("taskId").and_then(Value::as_str))
+            .collect();
+
+        assert_eq!(active_catalog.len(), 3);
+        assert!(task_ids.contains(&"task-available"));
+        assert!(task_ids.contains(&"task-assigned"));
+        assert!(task_ids.contains(&"task-active"));
     }
 }

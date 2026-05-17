@@ -71,7 +71,7 @@ if (_taskID isNotEqualTo "") then {
         ]] call EFUNC(common,log);
     };
 
-    GVAR(TaskStore) call ["setTaskStatus", [_taskID, "active"]];
+    GVAR(TaskStore) call ["setTaskStatus", [_taskID, "available"]];
 };
 
 switch (_taskType) do {

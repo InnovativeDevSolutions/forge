@@ -100,7 +100,11 @@ system-generated content rather than a hand-authored task creation path.
 
 ### CAD Compatibility
 CAD hydrates assignable tasks from `TaskStore.getActiveTaskCatalog`. A task must
-have a catalog entry and active task status before CAD can show and assign it.
+have a catalog entry and a task status of `available`, `assigned`, or `active`
+before CAD can show it.
+CAD assignment reserves a task for a group, but task logic waits until the
+assigned group leader acknowledges the assignment. Declined assignments return
+to the open CAD board.
 
 CAD-compatible creation paths:
 - Eden modules: compatible because they delegate to `fnc_startTask.sqf`
@@ -111,11 +115,11 @@ CAD-compatible creation paths:
 
 Limited or incompatible paths:
 - `fnc_handler.sqf`: only compatible if a catalog entry was already registered
-  elsewhere. The handler sets active status and ownership, but it does not
+  elsewhere. The handler sets available status and ownership, but it does not
   create the BIS task shown in the map task tab or upsert the catalog entry
 - direct task function calls: not CAD-compatible by default. They bypass
   `fnc_startTask.sqf` and usually do not register the task catalog entry or
-  active status that CAD hydrates from. They also only call
+  available/assigned/active status that CAD hydrates from. They also only call
   `BIS_fnc_taskSetState` at completion/failure; they do not create the BIS task
   first
 

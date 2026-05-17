@@ -5,9 +5,9 @@
  * Initializes the task store for task entity tracking, participant
  * contribution tracking, and task outcome application.
  *
- * Task metadata is extension-backed but intentionally transient. The
- * task backend is reset when this store is created so task/catalog/status
- * state starts clean for each server or mission lifecycle.
+ * Task metadata is extension-backed but intentionally transient. The task
+ * backend is reset explicitly from task preInit so task/catalog/status state
+ * starts clean before mission setup repopulates contracts.
  *
  * Arguments:
  * None
@@ -37,7 +37,6 @@ GVAR(TaskStore) = createHashMapObject [[
             ["targets", createHashMap]
         ]];
 
-        _self call ["resetMissionState", []];
     }],
     ["resetMissionState", compileFinal {
         _self set ["participantRegistry", createHashMap];
@@ -62,6 +61,7 @@ GVAR(TaskStore) = createHashMapObject [[
             false
         };
 
+        ["INFO", "Task backend state reset for mission lifecycle."] call EFUNC(common,log);
         true
     }],
     ["callTaskStateEnvelope", compileFinal {

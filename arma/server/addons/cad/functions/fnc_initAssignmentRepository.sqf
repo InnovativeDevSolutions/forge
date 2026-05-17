@@ -50,9 +50,10 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
                 if ((_y getOrDefault ["state", ""]) isNotEqualTo "acknowledged") then { continue; };
                 if ((_y getOrDefault ["acknowledgedByUid", ""]) isEqualTo "") then { continue; };
                 if ((_dispatchOrderRegistry getOrDefault [_x, createHashMap]) isNotEqualTo createHashMap) then { continue; };
-                if ((EGVAR(task,TaskStore) call ["getTaskStatus", [_x]]) isNotEqualTo "active") then { continue; };
+                if !((EGVAR(task,TaskStore) call ["getTaskStatus", [_x]]) in ["assigned", "active"]) then { continue; };
 
-                EGVAR(task,TaskStore) call ["bindTaskOwnership", [_x, _y getOrDefault ["acknowledgedByUid", ""]]];
+                EGVAR(task,TaskStore) call ["acceptTask", [_x, _y getOrDefault ["acknowledgedByUid", ""]]];
+                EGVAR(task,TaskStore) call ["setTaskStatus", [_x, "active"]];
             } forEach _assignmentRegistry;
 
             _self set ["ownershipHydrated", true];
@@ -77,7 +78,7 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
             };
 
             private _status = EGVAR(task,TaskStore) call ["getTaskStatus", [_x]];
-            if !(_status in ["active", ""]) then {
+            if !(_status in ["available", "assigned", "active", ""]) then {
                 _keysToRemove pushBack _x;
             };
         } forEach _assignmentRegistry;
@@ -145,7 +146,7 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
 
             private _dispatchOrder = +(_dispatchOrderRegistry getOrDefault [_x, createHashMap]);
             if (_dispatchOrder isEqualTo createHashMap) then {
-                if ((EGVAR(task,TaskStore) call ["getTaskStatus", [_x]]) isNotEqualTo "active") then { continue; };
+                if !((EGVAR(task,TaskStore) call ["getTaskStatus", [_x]]) in ["assigned", "active"]) then { continue; };
                 _taskID = _x;
             } else {
                 _taskID = _dispatchOrder getOrDefault ["title", _x];
@@ -235,8 +236,8 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
         private _dispatchOrderRegistry = _state getOrDefault ["dispatchOrders", createHashMap];
         private _isDispatchOrder = (_dispatchOrderRegistry getOrDefault [_taskID, createHashMap]) isNotEqualTo createHashMap;
 
-        if (!_isDispatchOrder && { (EGVAR(task,TaskStore) call ["getTaskStatus", [_taskID]]) isNotEqualTo "active" }) exitWith {
-            _result set ["message", "Task is no longer active."];
+        if (!_isDispatchOrder && { (EGVAR(task,TaskStore) call ["getTaskStatus", [_taskID]]) isNotEqualTo "available" }) exitWith {
+            _result set ["message", "Task is no longer available."];
             _result
         };
 
@@ -300,23 +301,15 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
             _activityRepository call ["appendEntry", [_activityEntry]];
         };
 
+        if (!_isDispatchOrder) then {
+            EGVAR(task,TaskStore) call ["setTaskStatus", [_taskID, "assigned"]];
+        };
+
         _result set ["success", true];
         _result set ["message", _assignData getOrDefault ["message", ["Task assigned.", "Dispatch order assigned."] select _isDispatchOrder]];
         _result set ["assignment", _assignment];
         _result set ["leaderUid", _leaderUid];
         _result set ["isDispatchOrder", _isDispatchOrder];
-        if (!_isDispatchOrder && { !(isNil QEGVAR(task,TaskStore)) }) then {
-            private _acceptResult = EGVAR(task,TaskStore) call ["acceptTask", [_taskID, _leaderUid]];
-            if !(_acceptResult getOrDefault ["success", false]) then {
-                ["WARNING", format [
-                    "CAD assigned task %1 to group %2 but could not mark it accepted for leader %3: %4",
-                    _taskID,
-                    _groupID,
-                    _leaderUid,
-                    _acceptResult getOrDefault ["message", "Unknown error."]
-                ]] call EFUNC(common,log);
-            };
-        };
         if (_isDispatchOrder) then {
             _result set ["order", +(_dispatchOrderRegistry getOrDefault [_taskID, createHashMap])];
         };
@@ -524,16 +517,18 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
         switch (_transition) do {
             case "acknowledge": {
                 if (!_isDispatchOrder) then {
-                    private _bindResult = EGVAR(task,TaskStore) call ["bindTaskOwnership", [_taskID, _requesterUid]];
-                    if !(_bindResult getOrDefault ["success", false]) exitWith {
-                        _result set ["message", _bindResult getOrDefault ["message", "Failed to bind task ownership."]];
+                    private _acceptResult = EGVAR(task,TaskStore) call ["acceptTask", [_taskID, _requesterUid]];
+                    if !(_acceptResult getOrDefault ["success", false]) exitWith {
+                        _result set ["message", _acceptResult getOrDefault ["message", "Failed to accept task."]];
                         _result
                     };
+                    EGVAR(task,TaskStore) call ["setTaskStatus", [_taskID, "active"]];
                 };
             };
             case "decline": {
                 if (!_isDispatchOrder) then {
                     EGVAR(task,TaskStore) call ["releaseTaskOwnership", [_taskID]];
+                    EGVAR(task,TaskStore) call ["setTaskStatus", [_taskID, "available"]];
                 };
             };
         };
