@@ -28,7 +28,7 @@ if (isNil QEGVAR(bank,BankSessionManager)) then { call EFUNC(bank,initSessionMan
 if (isNil QEGVAR(bank,BankMessenger)) then { call EFUNC(bank,initMessenger); };
 if (isNil QEGVAR(bank,BankModel)) then { call EFUNC(bank,initModel); };
 if (isNil QEGVAR(bank,BankPayloadBuilder)) then { call EFUNC(bank,initPayloadBuilder); };
-if (isNil QEGVAR(bank,BankStore)) then { call EFUNC(bank,initStore); };
+if (isNil QEGVAR(bank,BankStore)) then { call EFUNC(bank,initBankStore); };
 
 // Garage
 if (isNil QEGVAR(garage,GarageStore)) then { call EFUNC(garage,initGarageStore); };

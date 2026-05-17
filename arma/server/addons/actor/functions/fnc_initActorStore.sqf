@@ -203,51 +203,12 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
 
         true
     }],
-    ["grantNewActorStartingBankCredit", compileFinal {
-        params [["_uid", "", [""]], ["_amount", 2000, [0]]];
-
-        if (_uid isEqualTo "" || { _amount <= 0 }) exitWith { false };
-        if (isNil QEGVAR(bank,BankStore) || { isNil QEGVAR(bank,BankMessenger) }) exitWith {
-            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank store or messenger is unavailable.", _uid]] call EFUNC(common,log);
-            false
-        };
-
-        private _account = EGVAR(bank,BankStore) call ["get", [_uid, ""]];
-        if (_account isEqualTo createHashMap) then {
-            _account = EGVAR(bank,BankStore) call ["init", [_uid]];
-        };
-        if (_account isEqualTo createHashMap) exitWith {
-            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank account could not be initialized.", _uid]] call EFUNC(common,log);
-            false
-        };
-
-        private _currentBank = _account getOrDefault ["bank", 0];
-        if !(_currentBank isEqualType 0) then { _currentBank = 0; };
-
-        private _patch = EGVAR(bank,BankStore) call [
-            "mset",
-            [
-                _uid,
-                createHashMapFromArray [["bank", _currentBank + _amount]],
-                true
-            ]
-        ];
-        if (_patch isEqualTo createHashMap) exitWith {
-            ["WARNING", format ["Unable to grant new actor starting bank credit for %1: bank account update failed.", _uid]] call EFUNC(common,log);
-            false
-        };
-
-        EGVAR(bank,BankMessenger) call ["sendAccountSync", [_uid, _patch]];
-
-        true
-    }],
     ["bootstrapNewActor", compileFinal {
         params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
 
         if (_uid isEqualTo "") exitWith { false };
 
         _self call ["sendNewActorWelcomeComms", [_uid, _actor]];
-        _self call ["grantNewActorStartingBankCredit", [_uid, 2000]];
 
         true
     }],
@@ -307,8 +268,6 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
             _createdActor = +_actor;
         };
         _createdActor = GVAR(ActorModel) call ["migrate", [_createdActor]];
-        _self call ["bootstrapNewActor", [_uid, _createdActor]];
-
         true
     }],
     ["hydrateActorIfNeeded", compileFinal {
