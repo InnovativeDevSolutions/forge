@@ -37,6 +37,21 @@ GVAR(TaskStore) = createHashMapObject [[
             ["targets", createHashMap]
         ]];
 
+        _self call ["resetMissionState", []];
+    }],
+    ["resetMissionState", compileFinal {
+        _self set ["participantRegistry", createHashMap];
+        _self set ["taskLifecycleRegistry", createHashMap];
+        _self set ["taskEntityRegistries", createHashMapFromArray [
+            ["cargo", createHashMap],
+            ["hostages", createHashMap],
+            ["hvts", createHashMap],
+            ["ieds", createHashMap],
+            ["entities", createHashMap],
+            ["shooters", createHashMap],
+            ["targets", createHashMap]
+        ]];
+
         // Task extension state is mission-scoped and intentionally reset on
         // startup rather than being treated as durable account data.
         ["task:reset", []] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
@@ -44,9 +59,12 @@ GVAR(TaskStore) = createHashMapObject [[
             !_isSuccess
             || { !(_result isEqualType "") }
             || { (_result find "Error:") == 0 }
-        ) then {
+        ) exitWith {
             ["WARNING", "Failed to reset task backend state during task store initialization."] call EFUNC(common,log);
+            false
         };
+
+        true
     }],
     ["callTaskStateEnvelope", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];

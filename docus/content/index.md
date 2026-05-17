@@ -16,6 +16,10 @@ browser-backed player interfaces.
 Use these docs to understand the runtime architecture, extension API surface,
 server gameplay modules, and client addon integration patterns.
 
+Server owners and developers must start SurrealDB and place a matching
+`config.toml` beside `forge_server_x64.dll` before launching a
+Forge-enabled server or local multiplayer test.
+
 #links
   :::u-button
   ---

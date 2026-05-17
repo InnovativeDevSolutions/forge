@@ -114,6 +114,18 @@ GVAR(DefuseTaskBaseClass) = createHashMapFromArray [
 
         true
     }],
+    ["waitForAssignment", compileFinal {
+        private _taskID = _self getOrDefault ["taskID", ""];
+
+        if (_taskID isEqualTo "" || { !(_self getOrDefault ["useTaskStore", false]) }) exitWith { true };
+
+        waitUntil {
+            sleep 1;
+            GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
+        };
+
+        true
+    }],
     ["startIedControllers", compileFinal {
         if ((_self getOrDefault ["iedControllers", []]) isNotEqualTo []) exitWith { true };
 
@@ -234,6 +246,7 @@ GVAR(DefuseTaskBaseClass) = createHashMapFromArray [
     }],
     ["runLoop", compileFinal {
         _self call ["waitForRequiredEntities", []];
+        _self call ["waitForAssignment", []];
         _self call ["startIedControllers", []];
         _self call ["markActive", []];
 

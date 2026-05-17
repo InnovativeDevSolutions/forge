@@ -5,7 +5,9 @@ This guide covers the usual path for adding or changing a Forge module.
 ## Local Checks
 
 Before running storage-backed workflows locally, complete
-[SurrealDB Setup](./surrealdb-setup.md).
+[SurrealDB Setup](./surrealdb-setup.md). A local or dedicated server launch must
+have SurrealDB running and a `config.toml` beside `forge_server_x64.dll` that
+matches the running database.
 
 Run these before pushing Rust or extension changes:
 

@@ -171,6 +171,10 @@ browser-backed player interfaces.
 Use these docs to understand the runtime architecture, extension API surface,
 server gameplay modules, and client addon integration patterns.
 
+Server owners and developers must start SurrealDB and place a matching
+\`config.toml\` beside \`forge_server_x64.dll\` before launching a
+Forge-enabled server or local multiplayer test.
+
 #links
   :::u-button
   ---
@@ -371,6 +375,17 @@ Forge combines:
 - a Rust server extension for command routing and persistence
 - shared Rust crates for models, repositories, and services
 - SurrealDB for durable storage
+
+## Launch Prerequisites
+
+Before starting a Forge-enabled dedicated server or local multiplayer test,
+server owners and developers must start SurrealDB and make sure
+\`config.toml\` is beside \`forge_server_x64.dll\`. The config values must match
+the running SurrealDB endpoint, namespace, database, username, and password.
+
+Mission designers and players do not need their own SurrealDB instance unless
+they are hosting locally, but the server they join must have these prerequisites
+ready.
 
 ## Common Commands
 

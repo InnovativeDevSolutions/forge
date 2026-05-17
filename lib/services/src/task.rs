@@ -80,9 +80,10 @@ impl<R: TaskRepository> TaskStateService<R> {
 
         self.repository
             .save_ownership(entry_id.clone(), ownership.clone())?;
+        let accepted = !ownership.requester_uid.trim().is_empty();
         let entry = self.patch_catalog_ownership(
             &entry_id,
-            true,
+            accepted,
             &ownership.requester_uid,
             &ownership.org_id,
         )?;
@@ -323,6 +324,39 @@ mod tests {
         assert_eq!(
             stored.fields.get("requesterUid").and_then(Value::as_str),
             Some("uid-1")
+        );
+    }
+
+    #[test]
+    fn bind_ownership_without_requester_does_not_accept_task() {
+        let repository = InMemoryTaskRepository::new();
+        let service = TaskStateService::new(repository.clone());
+
+        service
+            .upsert_catalog_entry("task-1".to_string(), r#"{"title":"Hostage"}"#.to_string())
+            .expect("catalog upsert should succeed");
+
+        let result = service
+            .bind_ownership(
+                "task-1".to_string(),
+                r#"{"requesterUid":"","orgId":"default"}"#.to_string(),
+            )
+            .expect("bind should succeed");
+
+        assert_eq!(result.requester_uid, "");
+        assert_eq!(result.org_id, "default");
+        assert_eq!(
+            result.entry.get("accepted").and_then(Value::as_bool),
+            Some(false)
+        );
+
+        let stored = repository
+            .get_catalog_entry("task-1")
+            .expect("catalog lookup should succeed")
+            .expect("catalog entry should exist");
+        assert_eq!(
+            stored.fields.get("requesterUid").and_then(Value::as_str),
+            Some("")
         );
     }
 

@@ -89,6 +89,18 @@ GVAR(AttackTaskBaseClass) = createHashMapFromArray [
         private _targets = _self getOrDefault ["targets", []];
         { !alive _x } count _targets
     }],
+    ["waitForAssignment", compileFinal {
+        private _taskID = _self getOrDefault ["taskID", ""];
+
+        if (_taskID isEqualTo "" || { !(_self getOrDefault ["useTaskStore", false]) }) exitWith { true };
+
+        waitUntil {
+            sleep 1;
+            GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
+        };
+
+        true
+    }],
     ["tick", compileFinal {
         private _startedAt = _self getOrDefault ["startedAt", -1];
         private _timeLimit = _self getOrDefault ["timeLimit", 0];
@@ -136,26 +148,7 @@ GVAR(AttackTaskBaseClass) = createHashMapFromArray [
             };
         };
 
-        if (_timeLimit isNotEqualTo 0 && { _useTaskStore }) then {
-            private _catalogEntry = GVAR(TaskStore) call ["getTaskCatalogEntry", [_taskID]];
-            ["INFO", format [
-                "Attack task %1 initial state before acceptance wait. Accepted=%2, RequesterUid='%3', Source='%4', TimeLimit=%5s",
-                _taskID,
-                _catalogEntry getOrDefault ["accepted", false],
-                _catalogEntry getOrDefault ["requesterUid", ""],
-                _catalogEntry getOrDefault ["source", ""],
-                _timeLimit
-            ]] call EFUNC(common,log);
-
-            ["INFO", format ["Attack task %1 waiting for acceptance before starting %2s time limit.", _taskID, _timeLimit]] call EFUNC(common,log);
-            waitUntil {
-                sleep 1;
-                GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
-            };
-
-            ["INFO", format ["Attack task %1 accepted. Starting %2s time limit.", _taskID, _timeLimit]] call EFUNC(common,log);
-        };
-
+        _self call ["waitForAssignment", []];
         _self call ["markActive", []];
 
         while { (_self call ["getStatus", []]) isEqualTo "active" } do {

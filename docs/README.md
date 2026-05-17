@@ -4,6 +4,20 @@ Forge is split into Arma client addons, Arma server addons, a Rust server
 extension, shared Rust domain crates, and web UI build tooling. This directory
 collects framework-level documentation for those pieces.
 
+## Launch Prerequisites
+
+Before starting a Forge-enabled dedicated server or local multiplayer test,
+server owners and developers must:
+
+1. Start SurrealDB.
+2. Place `config.toml` beside `forge_server_x64.dll`.
+3. Keep the `config.toml` SurrealDB endpoint, namespace, database, username,
+   and password aligned with the running database.
+
+Mission designers and players do not need to run SurrealDB unless they are
+hosting locally, but the server they join must have these prerequisites ready.
+See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
+
 ## Start Here
 
 - [Framework Architecture](./FRAMEWORK_ARCHITECTURE.md): how SQF, web UIs,

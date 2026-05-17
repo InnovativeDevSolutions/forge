@@ -183,11 +183,10 @@ GVAR(HostageTaskBaseClass) = createHashMapFromArray [
         _self set ["maxHostageLosses", _maxHostageLosses];
         true
     }],
-    ["waitForAssignmentIfTimed", compileFinal {
-        private _timeLimit = _self getOrDefault ["timeLimit", 0];
+    ["waitForAssignment", compileFinal {
         private _taskID = _self getOrDefault ["taskID", ""];
 
-        if (_timeLimit <= 0 || { _taskID isEqualTo "" } || { !(_self getOrDefault ["useTaskStore", false]) }) exitWith { true };
+        if (_taskID isEqualTo "" || { !(_self getOrDefault ["useTaskStore", false]) }) exitWith { true };
 
         waitUntil {
             sleep 1;
@@ -337,8 +336,8 @@ GVAR(HostageTaskBaseClass) = createHashMapFromArray [
     }],
     ["runLoop", compileFinal {
         _self call ["waitForRequiredEntities", []];
+        _self call ["waitForAssignment", []];
         _self call ["startHostageControllers", []];
-        _self call ["waitForAssignmentIfTimed", []];
         _self call ["markActive", []];
 
         while { (_self call ["getStatus", []]) isEqualTo "active" } do {

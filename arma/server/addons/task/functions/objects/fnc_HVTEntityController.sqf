@@ -37,7 +37,7 @@ GVAR(HVTEntityController) = createHashMapFromArray [
         if (isNull _entity || { !alive _entity }) exitWith { false };
 
         _entity setCaptive true;
-        doStop _entity;
+        _entity enableAIFeature ["MOVE", true];
         true
     }],
     ["runLoop", compileFinal {

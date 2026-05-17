@@ -127,6 +127,13 @@ password = "root"
 connect_timeout_ms = 5000
 ```
 
+`config.toml` is a launch prerequisite for server owners and developers. The
+file must exist beside `forge_server_x64.dll`, and SurrealDB must already be
+running at the configured endpoint before starting a Forge-enabled dedicated
+server or local multiplayer test. Clients and mission designers do not run this
+configuration unless they are hosting locally, but the server they connect to
+must have it in place.
+
 For install links and role-based setup guidance, see
 [SurrealDB Setup](./surrealdb-setup.md).
 

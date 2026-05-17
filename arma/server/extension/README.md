@@ -6,6 +6,19 @@ persists durable state through SurrealDB.
 
 This extension build targets SurrealDB `3.x`.
 
+## Launch Prerequisites
+
+Before starting the Arma server with Forge enabled:
+
+1. Start SurrealDB.
+2. Copy `config.example.toml` to `config.toml` beside `forge_server_x64.dll`.
+3. Match the `config.toml` endpoint, namespace, database, username, and password
+   to the running SurrealDB instance.
+
+The extension reads configuration during startup. If SurrealDB is offline or
+the config values do not match, persistence-backed commands are not ready for
+normal gameplay.
+
 ## Responsibilities
 
 - Register extension command groups for actor, bank, garage, locker, org,

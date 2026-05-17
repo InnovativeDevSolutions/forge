@@ -1,5 +1,6 @@
 #include "script_component.hpp"
 
+if !(isNil QGVAR(TaskStore)) then { GVAR(TaskStore) call ["resetMissionState", []]; };
 if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
 if (isNil QGVAR(TaskLifecycleEventLogTokens)) then {
     private _logTaskLifecycleEvent = {

@@ -21,7 +21,9 @@ SQF module
 
 ## Configuration
 
-Copy `config.example.toml` to `config.toml` next to the extension DLL.
+Copy `config.example.toml` to `config.toml` next to the extension DLL before
+launching a Forge-enabled server. SurrealDB must also be running before the
+server starts, and the values in `config.toml` must match that database.
 
 ```toml
 [surreal]
@@ -32,6 +34,9 @@ username = "root"
 password = "root"
 connect_timeout_ms = 5000
 ```
+
+Players and mission designers do not need this file unless they are hosting
+locally. Server owners and developers do.
 
 For install links and Forge-specific setup steps, see
 [SurrealDB Setup](../../../docs/surrealdb-setup.md).
