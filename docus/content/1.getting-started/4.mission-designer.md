@@ -318,10 +318,10 @@ Zone fields that must reference area markers:
 
 ## Mission Manager Blacklist Markers
 
-The dynamic attack mission generator avoids rectangle and ellipse markers whose
+The dynamic mission generator avoids rectangle and ellipse area markers whose
 marker name or marker text starts with `blklist`.
 
-Use blacklist markers to keep generated attack missions out of bases, spawn
+Use blacklist area markers to keep generated missions out of bases, spawn
 areas, training zones, or protected set pieces.
 
 ![Blacklist marker placement](images/eden/blacklist_mrkr.jpg)
@@ -330,7 +330,7 @@ areas, training zones, or protected set pieces.
 
 Setup:
 
-1. Create a rectangle or ellipse marker over the area to exclude.
+1. Create a rectangle or ellipse area marker over the area to exclude.
 2. Set the marker variable name or marker text to start with `blklist`.
 3. Give the marker real size so the generator can test candidate positions
    against the area.
