@@ -27,3 +27,4 @@ private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 [] call FUNC(DefendTaskBaseClass);
 
 call FUNC(initTaskStore);
+if !(isNil QGVAR(TaskStore)) then { GVAR(TaskStore) call ["resetMissionState", []]; };

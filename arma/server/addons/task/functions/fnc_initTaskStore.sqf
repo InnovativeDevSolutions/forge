@@ -52,8 +52,6 @@ GVAR(TaskStore) = createHashMapObject [[
             ["targets", createHashMap]
         ]];
 
-        // Task extension state is mission-scoped and intentionally reset on
-        // startup rather than being treated as durable account data.
         ["task:reset", []] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
         if (
             !_isSuccess
@@ -257,7 +255,7 @@ GVAR(TaskStore) = createHashMapObject [[
 
         if (_taskID isEqualTo "") exitWith { createHashMap };
 
-        private _entry = _self call ["callTaskState", ["task:catalog:get", [_taskID], createHashMap]];
+        [(_self call ["callTaskState", ["task:catalog:get", [_taskID], createHashMap]])] params [["_entry", createHashMap, [createHashMap]]];
         if !(_entry isEqualType createHashMap) exitWith { createHashMap };
 
         _entry
@@ -267,10 +265,13 @@ GVAR(TaskStore) = createHashMapObject [[
 
         if (_taskID isEqualTo "") exitWith { false };
 
-        private _entry = _self call ["getTaskCatalogEntry", [_taskID]];
+        [(_self call ["getTaskCatalogEntry", [_taskID]])] params [["_entry", createHashMap, [createHashMap]]];
         if (_entry isEqualTo createHashMap) exitWith { false };
 
-        (_entry getOrDefault ["accepted", false]) || { (_entry getOrDefault ["requesterUid", ""]) isNotEqualTo "" }
+        [(_entry getOrDefault ["accepted", false])] params [["_accepted", false, [false]]];
+        [(_entry getOrDefault ["requesterUid", ""])] params [["_requesterUid", "", [""]]];
+
+        _accepted || { _requesterUid isNotEqualTo "" }
     }],
     ["acceptTask", compileFinal {
         params [["_taskID", "", [""]], ["_requesterUid", "", [""]]];

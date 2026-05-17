@@ -305,6 +305,18 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
         _result set ["assignment", _assignment];
         _result set ["leaderUid", _leaderUid];
         _result set ["isDispatchOrder", _isDispatchOrder];
+        if (!_isDispatchOrder && { !(isNil QEGVAR(task,TaskStore)) }) then {
+            private _acceptResult = EGVAR(task,TaskStore) call ["acceptTask", [_taskID, _leaderUid]];
+            if !(_acceptResult getOrDefault ["success", false]) then {
+                ["WARNING", format [
+                    "CAD assigned task %1 to group %2 but could not mark it accepted for leader %3: %4",
+                    _taskID,
+                    _groupID,
+                    _leaderUid,
+                    _acceptResult getOrDefault ["message", "Unknown error."]
+                ]] call EFUNC(common,log);
+            };
+        };
         if (_isDispatchOrder) then {
             _result set ["order", +(_dispatchOrderRegistry getOrDefault [_taskID, createHashMap])];
         };
