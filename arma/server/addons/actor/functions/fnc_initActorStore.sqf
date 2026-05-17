@@ -203,7 +203,7 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
 
         true
     }],
-    ["bootstrapNewActor", compileFinal {
+    ["welcomeNewActor", compileFinal {
         params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
 
         if (_uid isEqualTo "") exitWith { false };

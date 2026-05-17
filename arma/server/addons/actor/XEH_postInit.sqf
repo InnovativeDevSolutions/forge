@@ -2,7 +2,7 @@
 
 if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
 if (isNil QGVAR(BankAccountCreatedEventTokens)) then {
-    private _bootstrapNewActorFromBankAccount = {
+    private _welcomeNewActor = {
         params ["_event"];
 
         private _uid = _event getOrDefault ["uid", ""];
@@ -19,10 +19,10 @@ if (isNil QGVAR(BankAccountCreatedEventTokens)) then {
             _actor set ["uid", _uid];
         };
 
-        GVAR(ActorStore) call ["bootstrapNewActor", [_uid, _actor]];
+        GVAR(ActorStore) call ["welcomeNewActor", [_uid, _actor]];
     };
 
     GVAR(BankAccountCreatedEventTokens) = [
-        EGVAR(common,EventBus) call ["on", ["bank.account.created", _bootstrapNewActorFromBankAccount, "actor.newActor.bootstrap"]]
+        EGVAR(common,EventBus) call ["on", ["bank.account.created", _welcomeNewActor, "actor.newActor.welcome"]]
     ];
 };
