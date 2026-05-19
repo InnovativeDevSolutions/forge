@@ -261,9 +261,13 @@ Those modules delegate to `forge_server_task_fnc_startTask`, which creates the
 BIS task, registers the Forge task catalog entry, sets active task state, and
 dispatches the task handler.
 
-![Create task module placement](images/eden/create_task_mod.jpg)
+Use the Arma 3 `Create Task` module when you need a standard BIS map task
+alongside Forge task handling. Use Forge task modules for CAD-visible task
+contracts and runtime task logic.
 
-![Create task module parameters](images/eden/create_task_mod_params.jpg)
+![Arma 3 Create Task module placement](images/eden/create_task_mod.jpg)
+
+![Arma 3 Create Task module parameters](images/eden/create_task_mod_params.jpg)
 
 ![Attack task module placement](images/eden/attack_task_mod.jpg)
 
@@ -303,6 +307,309 @@ Zone fields that must reference area markers:
 | `DeliveryZone` | Delivery Task | Rectangle or ellipse area marker. |
 | `ExtZone` | Hostage and HVT capture tasks | Rectangle or ellipse area marker. |
 | `CBRNZone` | Hostage CBRN variant | Rectangle or ellipse area marker. |
+
+## Task Module Setup Guides
+
+Use these task sections as the setup guide and capture plan. Save any new
+screenshots under `docus/public/images/eden/` with the listed filenames.
+
+### Attack Task
+
+Use `FORGE_Module_Attack` when players need to eliminate hostile units or
+vehicles.
+
+Existing screenshots:
+
+- `attack_task_mod.jpg` - Attack task module placement.
+- `attack_task_mod_params.jpg` - Attack task module attributes.
+- `attack_task_tgts.jpg` - Attack task synced to target units or vehicles.
+
+Setup:
+
+1. Place the enemy units or vehicles.
+2. Place `FORGE_Module_Attack`.
+3. Set a unique `TaskID`.
+4. Set `LimitSuccess` to the number of targets that must be killed.
+5. Set `LimitFail` if the mission should fail after too many losses.
+6. Set reward funds, rating gain/loss, end-state behavior, and optional
+   `TimeLimit`.
+7. Sync the attack module directly to the target units or vehicles.
+
+Validation:
+
+- The task appears in CAD after creation.
+- Killing the configured number of targets succeeds the task.
+- `TimeLimit` uses seconds; `0` disables the timer.
+
+### Destroy Task
+
+Use `FORGE_Module_Destroy` when players must destroy objects, vehicles, or
+units.
+
+![Destroy task module placement](images/eden/destroy_task_mod.jpg)
+
+![Destroy task module parameters](images/eden/destroy_task_mod_params.jpg)
+
+![Destroy task target sync](images/eden/destroy_task_tgts.jpg)
+
+Setup:
+
+1. Place the objects, vehicles, or units that must be destroyed.
+2. Place `FORGE_Module_Destroy`.
+3. Set a unique `TaskID`.
+4. Set `LimitSuccess` to the number of targets that must be destroyed.
+5. Set `LimitFail` if the mission should fail after too many protected losses
+   or failed conditions.
+6. Set reward funds, rating gain/loss, end-state behavior, and optional
+   `TimeLimit`.
+7. Sync the destroy module directly to the targets.
+
+Validation:
+
+- The module reads direct syncs only.
+- Destroying the configured number of targets succeeds the task.
+- `TimeLimit` uses seconds; `0` disables the timer.
+
+### Defuse Task
+
+Use `FORGE_Module_Defuse` when players must defuse explosives while optionally
+protecting other entities.
+
+![Defuse task module placement](images/eden/defuse_task_mod.jpg)
+
+![Defuse task module parameters](images/eden/defuse_task_mod_params.jpg)
+
+![Explosive Entities grouping module](images/eden/defuse_explosives_mod.jpg)
+
+![Protected Entities grouping module](images/eden/defuse_protected_mod.jpg)
+
+The Defuse task screenshots show both module placement and the required sync
+layout.
+
+Required module layout:
+
+```text
+[Defuse Task] --> [Explosive Entities] --> explosive objects
+[Defuse Task] --> [Protected Entities] --> protected objects, vehicles, or units
+```
+
+Setup:
+
+1. Place the explosive objects that players must defuse.
+2. Place `FORGE_Module_Explosives`.
+3. Sync each explosive object to `FORGE_Module_Explosives`.
+4. Place any objects, vehicles, or units that must survive.
+5. Place `FORGE_Module_Protected` when protected entities are part of the task.
+6. Sync each protected entity to `FORGE_Module_Protected`.
+7. Place `FORGE_Module_Defuse`.
+8. Set a unique `TaskID`.
+9. Set `LimitSuccess` to the number of explosives that must be defused.
+10. Set `LimitFail` to the number of protected entities that can be lost before
+    failure.
+11. Set `TimeLimit` to the IED countdown in seconds.
+12. Set reward funds, rating gain/loss, and end-state behavior.
+13. Sync `FORGE_Module_Defuse` to `FORGE_Module_Explosives`.
+14. Sync `FORGE_Module_Defuse` to `FORGE_Module_Protected` if used.
+
+Validation:
+
+- The defuse task reads grouped entities, not direct object syncs.
+- The ACE defuse event resolves the correct IED for the task.
+- Defuse `TimeLimit` is the IED countdown and should be greater than `0`.
+
+### Delivery Task
+
+Use `FORGE_Module_Delivery` when players must move cargo objects into a
+delivery zone.
+
+![Delivery task module placement](images/eden/delivery_task_mod.jpg)
+
+![Delivery task module parameters](images/eden/delivery_task_mod_params.jpg)
+
+![Cargo Entities grouping module](images/eden/delivery_cargo_mod.jpg)
+
+![Delivery area marker placement](images/eden/delivery_zone_mrkr.jpg)
+
+![Delivery marker name](images/eden/delivery_zone_mrkr_var.jpg)
+
+The Delivery task screenshots show both module placement and the required sync
+layout.
+
+Required module layout:
+
+```text
+[Delivery Task] --> [Cargo Entities] --> cargo objects
+```
+
+Setup:
+
+1. Place the cargo objects.
+2. Create a rectangle or ellipse area marker for the delivery zone.
+3. Place `FORGE_Module_Cargo`.
+4. Sync each cargo object to `FORGE_Module_Cargo`.
+5. Place `FORGE_Module_Delivery`.
+6. Set a unique `TaskID`.
+7. Set `DeliveryZone` to the delivery marker name.
+8. Set `LimitSuccess` to the number of cargo objects that must arrive.
+9. Set `LimitFail` to the number of cargo objects that can be damaged past the
+   fail threshold.
+10. Set reward funds, rating gain/loss, end-state behavior, and optional
+    `TimeLimit`.
+11. Sync `FORGE_Module_Delivery` to `FORGE_Module_Cargo`.
+
+Validation:
+
+- `DeliveryZone` must be an area marker, not an icon marker.
+- The runtime checks cargo with `inArea DeliveryZone`.
+- The task succeeds only after the configured cargo count reaches the zone.
+
+### Hostage Task
+
+Use `FORGE_Module_Hostage` when players must rescue hostage units and move them
+to an extraction zone.
+
+![Hostage task module placement](images/eden/hostage_task_mod.jpg)
+
+![Hostage task module parameters](images/eden/hostage_task_mod_params.jpg)
+
+![Hostage Entities grouping module](images/eden/hostage_entities_mod.jpg)
+
+![Shooter Entities grouping module](images/eden/hostage_shooters_mod.jpg)
+
+![Hostage extraction area marker placement](images/eden/hostage_ext_zone_mrkr.jpg)
+
+![Hostage extraction marker name](images/eden/hostage_ext_zone_mrkr_var.jpg)
+
+The Hostage task screenshots show both module placement and the required sync
+layout.
+
+Required module layout:
+
+```text
+[Hostage Task] --> [Hostage Entities] --> hostage units
+[Hostage Task] --> [Shooter Entities] --> hostile shooter units
+```
+
+Setup:
+
+1. Place the hostage AI units.
+2. Place the hostile shooter AI units.
+3. Create a rectangle or ellipse area marker for the extraction zone.
+4. If using the CBRN variant, create a rectangle or ellipse area marker for
+   `CBRNZone`.
+5. Place `FORGE_Module_Hostages`.
+6. Sync the hostage units to `FORGE_Module_Hostages`.
+7. Place `FORGE_Module_Shooters`.
+8. Sync the shooter units to `FORGE_Module_Shooters`.
+9. Place `FORGE_Module_Hostage`.
+10. Set a unique `TaskID`.
+11. Set `ExtZone` to the extraction marker name.
+12. Set `LimitSuccess` to the number of hostages that must be rescued.
+13. Set `LimitFail` to the number of hostages that can be lost before failure.
+14. Enable `CBRN Attack` or `Execution` when that mission variant is needed.
+15. If `CBRN Attack` is enabled, set `CBRNZone`.
+16. Set reward funds, rating gain/loss, end-state behavior, and optional
+    `TimeLimit`.
+17. Sync `FORGE_Module_Hostage` to `FORGE_Module_Hostages`.
+18. Sync `FORGE_Module_Hostage` to `FORGE_Module_Shooters`.
+
+Validation:
+
+- `ExtZone` and `CBRNZone` must be area markers.
+- Hostage and shooter grouping modules should sync to real units only.
+- The hostage timer waits until the assigned group leader acknowledges the
+  task.
+
+### HVT Task
+
+Use `FORGE_Module_HVT` when players must capture or eliminate high-value target
+units. The `HVT Task` example below shows an elimination task. The `HVT Task 1`
+example shows a capture/extract task.
+
+Eliminate HVT example:
+
+![HVT eliminate task module placement](images/eden/hvt_task_mod.jpg)
+
+![HVT eliminate task module parameters](images/eden/hvt_task_mod_params.jpg)
+
+Capture HVT example:
+
+![HVT capture task module placement](images/eden/hvt_capture_task_mod.jpg)
+
+![HVT capture task module parameters](images/eden/hvt_capture_task_mod_params.jpg)
+
+![HVT capture extraction area marker placement](images/eden/hvt_ext_zone_mrkr.jpg)
+
+![HVT capture extraction marker name](images/eden/hvt_ext_zone_mrkr_var.jpg)
+
+The HVT task screenshots show the direct HVT unit sync for both eliminate and
+capture examples.
+
+Setup:
+
+1. Place the HVT unit or units.
+2. Place `FORGE_Module_HVT`.
+3. Set a unique `TaskID`.
+4. For kill/eliminate missions, set `Capture HVT` to `False` and
+   `Eliminate HVT` to `True`.
+5. For capture/extract missions, set `Capture HVT` to `True` and
+   `Eliminate HVT` to `False`.
+6. If using capture mode, create a rectangle or ellipse area marker for the
+   extraction zone and set `ExtZone` to that marker name.
+7. Set `LimitSuccess` to the number of HVTs that must be captured or
+   eliminated.
+8. Set `LimitFail` if the mission should fail after too many HVT deaths in
+   capture mode.
+9. Set reward funds, rating gain/loss, end-state behavior, and optional
+   `TimeLimit`.
+10. Sync the HVT module directly to the HVT unit or units.
+
+Validation:
+
+- Capture mode requires `ExtZone`; elimination mode does not.
+- `ExtZone` must be an area marker.
+- The HVT timer waits until the assigned group leader acknowledges the task.
+
+### Defend Task
+
+Use `FORGE_Module_Defend` when players must hold an area against spawned enemy
+waves.
+
+![Defend task module placement](images/eden/defend_task_mod.jpg)
+
+![Defend task module parameters](images/eden/defend_task_mod_params.jpg)
+
+![Defense area marker placement](images/eden/defend_zone_mrkr.jpg)
+
+![Defense marker name](images/eden/defend_zone_mrkr_var.jpg)
+
+The Defend task screenshots show module placement, marker setup, enemy wave
+templates, and the required sync layout.
+
+Setup:
+
+1. Create a rectangle or ellipse area marker for the defense zone.
+2. Place `FORGE_Module_Defend`.
+3. Set a unique `TaskID`.
+4. Set `DefenseZone` to the defense marker name.
+5. Set `DefendTime` to how long the area must be held.
+6. Set `WaveCount`.
+7. Set `WaveCooldown`.
+8. Set `MinBlufor` to the minimum number of friendly players or units required
+   in the zone.
+9. Place one or more enemy groups or units to use as wave templates.
+10. Sync any unit from each enemy group to the defend module.
+11. Set reward funds, rating gain/loss, and end-state behavior.
+
+Validation:
+
+- `DefenseZone` must be an area marker.
+- Syncing one unit from an enemy group makes the whole group available as a
+  wave composition.
+- If no enemy units are synced, the task falls back to default CSAT infantry
+  waves.
+- The timer, waves, and empty-zone failure checks start after enough BLUFOR
+  enter the zone.
 
 ## Task Module Quick Reference
 
@@ -383,8 +690,22 @@ filenames so the docs can reference stable assets:
 | `ceo_unit.jpg`, `ceo_unit_var.jpg` | CEO playable unit placement and variable name. |
 | `dispatch_unit.jpg`, `dispatch_unit_var.jpg` | Dispatch playable unit placement and variable name. |
 | `blacklist_mrkr.jpg`, `blacklist_mrkr_var.jpg` | Mission-manager blacklist marker placement and marker variable naming. |
-| `create_task_mod.jpg`, `create_task_mod_params.jpg` | Generic Forge task module placement and parameters. |
+| `create_task_mod.jpg`, `create_task_mod_params.jpg` | Arma 3 Create Task module placement and parameters. |
 | `attack_task_mod.jpg`, `attack_task_mod_params.jpg`, `attack_task_tgts.jpg` | Attack task module placement, parameters, and target sync. |
+| `destroy_task_mod.jpg`, `destroy_task_mod_params.jpg`, `destroy_task_tgts.jpg` | Destroy task module placement, parameters, and target sync. |
+| `defuse_task_mod.jpg`, `defuse_task_mod_params.jpg` | Defuse task module placement and parameters. |
+| `defuse_explosives_mod.jpg`, `defuse_protected_mod.jpg` | Defuse grouping modules for explosive and protected entities. |
+| `delivery_task_mod.jpg`, `delivery_task_mod_params.jpg`, `delivery_cargo_mod.jpg` | Delivery task module, parameters, and Cargo Entities grouping module. |
+| `delivery_zone_mrkr.jpg`, `delivery_zone_mrkr_var.jpg` | Delivery area marker placement and marker name. |
+| `hostage_task_mod.jpg`, `hostage_task_mod_params.jpg` | Hostage task module placement and parameters. |
+| `hostage_entities_mod.jpg`, `hostage_shooters_mod.jpg` | Hostage grouping modules for hostage and shooter units. |
+| `hostage_ext_zone_mrkr.jpg`, `hostage_ext_zone_mrkr_var.jpg` | Hostage extraction marker placement and marker name. |
+| Hostage CBRN marker | Use the same extraction-marker capture pattern if a separate CBRN screenshot is ever needed. |
+| `hvt_task_mod.jpg`, `hvt_task_mod_params.jpg` | HVT eliminate task module placement and parameters. |
+| `hvt_capture_task_mod.jpg`, `hvt_capture_task_mod_params.jpg` | HVT capture task module placement and parameters. |
+| `hvt_ext_zone_mrkr.jpg`, `hvt_ext_zone_mrkr_var.jpg` | HVT capture extraction marker placement and marker name. |
+| `defend_task_mod.jpg`, `defend_task_mod_params.jpg` | Defend task module placement, parameters, wave templates, and sync. |
+| `defend_zone_mrkr.jpg`, `defend_zone_mrkr_var.jpg` | Defense area marker placement and marker name. |
 | `cad-visible-task.jpg` | In-game CAD showing a task created from the Eden module. |
 
 Use screenshots that show the Eden left-side entity list, the selected object's
