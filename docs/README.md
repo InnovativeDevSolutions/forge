@@ -30,6 +30,8 @@ See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
 - [Mission Designer Guide](./MISSION_DESIGNER_GUIDE.md): how to place Eden
   objects, garage markers, and CAD-compatible task modules for playable
   missions.
+- [Player Guide](./PLAYER_GUIDE.md): how players use CAD, phone, bank, store,
+  locker, garage, and economy services during missions.
 - [SurrealDB Setup](./surrealdb-setup.md): where to get SurrealDB or
   Surrealist and how to connect Forge to it for local or live use.
 

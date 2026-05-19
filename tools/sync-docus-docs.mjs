@@ -24,8 +24,12 @@ const generatedPages = [
     target: '1.getting-started/4.mission-designer.md'
   },
   {
+    source: 'docs/PLAYER_GUIDE.md',
+    target: '1.getting-started/5.player-guide.md'
+  },
+  {
     source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/5.surrealdb-setup.md'
+    target: '1.getting-started/6.surrealdb-setup.md'
   },
   {
     source: 'arma/server/docs/README.md',
@@ -433,6 +437,16 @@ npm run build:webui
   ---
   Place Eden interaction objects, garage markers, and Forge task modules for
   playable missions.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-user-round-check
+  title: Player Guide
+  to: /getting-started/player-guide
+  ---
+  Learn the player-facing CAD, phone, bank, store, locker, garage, and economy
+  workflows.
   :::
 
   :::u-page-card
