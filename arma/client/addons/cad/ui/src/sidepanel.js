@@ -10,6 +10,7 @@ window.cadTasks = {
     selectedDispatchGroupId: "",
     selectedDispatchTaskId: "",
     selectedDispatchRequestId: "",
+    selectedRosterMemberUid: "",
     focusStatusTimer: null,
     requestModalType: "",
     statuses: [
@@ -431,6 +432,19 @@ window.cadTasks = {
             this.selectedDispatchGroupId = "";
         }
 
+        if (this.selectedRosterMemberUid) {
+            const memberExists = this.groups.some((group) =>
+                this.normalizeCollection(group.members).some(
+                    (member) =>
+                        (member.uid || "") === this.selectedRosterMemberUid,
+                ),
+            );
+
+            if (!memberExists) {
+                this.selectedRosterMemberUid = "";
+            }
+        }
+
         if (
             this.selectedDispatchTaskId &&
             !this.contracts.some((task) => {
@@ -746,8 +760,18 @@ window.cadTasks = {
                     const requestActionLabel = this.isDispatchMode()
                         ? "Close"
                         : "Cancel";
+                    const requestID = request.requestId || "";
+                    const isSelected =
+                        requestID === this.selectedDispatchRequestId;
                     return `
-                        <div class="task-card cad-request-card">
+                        <div
+                            class="task-card cad-request-card dispatch-map-card ${isSelected ? "is-selected" : ""}"
+                            data-request-id="${requestID}"
+                            role="button"
+                            tabindex="0"
+                            onclick="window.cadTasks.focusRequest('${requestID}')"
+                            onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.cadTasks.focusRequest('${requestID}'); }"
+                        >
                             <div class="task-card-header">
                                 <strong>${request.title || this.getRequestTypeLabel(request.type || "")}</strong>
                                 <span class="task-type">${(request.priority || "priority").replaceAll("_", " ")}</span>
@@ -760,7 +784,7 @@ window.cadTasks = {
                             ${
                                 canClose
                                     ? `<div class="task-action-row">
-                                        <button type="button" class="task-secondary-btn" onclick="window.cadTasks.closeSupportRequest('${request.requestId || ""}')">${requestActionLabel}</button>
+                                        <button type="button" class="task-secondary-btn" onclick="event.stopPropagation(); window.cadTasks.closeSupportRequest('${requestID}')">${requestActionLabel}</button>
                                     </div>`
                                     : ""
                             }
@@ -875,11 +899,57 @@ window.cadTasks = {
         this.selectedDispatchGroupId = groupID;
         this.selectedDispatchTaskId = "";
         this.selectedDispatchRequestId = "";
+        this.selectedRosterMemberUid = "";
         const statusMessage = `Centering map on ${group.callsign || group.groupId || "group"}...`;
         this.setStatus(statusMessage, "info");
         this.clearFocusStatusSoon(statusMessage);
         window.mapUI.sendEvent("cad::groups::focus", {
             groupID: groupID,
+        });
+        this.render();
+    },
+    focusMember(uid) {
+        let selectedMember = null;
+
+        this.groups.some((group) =>
+            this.normalizeCollection(group.members).some((member) => {
+                if ((member.uid || "") !== uid) {
+                    return false;
+                }
+
+                selectedMember = member;
+                return true;
+            }),
+        );
+
+        if (!selectedMember) {
+            this.setStatus(
+                "Selected group member is no longer available.",
+                "error",
+            );
+            return;
+        }
+
+        const position = Array.isArray(selectedMember.position)
+            ? selectedMember.position
+            : [];
+        if (position.length < 2) {
+            this.setStatus(
+                "Selected group member has no map position.",
+                "error",
+            );
+            return;
+        }
+
+        this.selectedRosterMemberUid = uid;
+        this.selectedDispatchGroupId = "";
+        this.selectedDispatchTaskId = "";
+        this.selectedDispatchRequestId = "";
+        const statusMessage = `Centering map on ${selectedMember.name || "group member"}...`;
+        this.setStatus(statusMessage, "info");
+        this.clearFocusStatusSoon(statusMessage);
+        window.mapUI.sendEvent("cad::members::focus", {
+            uid: uid,
         });
         this.render();
     },
@@ -899,6 +969,7 @@ window.cadTasks = {
         this.selectedDispatchTaskId = taskID;
         this.selectedDispatchGroupId = "";
         this.selectedDispatchRequestId = "";
+        this.selectedRosterMemberUid = "";
         const statusMessage = `Centering map on ${task.title || taskID}...`;
         this.setStatus(statusMessage, "info");
         this.clearFocusStatusSoon(statusMessage);
@@ -927,6 +998,7 @@ window.cadTasks = {
         this.selectedDispatchRequestId = requestID;
         this.selectedDispatchGroupId = "";
         this.selectedDispatchTaskId = "";
+        this.selectedRosterMemberUid = "";
         const statusMessage = `Centering map on ${request.title || requestID}...`;
         this.setStatus(statusMessage, "info");
         this.clearFocusStatusSoon(statusMessage);
@@ -1067,9 +1139,17 @@ window.cadTasks = {
                 );
                 const isAssignedToLeader =
                     this.isLeader() && assignedGroupId === currentGroupId;
+                const isSelected = taskId === this.selectedDispatchTaskId;
 
                 return `
-                    <div class="task-card" data-task-id="${taskId}">
+                    <div
+                        class="task-card dispatch-map-card ${isSelected ? "is-selected" : ""}"
+                        data-task-id="${taskId}"
+                        role="button"
+                        tabindex="0"
+                        onclick="window.cadTasks.focusTask('${taskId}')"
+                        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.cadTasks.focusTask('${taskId}'); }"
+                    >
                         <div class="task-card-header">
                             <strong>${task.title || taskId}</strong>
                             <span class="task-type">${this.formatTypeLabel(task)}</span>
@@ -1082,8 +1162,8 @@ window.cadTasks = {
                         ${
                             isAssignedToLeader && assignmentState === "assigned"
                                 ? `<div class="task-action-row">
-                                    <button type="button" class="task-accept-btn" onclick="window.cadTasks.acknowledgeTask('${taskId}')">Acknowledge</button>
-                                    <button type="button" class="task-secondary-btn" onclick="window.cadTasks.declineTask('${taskId}')">Decline</button>
+                                    <button type="button" class="task-accept-btn" onclick="event.stopPropagation(); window.cadTasks.acknowledgeTask('${taskId}')">Acknowledge</button>
+                                    <button type="button" class="task-secondary-btn" onclick="event.stopPropagation(); window.cadTasks.declineTask('${taskId}')">Decline</button>
                                 </div>`
                                 : ""
                         }
@@ -1177,9 +1257,19 @@ window.cadTasks = {
                     const leaderBadge = member.isLeader
                         ? '<span class="roster-leader-badge">Leader</span>'
                         : "";
+                    const memberUid = member.uid || "";
+                    const isSelected =
+                        memberUid && memberUid === this.selectedRosterMemberUid;
 
                     return `
-                    <div class="task-card roster-member-card" data-member-id="${member.uid || ""}">
+                    <div
+                        class="task-card roster-member-card dispatch-map-group-card ${isSelected ? "is-selected" : ""}"
+                        data-member-id="${memberUid}"
+                        role="button"
+                        tabindex="0"
+                        onclick="window.cadTasks.focusMember('${memberUid}')"
+                        onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); window.cadTasks.focusMember('${memberUid}'); }"
+                    >
                         <div class="task-card-header">
                             <strong>${member.name || "Unknown Operator"}</strong>
                             <span class="task-type">${lifeState}</span>

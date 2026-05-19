@@ -4,7 +4,7 @@
  * File: fnc_initSEconomyStore.sqf
  * Author: IDSolutions
  * Date: 2025-12-20
- * Last Update: 2026-05-15
+ * Last Update: 2026-05-19
  * Public: No
  *
  * Description:
@@ -27,6 +27,7 @@ GVAR(SEconomyStore) = createHashMapObject [[
     ["#type", "IServiceEconomy"],
     ["#create", {
         GVAR(ServiceRepairCost) = 500;
+        GVAR(ServiceRearmCost) = 500;
         ["INFO", "Service Store Initialized!", nil, nil] call EFUNC(common,log);
     }],
     ["notify", {
@@ -156,6 +157,22 @@ GVAR(SEconomyStore) = createHashMapObject [[
 
         _target setDamage 0;
         _self call ["notify", [_unit, "info", "Repair", format ["Repair complete. Organization charged $%1.", [_repairCost] call EFUNC(common,formatNumber)]]];
+        true
+    }],
+    ["rearm", {
+        params [["_target", objNull, [objNull]], ["_unit", objNull, [objNull]], ["_cost", -1, [0]]];
+
+        if (isNull _target || { isNull _unit }) exitWith { false };
+
+        private _rearmCost = [_cost, GVAR(ServiceRearmCost)] select (_cost < 0);
+        private _charge = _self call ["chargeOrg", [_unit, _rearmCost, "Rearm"]];
+        if !(_charge getOrDefault ["success", false]) exitWith {
+            _self call ["notify", [_unit, "danger", "Rearm", _charge getOrDefault ["message", "Organization funds cannot cover this rearm."]]];
+            false
+        };
+
+        [_target, 1] remoteExecCall ["setVehicleAmmo", 0];
+        _self call ["notify", [_unit, "info", "Rearm", format ["Rearm complete. Organization charged $%1.", [_rearmCost] call EFUNC(common,formatNumber)]]];
         true
     }],
     ["init", {}]

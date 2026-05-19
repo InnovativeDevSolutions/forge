@@ -33,6 +33,11 @@ if (isNil QGVAR(SEconomyStore)) then { call FUNC(initSEconomyStore); };
     GVAR(SEconomyStore) call ["repair", [_target, _unit, _cost]];
 }] call CFUNC(addEventHandler);
 
+[QGVAR(RearmService), {
+    params ["_target", "_unit", ["_cost", -1, [0]]];
+    GVAR(SEconomyStore) call ["rearm", [_target, _unit, _cost]];
+}] call CFUNC(addEventHandler);
+
 [QGVAR(RefuelService), {
     params ["_target", "_unit"];
     GVAR(FEconomyStore) call ["refuel", [_target, _unit]];

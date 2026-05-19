@@ -319,6 +319,33 @@ GVAR(CADUIBridgeBaseClass) = compileFinal createHashMapFromArray [
         ctrlMapAnimCommit _mapCtrl;
         true
     }],
+    ["focusMember", compileFinal {
+        params [["_uid", "", [""]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+        if (isNil QGVAR(CADRepository)) exitWith { false };
+
+        private _groups = GVAR(CADRepository) getOrDefault ["groups", []];
+        private _position = [];
+        {
+            private _members = _x getOrDefault ["members", []];
+            private _memberIndex = _members findIf { (_x getOrDefault ["uid", ""]) isEqualTo _uid };
+            if (_memberIndex >= 0) exitWith {
+                _position = (_members # _memberIndex) getOrDefault ["position", []];
+            };
+        } forEach _groups;
+
+        if !(_position isEqualType []) exitWith { false };
+        if ((count _position) < 2) exitWith { false };
+
+        private _mapCtrl = _self call ["getMapControl", []];
+        if (isNull _mapCtrl) exitWith { false };
+
+        private _targetPosition = [_position # 0, _position # 1, 0];
+        _mapCtrl ctrlMapAnimAdd [0.35, ctrlMapScale _mapCtrl, _targetPosition];
+        ctrlMapAnimCommit _mapCtrl;
+        true
+    }],
     ["focusTask", compileFinal {
         params [["_taskID", "", [""]]];
 

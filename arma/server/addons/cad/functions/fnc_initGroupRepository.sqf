@@ -99,7 +99,8 @@ GVAR(GroupRepositoryBaseClass) = compileFinal createHashMapFromArray [
                     ["uid", _memberUid],
                     ["name", name _x],
                     ["lifeState", _memberState],
-                    ["isLeader", _x isEqualTo _leader]
+                    ["isLeader", _x isEqualTo _leader],
+                    ["position", getPosATL _x]
                 ]);
             } forEach _members;
 

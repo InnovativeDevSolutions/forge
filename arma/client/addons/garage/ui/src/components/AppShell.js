@@ -353,6 +353,7 @@
             !isStored &&
             Number(currentSelection.health || 0) < 0.999 &&
             !isBusy;
+        const canRearm = !isStored && !isBusy;
 
         return h(
             "section",
@@ -500,6 +501,20 @@
                                     type: "button",
                                     className:
                                         "garage-btn garage-btn-secondary",
+                                    disabled: !canRearm,
+                                    onClick: () =>
+                                        actions.requestRearmSelected(),
+                                },
+                                pendingAction === "rearm"
+                                    ? "Rearming..."
+                                    : "Rearm",
+                            ),
+                            h(
+                                "button",
+                                {
+                                    type: "button",
+                                    className:
+                                        "garage-btn garage-btn-secondary garage-action-refresh",
                                     disabled: isBusy,
                                     onClick: () => actions.refreshGarage(),
                                 },
@@ -512,10 +527,10 @@
                             isStored
                                 ? session.spawnBlocked
                                     ? "The garage spawn lane is currently blocked."
-                                    : "Retrieve this stored vehicle into the active spawn lane before refuel or repair service."
+                                    : "Retrieve this stored vehicle into the active spawn lane before refuel, rearm, or repair service."
                                 : currentSelection.isEmpty === false
                                   ? "Only empty nearby vehicles can be stored."
-                                  : "Store this nearby vehicle or request organization-billed refuel and repair service.",
+                                  : "Store this nearby vehicle or request organization-billed refuel, rearm, and repair service.",
                         ),
                     ),
                     h(

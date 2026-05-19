@@ -223,6 +223,33 @@
         return true;
     }
 
+    function requestRearmSelected() {
+        const selectedEntry = getSelectedEntry();
+        if (!selectedEntry || selectedEntry.entryKind !== "nearby") {
+            showNotice("error", "Select a nearby vehicle to rearm.");
+            return false;
+        }
+
+        const bridge = GarageApp.bridge;
+        if (!bridge || typeof bridge.requestRearm !== "function") {
+            showNotice("error", "Garage rearm bridge is unavailable.");
+            return false;
+        }
+
+        store.startAction("rearm");
+        const sent = bridge.requestRearm({
+            netId: selectedEntry.netId || "",
+        });
+
+        if (!sent) {
+            store.finishAction();
+            showNotice("error", "Garage rearm bridge is unavailable.");
+            return false;
+        }
+
+        return true;
+    }
+
     GarageApp.actions = {
         showNotice,
         closeGarage,
@@ -232,6 +259,7 @@
         selectCategory,
         selectEntry,
         getSelectedEntry,
+        requestRearmSelected,
         requestRefuelSelected,
         requestRepairSelected,
         requestRetrieveSelected,

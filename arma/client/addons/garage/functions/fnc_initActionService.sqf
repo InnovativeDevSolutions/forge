@@ -8,8 +8,8 @@
  * Public: No
  *
  * Description:
- * Initializes the garage action service for retrieve, store, refuel, and
- * repair world actions.
+ * Initializes the garage action service for retrieve, store, refuel, rearm,
+ * and repair world actions.
  *
  * Arguments:
  * None
@@ -181,6 +181,17 @@ GVAR(GarageActionServiceBaseClass) = compileFinal createHashMapFromArray [
 
         [SRPC(economy,RepairService), [_vehicle, player, -1]] call CFUNC(serverEvent);
         _self call ["sendServiceResult", ["repair", true, "Repair request sent. Billing result will appear as a notification."]];
+        _self call ["refreshAfterService", []];
+        true
+    }],
+    ["handleRearmRequest", compileFinal {
+        params [["_data", createHashMap, [createHashMap]]];
+
+        private _vehicle = _self call ["resolveServiceVehicle", [_data, "rearm"]];
+        if (isNull _vehicle) exitWith { false };
+
+        [SRPC(economy,RearmService), [_vehicle, player, -1]] call CFUNC(serverEvent);
+        _self call ["sendServiceResult", ["rearm", true, "Rearm request sent. Billing result will appear as a notification."]];
         _self call ["refreshAfterService", []];
         true
     }],

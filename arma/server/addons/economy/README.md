@@ -7,7 +7,7 @@ refueling sessions, medical spawn occupancy, respawn placement, and death
 inventory handling.
 
 Current stores cover fuel tracking, medical service behavior, and service
-charges such as repairs.
+charges such as repairs and rearming.
 
 ## Dependencies
 - `forge_server_main`
@@ -27,8 +27,9 @@ Note: Bank and Org are runtime-only dependencies (not compile-time requiredAddon
   respawn placement, death inventory handling, and body-bag transfer. Medical
   charges use player bank/cash first, then organization funds with repayable
   member debt only when the player cannot cover the service.
-- `fnc_initSEconomyStore.sqf` handles organization-funded service charges and
-  repairs. Repairs only apply after the organization charge succeeds. The
+- `fnc_initSEconomyStore.sqf` handles organization-funded service charges,
+  repairs, and rearming. Vehicle services only apply after the organization
+  charge succeeds. The
   shared org-charge helper can also record member debt for medical fallback.
 
 ## Event Surface
@@ -50,6 +51,16 @@ Repair service requests use:
 
 `_cost` is optional. Passing `-1` uses the configured service repair cost.
 
+Rearm service requests use:
+
+```sqf
+[QEGVAR(economy,RearmService), [_target, _unit, _cost]] call CBA_fnc_serverEvent;
+```
+
+`_cost` is optional. Passing `-1` uses the configured service rearm cost.
+`setVehicleAmmo` has global effects, but only adds ammo to local turrets, so
+the ammo reset is broadcast after billing succeeds.
+
 Garage refuel service requests use:
 
 ```sqf
@@ -70,7 +81,7 @@ Fuel and repair services are organization-funded:
    `commit = true`, and member service charging enabled.
 4. Send the returned organization patch to online members.
 5. If the charge fails, do not complete the service. Refueling rolls the target
-   back to its starting fuel level; repairs are not applied.
+   back to its starting fuel level; repairs and rearming are not applied.
 
 Direct refuel service requests, such as those from the garage UI, calculate
 the missing fuel from `fuelCapacity`, charge the organization, and fill the

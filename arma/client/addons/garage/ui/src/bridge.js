@@ -31,6 +31,10 @@
         return bridge.send("garage::vehicle::repair::request", payload);
     }
 
+    function requestRearm(payload) {
+        return bridge.send("garage::vehicle::rearm::request", payload);
+    }
+
     function notifyReady() {
         return bridge.ready({ loaded: true });
     }
@@ -108,6 +112,7 @@
         receive: bridge.receive,
         requestClose,
         requestRefresh,
+        requestRearm,
         requestRefuel,
         requestRepair,
         requestRetrieve,

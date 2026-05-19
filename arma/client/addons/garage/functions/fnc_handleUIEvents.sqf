@@ -63,6 +63,11 @@ switch (_event) do {
             GVAR(GarageActionService) call ["handleRepairRequest", [_data]];
         };
     };
+    case "garage::vehicle::rearm::request": {
+        if !(isNil QGVAR(GarageActionService)) then {
+            GVAR(GarageActionService) call ["handleRearmRequest", [_data]];
+        };
+    };
     case "garage::refresh": {
         if !(isNil QGVAR(GarageUIBridge)) then {
             GVAR(GarageUIBridge) call ["refreshGarage", []];

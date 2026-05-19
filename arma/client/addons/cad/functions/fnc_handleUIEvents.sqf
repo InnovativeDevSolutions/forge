@@ -172,6 +172,14 @@ switch (_event) do {
 
         GVAR(CADUIBridge) call ["focusGroup", [_groupID]];
     };
+    case "cad::members::focus": {
+        private _uid = "";
+        if (_data isEqualType createHashMap) then {
+            _uid = _data getOrDefault ["uid", ""];
+        };
+
+        GVAR(CADUIBridge) call ["focusMember", [_uid]];
+    };
     case "cad::tasks::focus": {
         private _taskID = "";
         if (_data isEqualType createHashMap) then {
