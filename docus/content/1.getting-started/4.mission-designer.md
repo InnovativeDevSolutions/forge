@@ -297,7 +297,10 @@ General task rules:
    modules.
 6. To chain tasks, set `Prerequisite Task IDs` on the dependent task module to
    a comma-separated list of task IDs that must succeed first.
-7. Test that unchained tasks appear in CAD immediately and chained tasks appear
+7. Reward class fields use comma-separated class names without brackets, such
+   as `ItemGPS, FirstAidKit`. Existing SQF array strings such as
+   `["ItemGPS","FirstAidKit"]` still work for older missions.
+8. Test that unchained tasks appear in CAD immediately and chained tasks appear
    only after their prerequisite tasks succeed.
 
 Task chaining uses only task IDs. The dependent task is still registered during

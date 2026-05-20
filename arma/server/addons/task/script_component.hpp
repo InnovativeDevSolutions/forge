@@ -12,31 +12,31 @@
             class EquipmentRewards: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,EquipmentRewards)); \
                 displayName = "Equipment Rewards"; \
-                tooltip = "SQF array string for equipment rewards, e.g. [""ItemGPS"",""ItemCompass""]"; \
+                tooltip = "Comma-separated equipment class names, e.g. ItemGPS, ItemCompass. Legacy SQF arrays still work."; \
                 typeName = "STRING"; \
             }; \
             class SupplyRewards: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,SupplyRewards)); \
                 displayName = "Supply Rewards"; \
-                tooltip = "SQF array string for supply rewards, e.g. [""FirstAidKit"",""Medikit""]"; \
+                tooltip = "Comma-separated supply class names, e.g. FirstAidKit, Medikit. Legacy SQF arrays still work."; \
                 typeName = "STRING"; \
             }; \
             class WeaponRewards: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,WeaponRewards)); \
                 displayName = "Weapon Rewards"; \
-                tooltip = "SQF array string for weapon rewards, e.g. [""arifle_MX_F""]"; \
+                tooltip = "Comma-separated weapon class names, e.g. arifle_MX_F, arifle_Katiba_F. Legacy SQF arrays still work."; \
                 typeName = "STRING"; \
             }; \
             class VehicleRewards: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,VehicleRewards)); \
                 displayName = "Vehicle Rewards"; \
-                tooltip = "SQF array string for vehicle rewards, e.g. [""B_MRAP_01_F""]"; \
+                tooltip = "Comma-separated vehicle class names, e.g. B_MRAP_01_F, B_Quadbike_01_F. Legacy SQF arrays still work."; \
                 typeName = "STRING"; \
             }; \
             class SpecialRewards: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,SpecialRewards)); \
                 displayName = "Special Rewards"; \
-                tooltip = "SQF array string for special rewards, e.g. [""B_UAV_01_F""]"; \
+                tooltip = "Comma-separated special reward class names, e.g. B_UAV_01_F, B_Heli_Light_01_F. Legacy SQF arrays still work."; \
                 typeName = "STRING"; \
             };
 

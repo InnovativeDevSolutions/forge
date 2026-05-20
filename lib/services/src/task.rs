@@ -45,17 +45,13 @@ impl<R: TaskRepository> TaskStateService<R> {
 
     pub fn list_active_catalog(&self) -> Result<Vec<Value>, String> {
         let catalog = self.repository.list_catalog()?;
-        let active_statuses = self.repository.list_active_statuses()?;
         let mut active_entries = Vec::new();
 
-        for (task_id, status) in active_statuses {
+        for (task_id, entry) in catalog {
+            let status = self.derive_catalog_status(&task_id, &entry)?;
             if !matches!(status.as_str(), "available" | "assigned" | "active") {
                 continue;
             }
-
-            let Some(entry) = catalog.get(&task_id) else {
-                continue;
-            };
 
             let mut entry = entry.fields.clone();
             entry.insert("taskId".to_string(), Value::String(task_id.clone()));
@@ -173,10 +169,15 @@ impl<R: TaskRepository> TaskStateService<R> {
             return Ok(status);
         }
 
-        Ok(self
-            .repository
-            .get_completed_status(&entry_id)?
-            .unwrap_or_default())
+        if let Some(status) = self.repository.get_completed_status(&entry_id)? {
+            return Ok(status);
+        }
+
+        let Some(entry) = self.repository.get_catalog_entry(&entry_id)? else {
+            return Ok(String::new());
+        };
+
+        Ok(Self::default_catalog_status(&entry))
     }
 
     pub fn clear_status(&self, entry_id: String) -> Result<bool, String> {
@@ -243,6 +244,31 @@ impl<R: TaskRepository> TaskStateService<R> {
         self.repository
             .save_catalog_entry(entry_id.to_string(), entry.clone())?;
         Ok(entry.into_value())
+    }
+
+    fn derive_catalog_status(&self, entry_id: &str, entry: &TaskRecord) -> Result<String, String> {
+        if let Some(status) = self.repository.get_active_status(entry_id)? {
+            return Ok(status);
+        }
+
+        if let Some(status) = self.repository.get_completed_status(entry_id)? {
+            return Ok(status);
+        }
+
+        Ok(Self::default_catalog_status(entry))
+    }
+
+    fn default_catalog_status(entry: &TaskRecord) -> String {
+        if entry
+            .fields
+            .get("locked")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
+            "locked".to_string()
+        } else {
+            "available".to_string()
+        }
     }
 
     fn normalize_catalog_entry(entry: &mut TaskRecord, entry_id: &str) {
@@ -384,6 +410,34 @@ mod tests {
     }
 
     #[test]
+    fn get_status_defaults_catalog_entries_to_available_or_locked() {
+        let service = TaskStateService::new(InMemoryTaskRepository::new());
+
+        service
+            .upsert_catalog_entry("task-open".to_string(), r#"{"title":"Open"}"#.to_string())
+            .expect("open catalog upsert should succeed");
+        service
+            .upsert_catalog_entry(
+                "task-locked".to_string(),
+                r#"{"title":"Locked","locked":true}"#.to_string(),
+            )
+            .expect("locked catalog upsert should succeed");
+
+        assert_eq!(
+            service
+                .get_status("task-open".to_string())
+                .expect("open status lookup should succeed"),
+            "available"
+        );
+        assert_eq!(
+            service
+                .get_status("task-locked".to_string())
+                .expect("locked status lookup should succeed"),
+            "locked"
+        );
+    }
+
+    #[test]
     fn list_active_catalog_returns_assignable_and_active_entries() {
         let service = TaskStateService::new(InMemoryTaskRepository::new());
 
@@ -434,5 +488,32 @@ mod tests {
         assert!(task_ids.contains(&"task-available"));
         assert!(task_ids.contains(&"task-assigned"));
         assert!(task_ids.contains(&"task-active"));
+    }
+
+    #[test]
+    fn list_active_catalog_includes_unstatused_unlocked_entries() {
+        let service = TaskStateService::new(InMemoryTaskRepository::new());
+
+        service
+            .upsert_catalog_entry("task-open".to_string(), r#"{"title":"Open"}"#.to_string())
+            .expect("open catalog upsert should succeed");
+        service
+            .upsert_catalog_entry(
+                "task-locked".to_string(),
+                r#"{"title":"Locked","locked":true}"#.to_string(),
+            )
+            .expect("locked catalog upsert should succeed");
+
+        let active_catalog = service
+            .list_active_catalog()
+            .expect("active catalog should build");
+
+        let task_ids: Vec<_> = active_catalog
+            .iter()
+            .filter_map(|entry| entry.get("taskId").and_then(Value::as_str))
+            .collect();
+
+        assert_eq!(active_catalog.len(), 1);
+        assert!(task_ids.contains(&"task-open"));
     }
 }

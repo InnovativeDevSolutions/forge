@@ -38,6 +38,12 @@ PREP_SUBDIR(modules,protectedModule);
 PREP_SUBDIR(modules,shootersModule);
 
 PREP_SUBDIR(objects,TaskInstanceBaseClass);
+PREP_SUBDIR(objects,TaskStateGateway);
+PREP_SUBDIR(objects,TaskLifecycleReporter);
+PREP_SUBDIR(objects,TaskCatalogStore);
+PREP_SUBDIR(objects,TaskEntityRegistry);
+PREP_SUBDIR(objects,TaskParticipantTracker);
+PREP_SUBDIR(objects,TaskRewardService);
 PREP_SUBDIR(objects,EntityControllerBaseClass);
 PREP_SUBDIR(objects,AttackTaskBaseClass);
 PREP_SUBDIR(objects,HostageTaskBaseClass);

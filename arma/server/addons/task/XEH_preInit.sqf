@@ -8,6 +8,12 @@ private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 
 #include "initSettings.inc.sqf"
 
+[] call FUNC(TaskStateGateway);
+[] call FUNC(TaskLifecycleReporter);
+[] call FUNC(TaskCatalogStore);
+[] call FUNC(TaskEntityRegistry);
+[] call FUNC(TaskParticipantTracker);
+[] call FUNC(TaskRewardService);
 [] call FUNC(TaskInstanceBaseClass);
 [] call FUNC(EntityControllerBaseClass);
 [] call FUNC(AttackTaskBaseClass);
