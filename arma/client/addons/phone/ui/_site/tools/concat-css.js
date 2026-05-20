@@ -18,9 +18,12 @@ const files = [
     '../styles/components/contacts.css',
     '../styles/components/dialpad.css',
     '../styles/components/messages.css',
+    '../styles/components/mail.css',
     '../styles/components/settings.css',
     '../styles/components/notes.css',
+    '../styles/components/calendar.css',
     '../styles/components/clock.css',
+    '../styles/components/wallet.css',
     '../styles/components/loader.css'
 ];
 

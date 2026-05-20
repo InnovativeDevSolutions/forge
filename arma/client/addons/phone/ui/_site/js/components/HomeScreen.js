@@ -94,6 +94,7 @@ class HomeScreen extends Component {
             { name: 'photos', title: 'Photos', icon: 'Photos', color: '' },
             { name: 'clock', title: 'Clock', icon: 'Clock', color: '' },
             { name: 'calendar', title: 'Calendar', icon: 'Calendar', color: '' },
+            { name: 'wallet', title: 'Wallet', icon: 'Wallet', color: '' },
             { name: 'store', title: 'App Store', icon: 'AppStore', color: '' },
         ];
     }

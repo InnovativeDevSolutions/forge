@@ -1,0 +1,314 @@
+/* Wallet */
+.wallet-app {
+    background: var(--bg-primary);
+}
+
+.wallet-content {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: calc(100% - 44px);
+    overflow-y: auto;
+    padding: 12px 16px 28px;
+}
+
+.wallet-nav-button {
+    background: transparent;
+    border: 0;
+    color: #275a8c;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .wallet-nav-button {
+    color: #8bb9e6;
+}
+
+.wallet-notice {
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    padding: 10px 12px;
+}
+
+.wallet-notice-success {
+    background: rgba(47, 125, 91, 0.16);
+    color: #2f7d5b;
+}
+
+.wallet-notice-error {
+    background: rgba(196, 57, 57, 0.16);
+    color: #b42323;
+}
+
+.wallet-notice-info {
+    background: rgba(39, 90, 140, 0.14);
+    color: #275a8c;
+}
+
+.wallet-balance-card {
+    background: linear-gradient(160deg, #142f52 0%, #275a8c 58%, #4f86bd 100%);
+    border-radius: 20px;
+    box-shadow: 0 14px 26px rgba(20, 47, 82, 0.22);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    min-height: 142px;
+    padding: 18px;
+}
+
+.wallet-eyebrow,
+.wallet-card-title,
+.wallet-metric span,
+.wallet-transaction-meta {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.wallet-eyebrow {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.wallet-balance {
+    font-size: 34px;
+    letter-spacing: 0;
+    line-height: 1.1;
+    margin-top: 14px;
+}
+
+.wallet-owner {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    margin-top: auto;
+}
+
+.wallet-metrics {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallet-metric,
+.wallet-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+    border: 1px solid rgba(18, 54, 93, 0.12);
+    border-radius: 16px;
+}
+
+[data-theme="dark"] .wallet-metric,
+[data-theme="dark"] .wallet-card {
+    background: linear-gradient(180deg, #1c1c1e 0%, #151b23 100%);
+    border-color: rgba(139, 185, 230, 0.18);
+}
+
+.wallet-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 12px;
+}
+
+.wallet-metric span,
+.wallet-card-title {
+    color: #6f86a3;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+[data-theme="dark"] .wallet-metric span,
+[data-theme="dark"] .wallet-card-title,
+[data-theme="dark"] .wallet-transaction-meta {
+    color: #8ea2bb;
+}
+
+.wallet-metric strong {
+    color: #142f52;
+    font-size: 18px;
+    line-height: 1.15;
+}
+
+[data-theme="dark"] .wallet-metric strong {
+    color: #ffffff;
+}
+
+.wallet-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+}
+
+.wallet-input {
+    background: var(--input-bg);
+    border: 1px solid rgba(18, 54, 93, 0.16);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font: inherit;
+    min-height: 42px;
+    padding: 0 12px;
+    width: 100%;
+}
+
+[data-theme="dark"] .wallet-input {
+    border-color: var(--input-border);
+}
+
+.wallet-primary-button {
+    background: #275a8c;
+    border: 0;
+    border-radius: 12px;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    min-height: 42px;
+}
+
+.wallet-secondary-button {
+    background: rgba(39, 90, 140, 0.12);
+    border: 1px solid rgba(39, 90, 140, 0.18);
+    border-radius: 12px;
+    color: #275a8c;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    min-height: 42px;
+    padding: 0 10px;
+}
+
+.wallet-full-button {
+    width: 100%;
+}
+
+[data-theme="dark"] .wallet-secondary-button {
+    background: rgba(139, 185, 230, 0.13);
+    border-color: rgba(139, 185, 230, 0.2);
+    color: #8bb9e6;
+}
+
+.wallet-action-block {
+    background: rgba(39, 90, 140, 0.08);
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.wallet-action-block + .wallet-action-block {
+    margin-top: 2px;
+}
+
+[data-theme="dark"] .wallet-action-block {
+    background: rgba(139, 185, 230, 0.1);
+}
+
+.wallet-action-summary {
+    display: grid;
+    gap: 3px;
+}
+
+.wallet-action-summary span {
+    color: #6f86a3;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.wallet-action-summary strong {
+    color: #142f52;
+    font-size: 18px;
+}
+
+.wallet-action-summary small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+[data-theme="dark"] .wallet-action-summary span,
+[data-theme="dark"] .wallet-action-summary strong {
+    color: #ffffff;
+}
+
+.wallet-action-controls {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 112px;
+}
+
+.wallet-primary-button:disabled,
+.wallet-secondary-button:disabled,
+.wallet-nav-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.wallet-transaction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wallet-transaction-row {
+    align-items: center;
+    border-top: 1px solid rgba(18, 54, 93, 0.1);
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding-top: 10px;
+}
+
+[data-theme="dark"] .wallet-transaction-row {
+    border-top-color: rgba(139, 185, 230, 0.14);
+}
+
+.wallet-transaction-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.wallet-transaction-title {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wallet-transaction-meta {
+    color: #6f86a3;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.wallet-transaction-value {
+    color: #142f52;
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+[data-theme="dark"] .wallet-transaction-value {
+    color: #ffffff;
+}
+
+.wallet-empty-state {
+    border: 1px dashed rgba(18, 54, 93, 0.18);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 14px;
+    text-align: center;
+}

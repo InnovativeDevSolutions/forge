@@ -12,6 +12,7 @@ const files = [
 
     // Utils
     '../js/utils/helpers.js',
+    '../js/utils/PhoneMedia.js',
 
     // Shared Components
     '../js/components/StatusBar.js',
@@ -33,6 +34,12 @@ const files = [
     '../js/apps/messages/components/MessageItem.js',
     '../js/apps/messages/components/ConversationView.js',
     '../js/apps/messages/index.js',
+
+    // Mail App
+    '../js/apps/mail/components/MailList.js',
+    '../js/apps/mail/components/MailDetail.js',
+    '../js/apps/mail/components/MailComposer.js',
+    '../js/apps/mail/index.js',
 
     // Contacts App
     '../js/apps/contacts/components/ContactList.js',
@@ -56,6 +63,13 @@ const files = [
     '../js/apps/clock/components/AlarmClock.js',
     '../js/apps/clock/index.js',
 
+    // Calendar App
+    '../js/apps/calendar/components/Calendar.js',
+    '../js/apps/calendar/components/EventEditor.js',
+    '../js/apps/calendar/index.js',
+
+    // Wallet App
+    '../js/apps/wallet/index.js',
 
     // Main App
     '../js/app.js',

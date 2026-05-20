@@ -1666,6 +1666,76 @@ body::-webkit-scrollbar {
 }
 
 
+/* ---- ../styles/components/settings.css ---- */
+/* Settings */
+.settings-list {
+  background: var(--bg-primary);
+}
+
+.settings-item {
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.settings-item:hover {
+  background: var(--bg-secondary);
+}
+
+/* Theme Toggle Switch */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 51px;
+  height: 31px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e9ecef;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 27px;
+  width: 27px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked+.toggle-slider {
+  background-color: var(--accent-color);
+}
+
+input:checked+.toggle-slider:before {
+  transform: translateX(20px);
+}
+
 /* ---- ../styles/components/notes.css ---- */
 /* Notes App Styles */
 
@@ -1955,6 +2025,302 @@ body::-webkit-scrollbar {
 }
 
 
+
+/* ---- ../styles/components/calendar.css ---- */
+/* Calendar App Styles */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary);
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* Calendar Container */
+.calendar-container {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 375px;
+    margin: 0 auto;
+}
+
+/* Calendar Header */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px;
+    padding: 0 16px;
+}
+
+.calendar-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.calendar-nav {
+    display: flex;
+    gap: 8px;
+}
+
+.calendar-nav-btn {
+    background: var(--bg-secondary);
+    border: none;
+    border-radius: 8px;
+    padding: 8px;
+    color: var(--accent-color);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+}
+
+.calendar-nav-btn img {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-color);
+}
+
+.calendar-nav-btn:hover {
+    background: var(--border-color);
+}
+
+.nav-button.add-button img {
+    width: 24px;
+    height: 24px;
+    color: var(--accent-color);
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 0 16px;
+}
+
+.calendar-weekday {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+    font-weight: 500;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.calendar-day:hover {
+    background: var(--bg-secondary);
+}
+
+.calendar-day.today {
+    background: var(--accent-color);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.calendar-day.selected {
+    background: var(--accent-color);
+    color: white;
+}
+
+.calendar-day.today:not(.selected) {
+    background: transparent;
+    color: var(--text-primary);
+    border: 2px solid var(--accent-color);
+}
+
+.calendar-day.today.selected {
+    border: 2px solid white;
+}
+
+.calendar-day.other-month {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.calendar-day.has-events::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-color);
+}
+
+/* Calendar Events */
+.calendar-events {
+    margin-top: 20px;
+    border-top: 1px solid var(--border-color);
+    padding: 16px;
+}
+
+.no-events {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 20px 0;
+}
+
+.event-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.event-item:hover {
+    background: var(--border-color);
+}
+
+.event-time {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-right: 12px;
+    min-width: 60px;
+}
+
+.event-title {
+    font-size: 14px;
+    color: var(--text-primary);
+    flex-grow: 1;
+}
+
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    margin-right: 8px;
+}
+
+/* Event Editor */
+.event-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary);
+}
+
+.event-form {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 16px;
+}
+
+.event-title-input {
+    font-size: 20px;
+    padding: 8px 0;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.time-container {
+    display: flex;
+    gap: 16px;
+}
+
+.time-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.event-description-input {
+    min-height: 100px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    resize: none;
+}
+
+.delete-event-button {
+    background: transparent;
+    border: none;
+    color: #ff4444;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-event-button:hover {
+    background: rgba(255, 68, 68, 0.1);
+}
+
+.delete-event-button:active {
+    background: rgba(255, 68, 68, 0.2);
+}
+
+/* Navigation Buttons - Event Editor specific */
+.event-editor .navigation-bar .nav-button.cancel-button {
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+    font-weight: 400 !important;
+    padding: 0.5rem 1rem !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.event-editor .navigation-bar .nav-button.cancel-button:hover {
+    color: var(--text-primary) !important;
+}
+
+.event-editor .navigation-bar .nav-button.save-button {
+    color: var(--accent-color) !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1rem !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.event-editor .navigation-bar .nav-button.save-button:hover {
+    color: var(--accent-color-hover) !important;
+}
 
 /* ---- ../styles/components/clock.css ---- */
 /* Clock App Styles */
@@ -2543,371 +2909,322 @@ body::-webkit-scrollbar {
 
 
 
-/* ---- ../styles/components/calendar.css ---- */
-/* Calendar App Styles */
-.app-container {
+/* ---- ../styles/components/wallet.css ---- */
+/* Wallet */
+.wallet-app {
+    background: var(--bg-primary);
+}
+
+.wallet-content {
+    background: var(--bg-primary);
+    color: var(--text-primary);
     display: flex;
     flex-direction: column;
-    height: 100%;
-    background: var(--bg-primary);
-}
-
-.content {
-    flex: 1;
+    gap: 12px;
+    height: calc(100% - 44px);
     overflow-y: auto;
-    padding: 16px;
+    padding: 12px 16px 28px;
 }
 
-/* Calendar Container */
-.calendar-container {
-    background: var(--bg-primary);
+.wallet-nav-button {
+    background: transparent;
+    border: 0;
+    color: #275a8c;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .wallet-nav-button {
+    color: #8bb9e6;
+}
+
+.wallet-notice {
     border-radius: 12px;
-    width: 100%;
-    max-width: 375px;
-    margin: 0 auto;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    padding: 10px 12px;
 }
 
-/* Calendar Header */
-.calendar-header {
+.wallet-notice-success {
+    background: rgba(47, 125, 91, 0.16);
+    color: #2f7d5b;
+}
+
+.wallet-notice-error {
+    background: rgba(196, 57, 57, 0.16);
+    color: #b42323;
+}
+
+.wallet-notice-info {
+    background: rgba(39, 90, 140, 0.14);
+    color: #275a8c;
+}
+
+.wallet-balance-card {
+    background: linear-gradient(160deg, #142f52 0%, #275a8c 58%, #4f86bd 100%);
+    border-radius: 20px;
+    box-shadow: 0 14px 26px rgba(20, 47, 82, 0.22);
+    color: #ffffff;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin: 10px;
-    padding: 0 16px;
+    flex-direction: column;
+    min-height: 142px;
+    padding: 18px;
 }
 
-.calendar-title {
-    font-size: 20px;
-    font-weight: 600;
+.wallet-eyebrow,
+.wallet-card-title,
+.wallet-metric span,
+.wallet-transaction-meta {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.wallet-eyebrow {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.wallet-balance {
+    font-size: 34px;
+    letter-spacing: 0;
+    line-height: 1.1;
+    margin-top: 14px;
+}
+
+.wallet-owner {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    margin-top: auto;
+}
+
+.wallet-metrics {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallet-metric,
+.wallet-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8fd 100%);
+    border: 1px solid rgba(18, 54, 93, 0.12);
+    border-radius: 16px;
+}
+
+[data-theme="dark"] .wallet-metric,
+[data-theme="dark"] .wallet-card {
+    background: linear-gradient(180deg, #1c1c1e 0%, #151b23 100%);
+    border-color: rgba(139, 185, 230, 0.18);
+}
+
+.wallet-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 12px;
+}
+
+.wallet-metric span,
+.wallet-card-title {
+    color: #6f86a3;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+[data-theme="dark"] .wallet-metric span,
+[data-theme="dark"] .wallet-card-title,
+[data-theme="dark"] .wallet-transaction-meta {
+    color: #8ea2bb;
+}
+
+.wallet-metric strong {
+    color: #142f52;
+    font-size: 18px;
+    line-height: 1.15;
+}
+
+[data-theme="dark"] .wallet-metric strong {
+    color: #ffffff;
+}
+
+.wallet-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+}
+
+.wallet-input {
+    background: var(--input-bg);
+    border: 1px solid rgba(18, 54, 93, 0.16);
+    border-radius: 12px;
     color: var(--text-primary);
+    font: inherit;
+    min-height: 42px;
+    padding: 0 12px;
+    width: 100%;
 }
 
-.calendar-nav {
+[data-theme="dark"] .wallet-input {
+    border-color: var(--input-border);
+}
+
+.wallet-primary-button {
+    background: #275a8c;
+    border: 0;
+    border-radius: 12px;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    min-height: 42px;
+}
+
+.wallet-secondary-button {
+    background: rgba(39, 90, 140, 0.12);
+    border: 1px solid rgba(39, 90, 140, 0.18);
+    border-radius: 12px;
+    color: #275a8c;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    min-height: 42px;
+    padding: 0 10px;
+}
+
+.wallet-full-button {
+    width: 100%;
+}
+
+[data-theme="dark"] .wallet-secondary-button {
+    background: rgba(139, 185, 230, 0.13);
+    border-color: rgba(139, 185, 230, 0.2);
+    color: #8bb9e6;
+}
+
+.wallet-action-block {
+    background: rgba(39, 90, 140, 0.08);
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.wallet-action-block + .wallet-action-block {
+    margin-top: 2px;
+}
+
+[data-theme="dark"] .wallet-action-block {
+    background: rgba(139, 185, 230, 0.1);
+}
+
+.wallet-action-summary {
+    display: grid;
+    gap: 3px;
+}
+
+.wallet-action-summary span {
+    color: #6f86a3;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.wallet-action-summary strong {
+    color: #142f52;
+    font-size: 18px;
+}
+
+.wallet-action-summary small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+[data-theme="dark"] .wallet-action-summary span,
+[data-theme="dark"] .wallet-action-summary strong {
+    color: #ffffff;
+}
+
+.wallet-action-controls {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 112px;
+}
+
+.wallet-primary-button:disabled,
+.wallet-secondary-button:disabled,
+.wallet-nav-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.wallet-transaction-list {
     display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
-.calendar-nav-btn {
-    background: var(--bg-secondary);
-    border: none;
-    border-radius: 8px;
-    padding: 8px;
-    color: var(--accent-color);
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    display: flex;
+.wallet-transaction-row {
     align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    height: 36px;
-}
-
-.calendar-nav-btn img {
-    width: 20px;
-    height: 20px;
-    color: var(--accent-color);
-}
-
-.calendar-nav-btn:hover {
-    background: var(--border-color);
-}
-
-.nav-button.add-button img {
-    width: 24px;
-    height: 24px;
-    color: var(--accent-color);
-}
-
-/* Calendar Grid */
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    padding: 0 16px;
-}
-
-.calendar-weekday {
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-secondary);
-    padding: 8px 0;
-    font-weight: 500;
-}
-
-.calendar-day {
-    aspect-ratio: 1;
+    border-top: 1px solid rgba(18, 54, 93, 0.1);
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    border: 2px solid transparent;
+    gap: 10px;
+    justify-content: space-between;
+    padding-top: 10px;
 }
 
-.calendar-day:hover {
-    background: var(--bg-secondary);
+[data-theme="dark"] .wallet-transaction-row {
+    border-top-color: rgba(139, 185, 230, 0.14);
 }
 
-.calendar-day.today {
-    background: var(--accent-color);
-    color: white;
-    border: 2px solid transparent;
-}
-
-.calendar-day.selected {
-    background: var(--accent-color);
-    color: white;
-}
-
-.calendar-day.today:not(.selected) {
-    background: transparent;
-    color: var(--text-primary);
-    border: 2px solid var(--accent-color);
-}
-
-.calendar-day.today.selected {
-    border: 2px solid white;
-}
-
-.calendar-day.other-month {
-    color: var(--text-secondary);
-    opacity: 0.5;
-}
-
-.calendar-day.has-events::after {
-    content: '';
-    position: absolute;
-    bottom: 4px;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--accent-color);
-}
-
-/* Calendar Events */
-.calendar-events {
-    margin-top: 20px;
-    border-top: 1px solid var(--border-color);
-    padding: 16px;
-}
-
-.no-events {
-    text-align: center;
-    color: var(--text-secondary);
-    font-size: 14px;
-    padding: 20px 0;
-}
-
-.event-item {
-    display: flex;
-    align-items: center;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    background: var(--bg-secondary);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.event-item:hover {
-    background: var(--border-color);
-}
-
-.event-time {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-right: 12px;
-    min-width: 60px;
-}
-
-.event-title {
-    font-size: 14px;
-    color: var(--text-primary);
-    flex-grow: 1;
-}
-
-.event-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--accent-color);
-    margin-right: 8px;
-}
-
-/* Event Editor */
-.event-editor {
+.wallet-transaction-copy {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    background: var(--bg-primary);
+    gap: 3px;
+    min-width: 0;
 }
 
-.event-form {
-    display: flex;
-    flex-direction: column;
-    padding: 16px;
-    gap: 16px;
-}
-
-.event-title-input {
-    font-size: 20px;
-    padding: 8px 0;
-    border: none;
-    border-bottom: 1px solid var(--border-color);
-    background: none;
-    color: var(--text-primary);
-    outline: none;
-}
-
-.time-container {
-    display: flex;
-    gap: 16px;
-}
-
-.time-input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-secondary);
+.wallet-transaction-title {
     color: var(--text-primary);
     font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.event-description-input {
-    min-height: 100px;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
+.wallet-transaction-meta {
+    color: #6f86a3;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.wallet-transaction-value {
+    color: #142f52;
+    flex-shrink: 0;
     font-size: 14px;
-    resize: none;
+    font-weight: 800;
 }
 
-.delete-event-button {
-    background: transparent;
-    border: none;
-    color: #ff4444;
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+[data-theme="dark"] .wallet-transaction-value {
+    color: #ffffff;
 }
 
-.delete-event-button:hover {
-    background: rgba(255, 68, 68, 0.1);
+.wallet-empty-state {
+    border: 1px dashed rgba(18, 54, 93, 0.18);
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 14px;
+    text-align: center;
 }
 
-.delete-event-button:active {
-    background: rgba(255, 68, 68, 0.2);
-}
-
-/* Navigation Buttons - Event Editor specific */
-.event-editor .navigation-bar .nav-button.cancel-button {
-    color: var(--text-secondary) !important;
-    font-size: 0.9rem !important;
-    font-weight: 400 !important;
-    padding: 0.5rem 1rem !important;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.event-editor .navigation-bar .nav-button.cancel-button:hover {
-    color: var(--text-primary) !important;
-}
-
-.event-editor .navigation-bar .nav-button.save-button {
-    color: var(--accent-color) !important;
-    font-size: 0.9rem !important;
-    font-weight: 600 !important;
-    padding: 0.5rem 1rem !important;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.event-editor .navigation-bar .nav-button.save-button:hover {
-    color: var(--accent-color-hover) !important;
-}
-
-/* ---- ../styles/components/settings.css ---- */
-/* Settings */
-.settings-list {
-  background: var(--bg-primary);
-}
-
-.settings-item {
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-.settings-item:hover {
-  background: var(--bg-secondary);
-}
-
-/* Theme Toggle Switch */
-.theme-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.toggle-switch {
-  position: relative;
-  width: 51px;
-  height: 31px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #e9ecef;
-  transition: .4s;
-  border-radius: 34px;
-}
-
-.toggle-slider:before {
-  position: absolute;
-  content: "";
-  height: 27px;
-  width: 27px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: .4s;
-  border-radius: 50%;
-}
-
-input:checked+.toggle-slider {
-  background-color: var(--accent-color);
-}
-
-input:checked+.toggle-slider:before {
-  transform: translateX(20px);
-}
 
 /* ---- ../styles/components/loader.css ---- */
 #script-loader {

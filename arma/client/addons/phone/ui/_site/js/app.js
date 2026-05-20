@@ -90,6 +90,9 @@ class App extends Component {
             case 'settings':
                 window.initializeSettingsApp(appContainer);
                 break;
+            case 'wallet':
+                window.initializeMobileBankApp(appContainer);
+                break;
             default:
                 return this.renderPlaceholderApp(currentApp);
         }
@@ -111,7 +114,8 @@ class App extends Component {
             mail: '',
             icloud: '',
             photos: '',
-            safari: ''
+            safari: '',
+            wallet: ''
         };
 
         return this.createElement(

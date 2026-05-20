@@ -326,6 +326,23 @@ const initialAppState = {
     events: [],
     currentEvent: null,
     showEventEditor: false,
+
+    // Mobile bank state
+    mobileBank: {
+        account: {
+            bank: 0,
+            cash: 0,
+            earnings: 0,
+            transactions: [],
+        },
+        session: {
+            playerName: '',
+            transferTargets: [],
+            uid: '',
+        },
+        notice: null,
+        pendingAction: '',
+    },
 };
 
 /**
@@ -1404,6 +1421,7 @@ class HomeScreen extends Component {
             { name: 'photos', title: 'Photos', icon: 'Photos', color: '' },
             { name: 'clock', title: 'Clock', icon: 'Clock', color: '' },
             { name: 'calendar', title: 'Calendar', icon: 'Calendar', color: '' },
+            { name: 'wallet', title: 'Wallet', icon: 'Wallet', color: '' },
             { name: 'store', title: 'App Store', icon: 'AppStore', color: '' },
         ];
     }
@@ -2831,6 +2849,416 @@ function initializeMessagesApp(container) {
 window.initializeMessagesApp = initializeMessagesApp;
 
 
+// ---- ../js/apps/mail/components/MailList.js ----
+/** @format */
+
+class MailList extends Component {
+    constructor(props = {}) {
+        super(props);
+        this.state = {
+            searchTerm: ''
+        };
+
+        this.handleSearch = this.handleSearch.bind(this);
+        this.renderEmailItem = this.renderEmailItem.bind(this);
+    }
+
+    handleSearch(searchTerm) {
+        this.setState({ searchTerm });
+    }
+
+    formatEmailTime(timestamp) {
+        const parsed = new Date(timestamp);
+        if (Number.isNaN(parsed.getTime())) return '';
+
+        return parsed.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    resolveContactName(uid) {
+        const contact = (this.props.contacts || []).find((entry) => entry.uid === uid || entry.id === uid);
+        return contact ? contact.name : uid;
+    }
+
+    getFilteredEmails() {
+        const { emails = [] } = this.props;
+        const searchTerm = (this.state.searchTerm || '').toLowerCase();
+
+        if (!searchTerm) return emails;
+
+        return emails.filter((email) => {
+            const senderName = this.resolveContactName(email.from || '').toLowerCase();
+            const recipientName = this.resolveContactName(email.to || '').toLowerCase();
+            return (
+                (email.subject || '').toLowerCase().includes(searchTerm) ||
+                (email.body || '').toLowerCase().includes(searchTerm) ||
+                senderName.includes(searchTerm) ||
+                recipientName.includes(searchTerm)
+            );
+        });
+    }
+
+    renderEmailItem(email) {
+        const { currentUid, onEmailClick } = this.props;
+        const isSent = email.from === currentUid;
+        const actorName = this.resolveContactName(isSent ? email.to : email.from);
+        const bodyPreview = email.body || '';
+
+        return this.createElement(
+            'button',
+            {
+                className: `mail-item ${email.read ? 'read' : 'unread'}`,
+                type: 'button',
+                onClick: () => onEmailClick && onEmailClick(email),
+                'aria-label': `Open email ${email.subject || 'No subject'}`
+            },
+            this.createElement('div', { className: 'mail-item-header' },
+                this.createElement('strong', {}, `${isSent ? 'To' : 'From'}: ${actorName || 'Unknown'}`),
+                this.createElement('span', {}, this.formatEmailTime(email.timestamp))
+            ),
+            this.createElement('div', { className: 'mail-item-subject' }, email.subject || 'No subject'),
+            this.createElement('div', { className: 'mail-item-preview' }, bodyPreview)
+        );
+    }
+
+    render() {
+        const filteredEmails = this.getFilteredEmails();
+
+        return this.createElement(
+            'div',
+            { className: 'mail-list-container' },
+            new SearchBar({
+                placeholder: 'Search mail...',
+                onSearch: this.handleSearch,
+                value: this.state.searchTerm
+            }),
+            this.createElement(
+                'div',
+                { className: 'mail-list', role: 'list', 'aria-label': 'Email list' },
+                filteredEmails.length > 0
+                    ? filteredEmails.map(this.renderEmailItem)
+                    : this.createElement('div', { className: 'mail-empty' }, 'No email yet.')
+            )
+        );
+    }
+}
+
+
+// ---- ../js/apps/mail/components/MailDetail.js ----
+/** @format */
+
+class MailDetail extends Component {
+    resolveContactName(uid) {
+        const contact = (this.props.contacts || []).find((entry) => entry.uid === uid || entry.id === uid);
+        return contact ? contact.name : uid;
+    }
+
+    formatEmailTime(timestamp) {
+        const parsed = new Date(timestamp);
+        if (Number.isNaN(parsed.getTime())) return '';
+
+        return parsed.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    componentDidMount() {
+        const { email } = this.props;
+        if (!email || email.read) return;
+
+        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
+            A3API.SendAlert(JSON.stringify({
+                event: 'phone::mark::email::read',
+                data: { emailId: email.id }
+            }));
+        }
+    }
+
+    handleDeleteEmail(emailId) {
+        if (!emailId) return;
+
+        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
+            A3API.SendAlert(JSON.stringify({
+                event: 'phone::delete::email',
+                data: { emailId }
+            }));
+        }
+    }
+
+    render() {
+        const { email } = this.props;
+
+        if (!email) {
+            return this.createElement('div', { className: 'mail-empty' }, 'No email selected.');
+        }
+
+        return this.createElement(
+            'article',
+            { className: 'mail-detail' },
+            this.createElement('h2', {}, email.subject || 'No subject'),
+            this.createElement('div', { className: 'mail-meta' },
+                this.createElement('span', {}, `From: ${this.resolveContactName(email.from) || 'Unknown'}`),
+                this.createElement('span', {}, `To: ${this.resolveContactName(email.to) || 'Unknown'}`),
+                this.createElement('span', {}, this.formatEmailTime(email.timestamp))
+            ),
+            this.createElement('p', { className: 'mail-body' }, email.body || ''),
+            this.createElement(
+                'button',
+                {
+                    type: 'button',
+                    className: 'mail-delete-button',
+                    onClick: () => this.handleDeleteEmail(email.id)
+                },
+                'Delete Email'
+            )
+        );
+    }
+}
+
+
+// ---- ../js/apps/mail/components/MailComposer.js ----
+/** @format */
+
+class MailComposer extends Component {
+    constructor(props = {}) {
+        super(props);
+        const contacts = this.emailableContacts(props.contacts || []);
+        const defaultRecipient = contacts.length === 1 ? (contacts[0].uid || contacts[0].id || '') : '';
+        this.state = {
+            toUid: defaultRecipient,
+            subject: '',
+            body: ''
+        };
+
+        this.toRef = null;
+        this.subjectRef = null;
+        this.bodyRef = null;
+        this.lastSendAt = 0;
+
+        this.handleSend = this.handleSend.bind(this);
+        this.syncSubject = this.syncSubject.bind(this);
+        this.syncBody = this.syncBody.bind(this);
+    }
+
+    emailableContacts(contacts = []) {
+        return contacts.filter((contact) => contact && contact.canEmail !== false && (contact.uid || contact.id));
+    }
+
+    readField(id, ref, fallback = '') {
+        const scopedElement = this.element ? this.element.querySelector(`#${id}`) : null;
+        const documentElement = typeof document !== 'undefined' ? document.getElementById(id) : null;
+        const element = scopedElement || documentElement || ref;
+        if (!element) return fallback;
+
+        if (typeof element.value === 'string' && element.value.length > 0) {
+            return element.value;
+        }
+
+        if (typeof element.textContent === 'string' && element.textContent.length > 0) {
+            return element.textContent;
+        }
+
+        return fallback;
+    }
+
+    syncSubject(event) {
+        this.state.subject = event?.target?.value || '';
+    }
+
+    syncBody(event) {
+        this.state.body = event?.target?.value || '';
+    }
+
+    handleSend(event) {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+
+        const now = Date.now();
+        if (now - this.lastSendAt < 500) return;
+
+        const toUid = this.readField('phone-mail-recipient', this.toRef, this.state.toUid).trim();
+        const subject = this.readField('phone-mail-subject', this.subjectRef, this.state.subject).trim() || 'No subject';
+        const body = this.readField('phone-mail-body', this.bodyRef, this.state.body).trim();
+
+        if (!toUid || !body) {
+            console.warn('MailComposer: missing required email fields', {
+                hasRecipient: !!toUid,
+                hasSubject: subject !== 'No subject',
+                hasBody: !!body,
+                toUid,
+                subjectLength: subject.length,
+                bodyLength: body.length
+            });
+            return;
+        }
+
+        this.lastSendAt = now;
+
+        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
+            console.log('MailComposer: sending email', { toUid, subjectLength: subject.length, bodyLength: body.length });
+            A3API.SendAlert(JSON.stringify({
+                event: 'phone::send::email',
+                data: { toUid, subject, body }
+            }));
+        } else {
+            console.warn('MailComposer: A3API.SendAlert unavailable');
+        }
+
+        globalState.setState({
+            showEmailComposer: false,
+            selectedEmail: null
+        });
+    }
+
+    renderContactOptions() {
+        const contacts = this.emailableContacts(this.props.contacts || []);
+
+        return [
+            this.createElement('option', { value: '' }, 'Select recipient'),
+            ...contacts.map((contact) => this.createElement(
+                'option',
+                { value: contact.uid || contact.id },
+                `${contact.fullName || contact.name || 'Unknown'}${contact.email ? ` (${contact.email})` : ''}`
+            ))
+        ];
+    }
+
+    render() {
+        return this.createElement(
+            'div',
+            { className: 'mail-composer' },
+            this.createElement('label', {},
+                'To',
+                this.createElement(
+                    'select',
+                    {
+                        id: 'phone-mail-recipient',
+                        name: 'phone-mail-recipient',
+                        value: this.state.toUid,
+                        onInput: (event) => { this.state.toUid = event.target.value; },
+                        onChange: (event) => { this.state.toUid = event.target.value; },
+                        ref: (element) => {
+                            this.toRef = element;
+                            if (element && this.state.toUid && !element.value) {
+                                element.value = this.state.toUid;
+                            }
+                        },
+                        'aria-label': 'Email recipient'
+                    },
+                    ...this.renderContactOptions()
+                )
+            ),
+            this.createElement('label', {},
+                'Subject',
+                this.createElement('input', {
+                    id: 'phone-mail-subject',
+                    name: 'phone-mail-subject',
+                    type: 'text',
+                    value: this.state.subject,
+                    onInput: this.syncSubject,
+                    onChange: this.syncSubject,
+                    onKeyUp: this.syncSubject,
+                    ref: (element) => { this.subjectRef = element; },
+                    placeholder: 'Subject'
+                })
+            ),
+            this.createElement('label', {},
+                'Message',
+                this.createElement('textarea', {
+                    id: 'phone-mail-body',
+                    name: 'phone-mail-body',
+                    value: this.state.body,
+                    onInput: this.syncBody,
+                    onChange: this.syncBody,
+                    onKeyUp: this.syncBody,
+                    ref: (element) => { this.bodyRef = element; },
+                    placeholder: 'Write email body...',
+                    rows: 8
+                })
+            ),
+            this.createElement(
+                'button',
+                {
+                    type: 'button',
+                    className: 'mail-send-button',
+                    onClick: this.handleSend,
+                    onMouseDown: this.handleSend
+                },
+                'Send'
+            )
+        );
+    }
+}
+
+
+// ---- ../js/apps/mail/index.js ----
+/** @format */
+
+function initializeMailApp(container) {
+    const { emails, contacts, currentUid, selectedEmail, showEmailComposer } = globalState.getState();
+    const appContainer = document.createElement('div');
+
+    appContainer.className = 'app-container';
+    appContainer.setAttribute('role', 'main');
+    appContainer.setAttribute('aria-label', 'Mail');
+
+    if (typeof requestEmails === 'function') requestEmails();
+    if (typeof requestContacts === 'function') requestContacts();
+
+    const navBar = new NavigationBar({
+        title: selectedEmail ? 'Email' : (showEmailComposer ? 'New Email' : 'Mail'),
+        showBackButton: !!selectedEmail || !!showEmailComposer,
+        rightButton: (!selectedEmail && !showEmailComposer) ? {
+            element: 'button',
+            props: {
+                type: 'button',
+                className: 'nav-button add-button',
+                onClick: () => globalState.setState({ showEmailComposer: true, selectedEmail: null }),
+                'aria-label': 'Compose email',
+                style: {
+                    fontSize: '24px',
+                    padding: '0 15px',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--accent-color)',
+                    cursor: 'pointer'
+                }
+            },
+            content: '+'
+        } : null
+    });
+    navBar.mount(appContainer);
+
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'content mail-content';
+    appContainer.appendChild(contentContainer);
+
+    if (showEmailComposer) {
+        new MailComposer({ contacts }).mount(contentContainer);
+    } else if (selectedEmail) {
+        new MailDetail({ email: selectedEmail, contacts }).mount(contentContainer);
+    } else {
+        new MailList({
+            emails,
+            contacts,
+            currentUid,
+            onEmailClick: (email) => globalState.setState({ selectedEmail: email, showEmailComposer: false })
+        }).mount(contentContainer);
+    }
+
+    container.appendChild(appContainer);
+}
+
+window.initializeMailApp = initializeMailApp;
+
+
 // ---- ../js/apps/contacts/components/ContactList.js ----
 /** @format */
 
@@ -3295,415 +3723,152 @@ function initializeContactsApp(container) {
 window.initializeContactsApp = initializeContactsApp;
 
 
-// ---- ../js/apps/mail/components/MailList.js ----
-/** @format */
+// ---- ../js/apps/settings/components/Settings.js ----
+/**
+ * @format
+ * @class Settings
+ * @extends Component
+ * @description A settings component for the phone app.
+ */
 
-class MailList extends Component {
-    constructor(props = {}) {
-        super(props);
-        this.state = {
-            searchTerm: ''
-        };
+class Settings extends Component {
+	/**
+	 * @constructor
+	 * @param {Object} props - Component properties
+	 */
+	constructor() {
+		super();
+		// Get current theme from document attribute
+		const currentTheme = document.documentElement.getAttribute('data-theme');
+		this.state = { isDarkTheme: currentTheme === 'dark' };
+	}
 
-        this.handleSearch = this.handleSearch.bind(this);
-        this.renderEmailItem = this.renderEmailItem.bind(this);
-    }
+	/**
+	 * @method componentDidMount
+	 * @description Sets the initial theme when the component mounts
+	 */
+	componentDidMount() {
+		// Get current theme from game
+		const alert = {
+			"event": "phone::get::theme",
+			"data": {}
+		};
+		A3API.SendAlert(JSON.stringify(alert));
+	}
 
-    handleSearch(searchTerm) {
-        this.setState({ searchTerm });
-    }
+	/**
+	 * @method updateTheme
+	 * @param {boolean} isDark - Whether the theme is dark
+	 * @description Updates the theme and phone screen background
+	 */
+	updateTheme(isDark) {
+		const theme = isDark ? 'dark' : 'light';
 
-    formatEmailTime(timestamp) {
-        const parsed = new Date(timestamp);
-        if (Number.isNaN(parsed.getTime())) return '';
+		// Update document theme
+		document.documentElement.setAttribute('data-theme', theme);
 
-        return parsed.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
+		// Update phone screen background
+		const phoneScreen = document.querySelector('.phone-screen');
+		if (phoneScreen) {
+			phoneScreen.style.background = isDark ? '#000000' : '#ffffff';
+		}
 
-    resolveContactName(uid) {
-        const contact = (this.props.contacts || []).find((entry) => entry.uid === uid || entry.id === uid);
-        return contact ? contact.name : uid;
-    }
+		// Save theme preference to game
+		const alert = {
+			"event": "phone::set::theme",
+			"data": {
+				"isDark": isDark
+			}
+		};
+		A3API.SendAlert(JSON.stringify(alert));
 
-    getFilteredEmails() {
-        const { emails = [] } = this.props;
-        const searchTerm = (this.state.searchTerm || '').toLowerCase();
+		// Update state
+		this.setState({ isDarkTheme: isDark });
 
-        if (!searchTerm) return emails;
+		// Dispatch theme change event
+		const themeEvent = new CustomEvent('themeChanged', {
+			detail: { theme }
+		});
+		document.dispatchEvent(themeEvent);
+	}
 
-        return emails.filter((email) => {
-            const senderName = this.resolveContactName(email.from || '').toLowerCase();
-            const recipientName = this.resolveContactName(email.to || '').toLowerCase();
-            return (
-                (email.subject || '').toLowerCase().includes(searchTerm) ||
-                (email.body || '').toLowerCase().includes(searchTerm) ||
-                senderName.includes(searchTerm) ||
-                recipientName.includes(searchTerm)
-            );
-        });
-    }
+	/**
+	 * @method handleThemeToggle
+	 * @description Handles the theme toggle click
+	 */
+	handleThemeToggle = () => {
+		const newTheme = !this.state.isDarkTheme;
+		this.updateTheme(newTheme);
+	}
 
-    renderEmailItem(email) {
-        const { currentUid, onEmailClick } = this.props;
-        const isSent = email.from === currentUid;
-        const actorName = this.resolveContactName(isSent ? email.to : email.from);
-        const bodyPreview = email.body || '';
-
-        return this.createElement(
-            'button',
-            {
-                className: `mail-item ${email.read ? 'read' : 'unread'}`,
-                type: 'button',
-                onClick: () => onEmailClick && onEmailClick(email),
-                'aria-label': `Open email ${email.subject || 'No subject'}`
-            },
-            this.createElement('div', { className: 'mail-item-header' },
-                this.createElement('strong', {}, `${isSent ? 'To' : 'From'}: ${actorName || 'Unknown'}`),
-                this.createElement('span', {}, this.formatEmailTime(email.timestamp))
-            ),
-            this.createElement('div', { className: 'mail-item-subject' }, email.subject || 'No subject'),
-            this.createElement('div', { className: 'mail-item-preview' }, bodyPreview)
-        );
-    }
-
-    render() {
-        const filteredEmails = this.getFilteredEmails();
-
-        return this.createElement(
-            'div',
-            { className: 'mail-list-container' },
-            new SearchBar({
-                placeholder: 'Search mail...',
-                onSearch: this.handleSearch,
-                value: this.state.searchTerm
-            }),
-            this.createElement(
-                'div',
-                { className: 'mail-list', role: 'list', 'aria-label': 'Email list' },
-                filteredEmails.length > 0
-                    ? filteredEmails.map(this.renderEmailItem)
-                    : this.createElement('div', { className: 'mail-empty' }, 'No email yet.')
-            )
-        );
-    }
+	/**
+	 * @method render
+	 * @description Renders the settings component
+	 */
+	render() {
+		return this.createElement('div', { className: 'settings-list' },
+			this.createElement('div', { className: 'theme-toggle' },
+				this.createElement('span', {}, 'Dark Mode'),
+				this.createElement('div', {
+					className: this.state.isDarkTheme ? 'custom-toggle active' : 'custom-toggle',
+					onClick: this.handleThemeToggle,
+					style: {
+						width: '50px',
+						height: '25px',
+						backgroundColor: this.state.isDarkTheme ? '#0a84ff' : '#e9ecef',
+						borderRadius: '34px',
+						position: 'relative',
+						cursor: 'pointer',
+						transition: 'background-color 0.2s'
+					}
+				},
+					this.createElement('div', {
+						style: {
+							width: '25px',
+							height: '25px',
+							backgroundColor: '#fff',
+							borderRadius: '50%',
+							position: 'absolute',
+							left: this.state.isDarkTheme ? '25px' : '0px',
+							transition: 'left 0.2s'
+						}
+					})
+				)
+			)
+		);
+	}
 }
 
+// ---- ../js/apps/settings/index.js ----
+/**
+ * @fileoverview Main entry point for the Settings application
+ *
+ * This module initializes the Settings app UI, including:
+ * - Rendering the Settings component
+ * - Mounting the Settings component into the provided container
+ *
+ * The initializeSettingsApp function is exposed globally for use by the main app.
+ */
 
-// ---- ../js/apps/mail/components/MailComposer.js ----
-/** @format */
-
-class MailComposer extends Component {
-    constructor(props = {}) {
-        super(props);
-        const contacts = this.emailableContacts(props.contacts || []);
-        const defaultRecipient = contacts.length === 1 ? (contacts[0].uid || contacts[0].id || '') : '';
-        this.state = {
-            toUid: defaultRecipient,
-            subject: '',
-            body: ''
-        };
-
-        this.toRef = null;
-        this.subjectRef = null;
-        this.bodyRef = null;
-        this.lastSendAt = 0;
-
-        this.handleSend = this.handleSend.bind(this);
-        this.syncSubject = this.syncSubject.bind(this);
-        this.syncBody = this.syncBody.bind(this);
-    }
-
-    emailableContacts(contacts = []) {
-        return contacts.filter((contact) => contact && contact.canEmail !== false && (contact.uid || contact.id));
-    }
-
-    readField(id, ref, fallback = '') {
-        const scopedElement = this.element ? this.element.querySelector(`#${id}`) : null;
-        const documentElement = typeof document !== 'undefined' ? document.getElementById(id) : null;
-        const element = scopedElement || documentElement || ref;
-        if (!element) return fallback;
-
-        if (typeof element.value === 'string' && element.value.length > 0) {
-            return element.value;
-        }
-
-        if (typeof element.textContent === 'string' && element.textContent.length > 0) {
-            return element.textContent;
-        }
-
-        return fallback;
-    }
-
-    syncSubject(event) {
-        this.state.subject = event?.target?.value || '';
-    }
-
-    syncBody(event) {
-        this.state.body = event?.target?.value || '';
-    }
-
-    handleSend(event) {
-        event?.preventDefault?.();
-        event?.stopPropagation?.();
-
-        const now = Date.now();
-        if (now - this.lastSendAt < 500) return;
-
-        const toUid = this.readField('phone-mail-recipient', this.toRef, this.state.toUid).trim();
-        const subject = this.readField('phone-mail-subject', this.subjectRef, this.state.subject).trim() || 'No subject';
-        const body = this.readField('phone-mail-body', this.bodyRef, this.state.body).trim();
-
-        if (!toUid || !body) {
-            console.warn('MailComposer: missing required email fields', {
-                hasRecipient: !!toUid,
-                hasSubject: subject !== 'No subject',
-                hasBody: !!body,
-                toUid,
-                subjectLength: subject.length,
-                bodyLength: body.length
-            });
-            return;
-        }
-
-        this.lastSendAt = now;
-
-        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
-            console.log('MailComposer: sending email', { toUid, subjectLength: subject.length, bodyLength: body.length });
-            A3API.SendAlert(JSON.stringify({
-                event: 'phone::send::email',
-                data: { toUid, subject, body }
-            }));
-        } else {
-            console.warn('MailComposer: A3API.SendAlert unavailable');
-        }
-
-        globalState.setState({
-            showEmailComposer: false,
-            selectedEmail: null
-        });
-    }
-
-    renderContactOptions() {
-        const contacts = this.emailableContacts(this.props.contacts || []);
-
-        return [
-            this.createElement('option', { value: '' }, 'Select recipient'),
-            ...contacts.map((contact) => this.createElement(
-                'option',
-                { value: contact.uid || contact.id },
-                `${contact.fullName || contact.name || 'Unknown'}${contact.email ? ` (${contact.email})` : ''}`
-            ))
-        ];
-    }
-
-    render() {
-        return this.createElement(
-            'div',
-            { className: 'mail-composer' },
-            this.createElement('label', {},
-                'To',
-                this.createElement(
-                    'select',
-                    {
-                        id: 'phone-mail-recipient',
-                        name: 'phone-mail-recipient',
-                        value: this.state.toUid,
-                        onInput: (event) => { this.state.toUid = event.target.value; },
-                        onChange: (event) => { this.state.toUid = event.target.value; },
-                        ref: (element) => {
-                            this.toRef = element;
-                            if (element && this.state.toUid && !element.value) {
-                                element.value = this.state.toUid;
-                            }
-                        },
-                        'aria-label': 'Email recipient'
-                    },
-                    ...this.renderContactOptions()
-                )
-            ),
-            this.createElement('label', {},
-                'Subject',
-                this.createElement('input', {
-                    id: 'phone-mail-subject',
-                    name: 'phone-mail-subject',
-                    type: 'text',
-                    value: this.state.subject,
-                    onInput: this.syncSubject,
-                    onChange: this.syncSubject,
-                    onKeyUp: this.syncSubject,
-                    ref: (element) => { this.subjectRef = element; },
-                    placeholder: 'Subject'
-                })
-            ),
-            this.createElement('label', {},
-                'Message',
-                this.createElement('textarea', {
-                    id: 'phone-mail-body',
-                    name: 'phone-mail-body',
-                    value: this.state.body,
-                    onInput: this.syncBody,
-                    onChange: this.syncBody,
-                    onKeyUp: this.syncBody,
-                    ref: (element) => { this.bodyRef = element; },
-                    placeholder: 'Write email body...',
-                    rows: 8
-                })
-            ),
-            this.createElement(
-                'button',
-                {
-                    type: 'button',
-                    className: 'mail-send-button',
-                    onClick: this.handleSend,
-                    onMouseDown: this.handleSend
-                },
-                'Send'
-            )
-        );
-    }
-}
-
-
-// ---- ../js/apps/mail/components/MailDetail.js ----
-/** @format */
-
-class MailDetail extends Component {
-    resolveContactName(uid) {
-        const contact = (this.props.contacts || []).find((entry) => entry.uid === uid || entry.id === uid);
-        return contact ? contact.name : uid;
-    }
-
-    formatEmailTime(timestamp) {
-        const parsed = new Date(timestamp);
-        if (Number.isNaN(parsed.getTime())) return '';
-
-        return parsed.toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    componentDidMount() {
-        const { email } = this.props;
-        if (!email || email.read) return;
-
-        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
-            A3API.SendAlert(JSON.stringify({
-                event: 'phone::mark::email::read',
-                data: { emailId: email.id }
-            }));
-        }
-    }
-
-    handleDeleteEmail(emailId) {
-        if (!emailId) return;
-
-        if (typeof A3API !== 'undefined' && A3API.SendAlert) {
-            A3API.SendAlert(JSON.stringify({
-                event: 'phone::delete::email',
-                data: { emailId }
-            }));
-        }
-    }
-
-    render() {
-        const { email } = this.props;
-
-        if (!email) {
-            return this.createElement('div', { className: 'mail-empty' }, 'No email selected.');
-        }
-
-        return this.createElement(
-            'article',
-            { className: 'mail-detail' },
-            this.createElement('h2', {}, email.subject || 'No subject'),
-            this.createElement('div', { className: 'mail-meta' },
-                this.createElement('span', {}, `From: ${this.resolveContactName(email.from) || 'Unknown'}`),
-                this.createElement('span', {}, `To: ${this.resolveContactName(email.to) || 'Unknown'}`),
-                this.createElement('span', {}, this.formatEmailTime(email.timestamp))
-            ),
-            this.createElement('p', { className: 'mail-body' }, email.body || ''),
-            this.createElement(
-                'button',
-                {
-                    type: 'button',
-                    className: 'mail-delete-button',
-                    onClick: () => this.handleDeleteEmail(email.id)
-                },
-                'Delete Email'
-            )
-        );
-    }
-}
-
-
-// ---- ../js/apps/mail/index.js ----
-/** @format */
-
-function initializeMailApp(container) {
-    const { emails, contacts, currentUid, selectedEmail, showEmailComposer } = globalState.getState();
-    const appContainer = document.createElement('div');
-
-    appContainer.className = 'app-container';
-    appContainer.setAttribute('role', 'main');
-    appContainer.setAttribute('aria-label', 'Mail');
-
-    if (typeof requestEmails === 'function') requestEmails();
-    if (typeof requestContacts === 'function') requestContacts();
-
+// Initialize the settings app
+function initializeSettingsApp(container) {
+    /**
+     * Navigation bar with toggle button
+     * - Button toggles add contact form visibility
+     * - Icon switches between '+' (show form) and '-' (hide form)
+     */
     const navBar = new NavigationBar({
-        title: selectedEmail ? 'Email' : (showEmailComposer ? 'New Email' : 'Mail'),
-        showBackButton: !!selectedEmail || !!showEmailComposer,
-        rightButton: (!selectedEmail && !showEmailComposer) ? {
-            element: 'button',
-            props: {
-                type: 'button',
-                className: 'nav-button add-button',
-                onClick: () => globalState.setState({ showEmailComposer: true, selectedEmail: null }),
-                'aria-label': 'Compose email',
-                style: {
-                    fontSize: '24px',
-                    padding: '0 15px',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent-color)',
-                    cursor: 'pointer'
-                }
-            },
-            content: '+'
-        } : null
+        title: 'Settings'
     });
-    navBar.mount(appContainer);
+    navBar.mount(container);
 
-    const contentContainer = document.createElement('div');
-    contentContainer.className = 'content mail-content';
-    appContainer.appendChild(contentContainer);
-
-    if (showEmailComposer) {
-        new MailComposer({ contacts }).mount(contentContainer);
-    } else if (selectedEmail) {
-        new MailDetail({ email: selectedEmail, contacts }).mount(contentContainer);
-    } else {
-        new MailList({
-            emails,
-            contacts,
-            currentUid,
-            onEmailClick: (email) => globalState.setState({ selectedEmail: email, showEmailComposer: false })
-        }).mount(contentContainer);
-    }
-
-    container.appendChild(appContainer);
+    // Create and mount the Settings component
+    const settings = new Settings();
+    settings.mount(container);
 }
 
-window.initializeMailApp = initializeMailApp;
-
+// Make initialization function globally available
+window.initializeSettingsApp = initializeSettingsApp;
 
 // ---- ../js/apps/notes/components/NotesList.js ----
 /**
@@ -5815,153 +5980,6 @@ function initializeClockApp(container) {
 // Make initialization function globally available
 window.initializeClockApp = initializeClockApp;
 
-// ---- ../js/apps/settings/components/Settings.js ----
-/**
- * @format
- * @class Settings
- * @extends Component
- * @description A settings component for the phone app.
- */
-
-class Settings extends Component {
-	/**
-	 * @constructor
-	 * @param {Object} props - Component properties
-	 */
-	constructor() {
-		super();
-		// Get current theme from document attribute
-		const currentTheme = document.documentElement.getAttribute('data-theme');
-		this.state = { isDarkTheme: currentTheme === 'dark' };
-	}
-
-	/**
-	 * @method componentDidMount
-	 * @description Sets the initial theme when the component mounts
-	 */
-	componentDidMount() {
-		// Get current theme from game
-		const alert = {
-			"event": "phone::get::theme",
-			"data": {}
-		};
-		A3API.SendAlert(JSON.stringify(alert));
-	}
-
-	/**
-	 * @method updateTheme
-	 * @param {boolean} isDark - Whether the theme is dark
-	 * @description Updates the theme and phone screen background
-	 */
-	updateTheme(isDark) {
-		const theme = isDark ? 'dark' : 'light';
-
-		// Update document theme
-		document.documentElement.setAttribute('data-theme', theme);
-
-		// Update phone screen background
-		const phoneScreen = document.querySelector('.phone-screen');
-		if (phoneScreen) {
-			phoneScreen.style.background = isDark ? '#000000' : '#ffffff';
-		}
-
-		// Save theme preference to game
-		const alert = {
-			"event": "phone::set::theme",
-			"data": {
-				"isDark": isDark
-			}
-		};
-		A3API.SendAlert(JSON.stringify(alert));
-
-		// Update state
-		this.setState({ isDarkTheme: isDark });
-
-		// Dispatch theme change event
-		const themeEvent = new CustomEvent('themeChanged', {
-			detail: { theme }
-		});
-		document.dispatchEvent(themeEvent);
-	}
-
-	/**
-	 * @method handleThemeToggle
-	 * @description Handles the theme toggle click
-	 */
-	handleThemeToggle = () => {
-		const newTheme = !this.state.isDarkTheme;
-		this.updateTheme(newTheme);
-	}
-
-	/**
-	 * @method render
-	 * @description Renders the settings component
-	 */
-	render() {
-		return this.createElement('div', { className: 'settings-list' },
-			this.createElement('div', { className: 'theme-toggle' },
-				this.createElement('span', {}, 'Dark Mode'),
-				this.createElement('div', {
-					className: this.state.isDarkTheme ? 'custom-toggle active' : 'custom-toggle',
-					onClick: this.handleThemeToggle,
-					style: {
-						width: '50px',
-						height: '25px',
-						backgroundColor: this.state.isDarkTheme ? '#0a84ff' : '#e9ecef',
-						borderRadius: '34px',
-						position: 'relative',
-						cursor: 'pointer',
-						transition: 'background-color 0.2s'
-					}
-				},
-					this.createElement('div', {
-						style: {
-							width: '25px',
-							height: '25px',
-							backgroundColor: '#fff',
-							borderRadius: '50%',
-							position: 'absolute',
-							left: this.state.isDarkTheme ? '25px' : '0px',
-							transition: 'left 0.2s'
-						}
-					})
-				)
-			)
-		);
-	}
-}
-
-// ---- ../js/apps/settings/index.js ----
-/**
- * @fileoverview Main entry point for the Settings application
- *
- * This module initializes the Settings app UI, including:
- * - Rendering the Settings component
- * - Mounting the Settings component into the provided container
- *
- * The initializeSettingsApp function is exposed globally for use by the main app.
- */
-
-// Initialize the settings app
-function initializeSettingsApp(container) {
-    /**
-     * Navigation bar with toggle button
-     * - Button toggles add contact form visibility
-     * - Icon switches between '+' (show form) and '-' (hide form)
-     */
-    const navBar = new NavigationBar({
-        title: 'Settings'
-    });
-    navBar.mount(container);
-
-    // Create and mount the Settings component
-    const settings = new Settings();
-    settings.mount(container);
-}
-
-// Make initialization function globally available
-window.initializeSettingsApp = initializeSettingsApp;
-
 // ---- ../js/apps/calendar/components/Calendar.js ----
 /**
  * @format
@@ -6569,6 +6587,445 @@ function initializeCalendarApp(container) {
 // Make initialization function globally available
 window.initializeCalendarApp = initializeCalendarApp; 
 
+// ---- ../js/apps/wallet/index.js ----
+/** @format */
+
+let lastMobileBankRequest = 0;
+let mobileBankNoticeTimer = null;
+const MOBILE_BANK_REQUEST_COOLDOWN = 1000;
+
+function defaultMobileBankState() {
+    return {
+        account: {
+            bank: 0,
+            cash: 0,
+            earnings: 0,
+            transactions: [],
+        },
+        session: {
+            creditLine: {
+                amountDue: 0,
+                approvedAmount: 0,
+                availableAmount: 0,
+                outstandingPrincipal: 0,
+            },
+            orgName: '',
+            playerName: '',
+            transferTargets: [],
+            uid: '',
+        },
+        notice: null,
+        pendingAction: '',
+    };
+}
+
+function getMobileBankState() {
+    return {
+        ...defaultMobileBankState(),
+        ...(globalState.getState().mobileBank || {}),
+    };
+}
+
+function setMobileBankState(patch) {
+    globalState.setState({
+        mobileBank: {
+            ...getMobileBankState(),
+            ...patch,
+        },
+    });
+}
+
+function formatMobileBankCurrency(value) {
+    const amount = Math.floor(Number(value || 0));
+    return `$${Math.max(0, amount).toLocaleString()}`;
+}
+
+function normalizeMobileBankAmount(value) {
+    const amount = Math.floor(Number(value || 0));
+    return Number.isFinite(amount) ? amount : 0;
+}
+
+function sendMobileBankEvent(event, data = {}) {
+    if (typeof A3API !== 'undefined' && A3API.SendAlert) {
+        A3API.SendAlert(JSON.stringify({ event, data }));
+        return true;
+    }
+
+    showMobileBankNotice('error', 'Bank bridge is unavailable.');
+    return false;
+}
+
+function requestMobileBankRefresh(force = false) {
+    const now = Date.now();
+    if (!force && now - lastMobileBankRequest < MOBILE_BANK_REQUEST_COOLDOWN) {
+        return false;
+    }
+
+    lastMobileBankRequest = now;
+    return sendMobileBankEvent('phone::bank::refresh', {});
+}
+
+function requestMobileBankTransfer(target, amountValue) {
+    const targetUid = String(target || '').trim();
+    const amount = normalizeMobileBankAmount(amountValue);
+
+    if (!targetUid) {
+        showMobileBankNotice('error', 'Choose a recipient.');
+        return false;
+    }
+
+    if (amount <= 0) {
+        showMobileBankNotice('error', 'Enter a valid transfer amount.');
+        return false;
+    }
+
+    setMobileBankState({ pendingAction: 'transfer' });
+    const sent = sendMobileBankEvent('phone::bank::transfer::request', {
+        amount,
+        from: 'bank',
+        target: targetUid,
+    });
+
+    if (!sent) {
+        setMobileBankState({ pendingAction: '' });
+    }
+
+    return sent;
+}
+
+function requestMobileBankDepositEarnings() {
+    const state = getMobileBankState();
+    const availableEarnings = normalizeMobileBankAmount(state.account.earnings);
+
+    if (availableEarnings <= 0) {
+        showMobileBankNotice('error', 'No earnings are available to deposit.');
+        return false;
+    }
+
+    setMobileBankState({ pendingAction: 'depositearnings' });
+    const sent = sendMobileBankEvent('phone::bank::depositEarnings::request', {
+        amount: availableEarnings,
+    });
+
+    if (!sent) {
+        setMobileBankState({ pendingAction: '' });
+    }
+
+    return sent;
+}
+
+function requestMobileBankRepayCreditLine(amountValue) {
+    const amount = normalizeMobileBankAmount(amountValue);
+    const state = getMobileBankState();
+    const amountDue = normalizeMobileBankAmount(state.session.creditLine?.amountDue);
+
+    if (amountDue <= 0) {
+        showMobileBankNotice('error', 'No credit line payment is due.');
+        return false;
+    }
+
+    if (amount <= 0) {
+        showMobileBankNotice('error', 'Enter a valid payment amount.');
+        return false;
+    }
+
+    setMobileBankState({ pendingAction: 'repaycreditline' });
+    const sent = sendMobileBankEvent('phone::bank::repayCreditLine::request', {
+        amount: Math.min(amount, amountDue),
+    });
+
+    if (!sent) {
+        setMobileBankState({ pendingAction: '' });
+    }
+
+    return sent;
+}
+
+function updateMobileBank(payload) {
+    const current = getMobileBankState();
+    setMobileBankState({
+        account: {
+            ...current.account,
+            ...(payload && payload.account ? payload.account : {}),
+        },
+        session: {
+            ...current.session,
+            ...(payload && payload.session ? payload.session : {}),
+        },
+        pendingAction: '',
+    });
+}
+
+function updateMobileBankAccount(accountPatch) {
+    const current = getMobileBankState();
+    setMobileBankState({
+        account: {
+            ...current.account,
+            ...(accountPatch || {}),
+        },
+        pendingAction: '',
+    });
+}
+
+function showMobileBankNotice(type, message) {
+    if (!message) return;
+
+    setMobileBankState({
+        notice: {
+            type: type || 'info',
+            message,
+        },
+        pendingAction: '',
+    });
+
+    if (mobileBankNoticeTimer) {
+        clearTimeout(mobileBankNoticeTimer);
+    }
+
+    mobileBankNoticeTimer = setTimeout(() => {
+        setMobileBankState({ notice: null });
+        mobileBankNoticeTimer = null;
+    }, 3200);
+}
+
+function mobileBankTransactionRows(transactions) {
+    const rows = Array.isArray(transactions) ? transactions.slice(0, 5) : [];
+
+    if (rows.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'wallet-empty-state';
+        empty.textContent = 'No recent transactions';
+        return empty;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'wallet-transaction-list';
+
+    rows.forEach((entry) => {
+        const row = document.createElement('div');
+        row.className = 'wallet-transaction-row';
+
+        const copy = document.createElement('div');
+        copy.className = 'wallet-transaction-copy';
+
+        const title = document.createElement('span');
+        title.className = 'wallet-transaction-title';
+        title.textContent = entry.type || 'Transaction';
+
+        const meta = document.createElement('span');
+        meta.className = 'wallet-transaction-meta';
+        meta.textContent = entry.date || 'Pending timestamp';
+
+        const value = document.createElement('span');
+        value.className = 'wallet-transaction-value';
+        value.textContent = formatMobileBankCurrency(entry.amount || 0);
+
+        copy.append(title, meta);
+        row.append(copy, value);
+        list.appendChild(row);
+    });
+
+    return list;
+}
+
+function initializeMobileBankApp(container) {
+    const state = getMobileBankState();
+    const { account, session, notice, pendingAction } = state;
+    const transferTargets = Array.isArray(session.transferTargets)
+        ? session.transferTargets
+        : [];
+    const creditLine = session.creditLine || {};
+    const amountDue = normalizeMobileBankAmount(creditLine.amountDue);
+    const outstandingPrincipal = normalizeMobileBankAmount(creditLine.outstandingPrincipal);
+
+    requestMobileBankRefresh(false);
+
+    const appContainer = document.createElement('div');
+    appContainer.className = 'app-container wallet-app';
+    appContainer.setAttribute('role', 'main');
+    appContainer.setAttribute('aria-label', 'Wallet');
+
+    const navBar = new NavigationBar({
+        title: 'Wallet',
+        rightButton: {
+            element: 'button',
+            props: {
+                className: 'wallet-nav-button',
+                type: 'button',
+                disabled: pendingAction !== '',
+                onClick: () => requestMobileBankRefresh(true),
+                'aria-label': 'Refresh wallet',
+            },
+            content: 'Refresh',
+        },
+    });
+    navBar.mount(appContainer);
+
+    const content = document.createElement('div');
+    content.className = 'content wallet-content';
+
+    if (notice && notice.message) {
+        const noticeElement = document.createElement('div');
+        noticeElement.className = `wallet-notice wallet-notice-${notice.type || 'info'}`;
+        noticeElement.textContent = notice.message;
+        content.appendChild(noticeElement);
+    }
+
+    const hero = document.createElement('section');
+    hero.className = 'wallet-balance-card';
+    hero.innerHTML = `
+        <span class="wallet-eyebrow">Available Balance</span>
+        <strong class="wallet-balance">${formatMobileBankCurrency(account.bank)}</strong>
+        <span class="wallet-owner">${session.playerName || 'Personal account'}</span>
+    `;
+    content.appendChild(hero);
+
+    const metrics = document.createElement('section');
+    metrics.className = 'wallet-metrics';
+    metrics.innerHTML = `
+        <div class="wallet-metric">
+            <span>Cash</span>
+            <strong>${formatMobileBankCurrency(account.cash)}</strong>
+        </div>
+        <div class="wallet-metric">
+            <span>Earnings</span>
+            <strong>${formatMobileBankCurrency(account.earnings)}</strong>
+        </div>
+    `;
+    content.appendChild(metrics);
+
+    const bankingActions = document.createElement('section');
+    bankingActions.className = 'wallet-card';
+
+    const bankingTitle = document.createElement('div');
+    bankingTitle.className = 'wallet-card-title';
+    bankingTitle.textContent = 'Account Actions';
+
+    const earningsAction = document.createElement('div');
+    earningsAction.className = 'wallet-action-block';
+
+    const earningsSummary = document.createElement('div');
+    earningsSummary.className = 'wallet-action-summary';
+    earningsSummary.innerHTML = `
+        <span>Deposit Earnings</span>
+        <strong>${formatMobileBankCurrency(account.earnings)} available</strong>
+        <small>Move mission earnings into your bank balance.</small>
+    `;
+
+    const earningsButton = document.createElement('button');
+    earningsButton.className = 'wallet-secondary-button wallet-full-button';
+    earningsButton.type = 'button';
+    earningsButton.disabled = pendingAction !== '' || normalizeMobileBankAmount(account.earnings) <= 0;
+    earningsButton.textContent = pendingAction === 'depositearnings' ? 'Depositing...' : 'Deposit Earnings';
+    earningsButton.addEventListener('click', () => {
+        requestMobileBankDepositEarnings();
+    });
+    earningsAction.append(earningsSummary, earningsButton);
+
+    const creditAction = document.createElement('div');
+    creditAction.className = 'wallet-action-block';
+
+    const creditSummary = document.createElement('div');
+    creditSummary.className = 'wallet-action-summary';
+    creditSummary.innerHTML = `
+        <span>Credit Line Payment</span>
+        <strong>${formatMobileBankCurrency(amountDue)} due</strong>
+        <small>${session.orgName || 'Organization'} - ${formatMobileBankCurrency(outstandingPrincipal)} outstanding</small>
+    `;
+
+    const creditControls = document.createElement('div');
+    creditControls.className = 'wallet-action-controls';
+
+    const creditAmount = document.createElement('input');
+    creditAmount.className = 'wallet-input';
+    creditAmount.type = 'number';
+    creditAmount.min = '1';
+    creditAmount.step = '1';
+    creditAmount.placeholder = amountDue > 0 ? 'Payment amount' : 'No payment due';
+    creditAmount.setAttribute('aria-label', 'Credit line payment amount');
+    creditAmount.inputMode = 'numeric';
+    creditAmount.disabled = pendingAction !== '' || amountDue <= 0;
+
+    const creditButton = document.createElement('button');
+    creditButton.className = 'wallet-secondary-button';
+    creditButton.type = 'button';
+    creditButton.disabled = pendingAction !== '' || amountDue <= 0;
+    creditButton.textContent = pendingAction === 'repaycreditline' ? 'Paying...' : 'Pay Credit';
+    creditButton.addEventListener('click', () => {
+        requestMobileBankRepayCreditLine(creditAmount.value || amountDue);
+    });
+
+    creditControls.append(creditAmount, creditButton);
+    creditAction.append(creditSummary, creditControls);
+    bankingActions.append(bankingTitle, earningsAction, creditAction);
+    content.appendChild(bankingActions);
+
+    const transferCard = document.createElement('section');
+    transferCard.className = 'wallet-card';
+
+    const transferTitle = document.createElement('div');
+    transferTitle.className = 'wallet-card-title';
+    transferTitle.textContent = 'Transfer';
+
+    const targetSelect = document.createElement('select');
+    targetSelect.className = 'wallet-input';
+    targetSelect.setAttribute('aria-label', 'Transfer recipient');
+    targetSelect.disabled = pendingAction !== '' || transferTargets.length === 0;
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = transferTargets.length === 0 ? 'No online recipients' : 'Choose recipient';
+    targetSelect.appendChild(placeholder);
+
+    transferTargets.forEach((target) => {
+        const option = document.createElement('option');
+        option.value = target.uid || '';
+        option.textContent = target.name || target.uid || 'Player';
+        targetSelect.appendChild(option);
+    });
+
+    const amountInput = document.createElement('input');
+    amountInput.className = 'wallet-input';
+    amountInput.type = 'number';
+    amountInput.min = '1';
+    amountInput.step = '1';
+    amountInput.placeholder = 'Amount';
+    amountInput.inputMode = 'numeric';
+    amountInput.disabled = pendingAction !== '';
+
+    const transferButton = document.createElement('button');
+    transferButton.className = 'wallet-primary-button';
+    transferButton.type = 'button';
+    transferButton.disabled = pendingAction !== '' || transferTargets.length === 0;
+    transferButton.textContent = pendingAction === 'transfer' ? 'Sending...' : 'Send Transfer';
+    transferButton.addEventListener('click', () => {
+        requestMobileBankTransfer(targetSelect.value, amountInput.value);
+    });
+
+    transferCard.append(transferTitle, targetSelect, amountInput, transferButton);
+    content.appendChild(transferCard);
+
+    const historyCard = document.createElement('section');
+    historyCard.className = 'wallet-card';
+
+    const historyTitle = document.createElement('div');
+    historyTitle.className = 'wallet-card-title';
+    historyTitle.textContent = 'Recent Activity';
+
+    historyCard.append(historyTitle, mobileBankTransactionRows(account.transactions));
+    content.appendChild(historyCard);
+
+    appContainer.appendChild(content);
+    container.appendChild(appContainer);
+}
+
+window.initializeMobileBankApp = initializeMobileBankApp;
+window.requestMobileBankRefresh = requestMobileBankRefresh;
+window.updateMobileBank = updateMobileBank;
+window.updateMobileBankAccount = updateMobileBankAccount;
+window.showMobileBankNotice = showMobileBankNotice;
+
+
 // ---- ../js/app.js ----
 /**
  * @fileoverview Root application component and integration logic.
@@ -6662,6 +7119,9 @@ class App extends Component {
             case 'settings':
                 window.initializeSettingsApp(appContainer);
                 break;
+            case 'wallet':
+                window.initializeMobileBankApp(appContainer);
+                break;
             default:
                 return this.renderPlaceholderApp(currentApp);
         }
@@ -6683,7 +7143,8 @@ class App extends Component {
             mail: '',
             icloud: '',
             photos: '',
-            safari: ''
+            safari: '',
+            wallet: ''
         };
 
         return this.createElement(

@@ -3,6 +3,26 @@
 if (isNil QGVAR(BankRepository)) then { call FUNC(initRepository); };
 if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
 
+GVAR(sendPhoneBankEvent) = {
+    params [["_functionName", "", [""]], ["_arguments", [], [[]]]];
+
+    private _display = uiNamespace getVariable ["RscPhone", displayNull];
+    if (isNull _display || { _functionName isEqualTo "" }) exitWith { false };
+
+    private _control = _display displayCtrl 1001;
+    if (isNull _control) exitWith { false };
+
+    private _serializedArguments = _arguments apply { toJSON _x };
+    private _script = format [
+        "window.%1 && window.%1(%2)",
+        _functionName,
+        _serializedArguments joinString ", "
+    ];
+
+    _control ctrlWebBrowserAction ["ExecJS", _script];
+    true
+};
+
 [QGVAR(initBank), {
     GVAR(BankRepository) call ["init", []];
 }] call CFUNC(addEventHandler);
@@ -14,6 +34,7 @@ if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
     if !(isNil QGVAR(BankUIBridge)) then {
         GVAR(BankUIBridge) call ["handleAccountSyncResponse", [_data]];
     };
+    ["updateMobileBankAccount", [_data]] call GVAR(sendPhoneBankEvent);
 }] call CFUNC(addEventHandler);
 
 [QGVAR(responseSyncBank), {
@@ -23,6 +44,7 @@ if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
     if !(isNil QGVAR(BankUIBridge)) then {
         GVAR(BankUIBridge) call ["handleAccountSyncResponse", [_data]];
     };
+    ["updateMobileBankAccount", [_data]] call GVAR(sendPhoneBankEvent);
 }] call CFUNC(addEventHandler);
 
 [QGVAR(responseHydrateBank), {
@@ -31,6 +53,7 @@ if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
     if !(isNil QGVAR(BankUIBridge)) then {
         GVAR(BankUIBridge) call ["handleHydrateResponse", [_data, "bank::hydrate"]];
     };
+    ["updateMobileBank", [_data]] call GVAR(sendPhoneBankEvent);
 }] call CFUNC(addEventHandler);
 
 [QGVAR(responseBankNotice), {
@@ -39,6 +62,7 @@ if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
     if !(isNil QGVAR(BankUIBridge)) then {
         GVAR(BankUIBridge) call ["handleNoticeResponse", [_type, _message]];
     };
+    ["showMobileBankNotice", [_type, _message]] call GVAR(sendPhoneBankEvent);
 }] call CFUNC(addEventHandler);
 
 [{

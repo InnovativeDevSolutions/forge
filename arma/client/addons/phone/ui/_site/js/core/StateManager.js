@@ -49,6 +49,23 @@ const initialAppState = {
     events: [],
     currentEvent: null,
     showEventEditor: false,
+
+    // Mobile bank state
+    mobileBank: {
+        account: {
+            bank: 0,
+            cash: 0,
+            earnings: 0,
+            transactions: [],
+        },
+        session: {
+            playerName: '',
+            transferTargets: [],
+            uid: '',
+        },
+        notice: null,
+        pendingAction: '',
+    },
 };
 
 /**

@@ -345,6 +345,56 @@ switch (_event) do {
 
         profileNamespace setVariable ["FORGE_Phone_Alarms", _alarms];
     };
+    case "phone::bank::refresh": {
+        ["forge_server_bank_requestHydrateBank", [getPlayerUID player, "bank", false]] call CFUNC(serverEvent);
+    };
+    case "phone::bank::transfer::request": {
+        private _amount = floor (_data getOrDefault ["amount", 0]);
+        private _target = _data getOrDefault ["target", ""];
+        private _from = toLowerANSI (_data getOrDefault ["from", "bank"]);
+
+        if (_target isNotEqualTo "" && { _amount > 0 }) then {
+            ["forge_server_bank_requestTransfer", [getPlayerUID player, _target, _from, _amount]] call CFUNC(serverEvent);
+        } else {
+            private _display = uiNamespace getVariable ["RscPhone", displayNull];
+            if !(isNull _display) then {
+                private _control = _display displayCtrl 1001;
+                if !(isNull _control) then {
+                    _control ctrlWebBrowserAction ["ExecJS", "window.showMobileBankNotice && window.showMobileBankNotice('error', 'Choose a recipient and valid amount.')"];
+                };
+            };
+        };
+    };
+    case "phone::bank::depositEarnings::request": {
+        private _amount = floor (_data getOrDefault ["amount", 0]);
+
+        if (_amount > 0) then {
+            ["forge_server_bank_requestDepositEarnings", [getPlayerUID player, _amount]] call CFUNC(serverEvent);
+        } else {
+            private _display = uiNamespace getVariable ["RscPhone", displayNull];
+            if !(isNull _display) then {
+                private _control = _display displayCtrl 1001;
+                if !(isNull _control) then {
+                    _control ctrlWebBrowserAction ["ExecJS", "window.showMobileBankNotice && window.showMobileBankNotice('error', 'Enter a valid earnings amount.')"];
+                };
+            };
+        };
+    };
+    case "phone::bank::repayCreditLine::request": {
+        private _amount = floor (_data getOrDefault ["amount", 0]);
+
+        if (_amount > 0) then {
+            ["forge_server_bank_requestRepayCreditLine", [getPlayerUID player, _amount]] call CFUNC(serverEvent);
+        } else {
+            private _display = uiNamespace getVariable ["RscPhone", displayNull];
+            if !(isNull _display) then {
+                private _control = _display displayCtrl 1001;
+                if !(isNull _control) then {
+                    _control ctrlWebBrowserAction ["ExecJS", "window.showMobileBankNotice && window.showMobileBankNotice('error', 'Enter a valid payment amount.')"];
+                };
+            };
+        };
+    };
     default { hint format ["Unhandled phone event: %1", _event]; };
 };
 
