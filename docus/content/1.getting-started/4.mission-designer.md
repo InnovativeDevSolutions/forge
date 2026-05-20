@@ -295,7 +295,16 @@ General task rules:
 4. Use Forge grouping modules where required.
 5. Sync task modules to real world objects, units, vehicles, or grouping
    modules.
-6. Test that the task appears in CAD before relying on dispatch assignment.
+6. To chain tasks, set `Prerequisite Task IDs` on the dependent task module to
+   a comma-separated list of task IDs that must succeed first.
+7. Test that unchained tasks appear in CAD immediately and chained tasks appear
+   only after their prerequisite tasks succeed.
+
+Task chaining uses only task IDs. The dependent task is still registered during
+mission setup, but it stays hidden from CAD, cannot be assigned, and does not
+start its task logic until every prerequisite task has completed successfully.
+If any prerequisite task fails or never completes, the dependent task remains
+locked.
 
 Zone fields that must reference area markers:
 
@@ -333,7 +342,9 @@ Setup:
 5. Set `LimitFail` if the mission should fail after too many losses.
 6. Set reward funds, rating gain/loss, end-state behavior, and optional
    `TimeLimit`.
-7. Sync the attack module directly to the target units or vehicles.
+7. Set `Prerequisite Task IDs` only if this attack task should unlock after
+   other tasks succeed.
+8. Sync the attack module directly to the target units or vehicles.
 
 Validation:
 
@@ -362,7 +373,9 @@ Setup:
    or failed conditions.
 6. Set reward funds, rating gain/loss, end-state behavior, and optional
    `TimeLimit`.
-7. Sync the destroy module directly to the targets.
+7. Set `Prerequisite Task IDs` only if this destroy task should unlock after
+   other tasks succeed.
+8. Sync the destroy module directly to the targets.
 
 Validation:
 
@@ -408,8 +421,10 @@ Setup:
     failure.
 11. Set `TimeLimit` to the IED countdown in seconds.
 12. Set reward funds, rating gain/loss, and end-state behavior.
-13. Sync `FORGE_Module_Defuse` to `FORGE_Module_Explosives`.
-14. Sync `FORGE_Module_Defuse` to `FORGE_Module_Protected` if used.
+13. Set `Prerequisite Task IDs` only if this defuse task should unlock after
+    other tasks succeed.
+14. Sync `FORGE_Module_Defuse` to `FORGE_Module_Explosives`.
+15. Sync `FORGE_Module_Defuse` to `FORGE_Module_Protected` if used.
 
 Validation:
 
@@ -455,7 +470,9 @@ Setup:
    fail threshold.
 10. Set reward funds, rating gain/loss, end-state behavior, and optional
     `TimeLimit`.
-11. Sync `FORGE_Module_Delivery` to `FORGE_Module_Cargo`.
+11. Set `Prerequisite Task IDs` only if this delivery task should unlock after
+    other tasks succeed.
+12. Sync `FORGE_Module_Delivery` to `FORGE_Module_Cargo`.
 
 Validation:
 
@@ -510,8 +527,10 @@ Setup:
 15. If `CBRN Attack` is enabled, set `CBRNZone`.
 16. Set reward funds, rating gain/loss, end-state behavior, and optional
     `TimeLimit`.
-17. Sync `FORGE_Module_Hostage` to `FORGE_Module_Hostages`.
-18. Sync `FORGE_Module_Hostage` to `FORGE_Module_Shooters`.
+17. Set `Prerequisite Task IDs` only if this hostage task should unlock after
+    other tasks succeed.
+18. Sync `FORGE_Module_Hostage` to `FORGE_Module_Hostages`.
+19. Sync `FORGE_Module_Hostage` to `FORGE_Module_Shooters`.
 
 Validation:
 
@@ -562,7 +581,9 @@ Setup:
    capture mode.
 9. Set reward funds, rating gain/loss, end-state behavior, and optional
    `TimeLimit`.
-10. Sync the HVT module directly to the HVT unit or units.
+10. Set `Prerequisite Task IDs` only if this HVT task should unlock after other
+    tasks succeed.
+11. Sync the HVT module directly to the HVT unit or units.
 
 Validation:
 
@@ -600,6 +621,8 @@ Setup:
 9. Place one or more enemy groups or units to use as wave templates.
 10. Sync any unit from each enemy group to the defend module.
 11. Set reward funds, rating gain/loss, and end-state behavior.
+12. Set `Prerequisite Task IDs` only if this defend task should unlock after
+    other tasks succeed.
 
 Validation:
 
@@ -652,7 +675,8 @@ Before publishing a mission, verify:
 - Grouping modules are synced in the correct direction.
 - Success and fail limits match the number of required entities.
 - Reward funds and rating changes are intentional.
-- The task appears in CAD when created.
+- Unchained tasks appear in CAD when created.
+- Chained tasks remain hidden until all prerequisite task IDs succeed.
 - Assigned CAD tasks can be acknowledged, declined, and completed.
 
 ## Mission Validation Checklist

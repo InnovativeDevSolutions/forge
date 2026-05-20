@@ -28,6 +28,7 @@ when a catalog entry is inserted or ownership changes:
 - `accepted`
 - `requesterUid`
 - `orgID`
+- `prerequisiteTaskIds`
 
 Ownership context:
 
@@ -209,6 +210,10 @@ Available task modules:
 
 These modules delegate to `forge_server_task_fnc_startTask`.
 
+Each task module also includes an optional chain field:
+
+- `Prerequisite Task IDs`: comma-separated task IDs that must succeed first.
+
 ## Mission Designer Guide
 
 This section is the practical Eden setup guide for mission designers.
@@ -230,6 +235,10 @@ Use these rules for every Forge task:
 6. Grouping modules such as `Explosive Entities`, `Protected Entities`,
    `Cargo`, `Hostages`, and `Shooters` should be synced to real world objects,
    not other logic modules.
+7. To chain tasks, set `Prerequisite Task IDs` on the dependent task module.
+   Use comma-separated IDs such as `attack_01, delivery_02`. The dependent
+   task stays hidden from CAD and cannot be assigned until every listed task
+   succeeds.
 
 ### Attack Task
 
@@ -473,6 +482,7 @@ through `forge_server_task_fnc_handler`.
     createHashMapFromArray [
         ["limitFail", 0],
         ["limitSuccess", 3],
+        ["prerequisiteTaskIds", ["recon_01"]],
         ["funds", 50000],
         ["ratingFail", -10],
         ["ratingSuccess", 20],
@@ -483,6 +493,37 @@ through `forge_server_task_fnc_handler`.
     "script"
 ] call forge_server_task_fnc_startTask;
 ```
+
+## Chained Tasks
+
+Use `prerequisiteTaskIds` when a task should stay hidden until one or more
+other tasks succeed. The task is still registered during mission setup, but it
+is stored with `locked` status, filtered out of CAD, blocked from assignment,
+and its task logic does not start until every prerequisite task has completed
+with `succeeded`.
+
+```sqf
+[
+    "delivery",
+    "supply_delivery_02",
+    getMarkerPos "delivery_zone_02",
+    "Deliver Medical Supplies",
+    "Move the cargo into the marked delivery area.",
+    createHashMapFromArray [["cargo", [cargoBox1, cargoBox2]]],
+    createHashMapFromArray [
+        ["deliveryZone", "delivery_zone_02"],
+        ["limitSuccess", 2],
+        ["prerequisiteTaskIds", ["compound_attack_01"]],
+        ["funds", 30000]
+    ]
+] call forge_server_task_fnc_startTask;
+```
+
+Notes:
+
+- `prerequisiteTaskIds` accepts either a string or an array of task ID strings.
+- All prerequisite tasks must succeed before the chained task unlocks.
+- If a prerequisite fails or never completes, the chained task remains locked.
 
 ## Handler Calls
 

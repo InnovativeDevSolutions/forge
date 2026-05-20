@@ -4,6 +4,9 @@ Use this guide as the player-facing overview for Forge systems. It explains
 what players interact with during normal missions, how task assignment works,
 and what persistent storage limits apply.
 
+Player-guide screenshots are stored as JPG files under
+`docus/public/images/player`.
+
 ## Opening Forge Interactions
 
 Most Forge actions are opened from the actor interaction menu while standing

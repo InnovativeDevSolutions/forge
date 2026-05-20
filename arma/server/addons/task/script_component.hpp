@@ -39,3 +39,11 @@
                 tooltip = "SQF array string for special rewards, e.g. [""B_UAV_01_F""]"; \
                 typeName = "STRING"; \
             };
+
+#define TASK_CHAIN_ATTRIBUTES(PREFIX) \
+            class PrerequisiteTaskIds: Edit { \
+                property = QUOTE(DOUBLES(PREFIX,PrerequisiteTaskIds)); \
+                displayName = "Prerequisite Task IDs"; \
+                tooltip = "Comma-separated task IDs that must succeed before this task appears in CAD or can be assigned"; \
+                typeName = "STRING"; \
+            };

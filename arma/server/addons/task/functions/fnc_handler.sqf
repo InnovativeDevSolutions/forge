@@ -22,6 +22,7 @@
 params [["_taskType", "", [""]], ["_args", [], [[]]], ["_minRating", 0, [0]], ["_requesterUid", "", [""]]];
 
 private _taskID = "";
+private _shouldStartTaskLogic = true;
 
 if (_minRating > 0) then {
     if (_requesterUid isEqualTo "") then {
@@ -71,8 +72,23 @@ if (_taskID isNotEqualTo "") then {
         ]] call EFUNC(common,log);
     };
 
-    GVAR(TaskStore) call ["setTaskStatus", [_taskID, "available"]];
+    private _initialStatus = GVAR(TaskStore) call ["resolveInitialTaskStatus", [_taskID, _catalogEntry]];
+    GVAR(TaskStore) call ["setTaskStatus", [_taskID, _initialStatus]];
+    if (_initialStatus isEqualTo "locked") then {
+        ["INFO", format ["Task %1 is waiting for chained prerequisites before task logic starts.", _taskID]] call EFUNC(common,log);
+        waitUntil {
+            sleep 2;
+            private _status = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];
+            _status isNotEqualTo "locked"
+        };
+        if ((GVAR(TaskStore) call ["getTaskStatus", [_taskID]]) isEqualTo "") then {
+            _shouldStartTaskLogic = false;
+            ["WARNING", format ["Task %1 was cleared before its chained prerequisites unlocked.", _taskID]] call EFUNC(common,log);
+        };
+    };
 };
+
+if !(_shouldStartTaskLogic) exitWith {};
 
 switch (_taskType) do {
 	case "attack": {

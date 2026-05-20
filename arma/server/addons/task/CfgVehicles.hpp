@@ -34,6 +34,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Attack)
             class LimitFail: Edit {
                 property = "FORGE_Module_Attack_LimitFail";
                 displayName = "Fail Limit";
@@ -292,6 +293,7 @@ class CfgVehicles {
                 tooltip = "Unique identifier for this task";
                 typeName = "STRING";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Defend)
             class DefenseZone: Edit {
                 property = "FORGE_Module_Defend_DefenseZone";
                 displayName = "Defense Zone Marker";
@@ -417,6 +419,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Defuse)
             class LimitFail: Edit {
                 property = "FORGE_Module_Defuse_LimitFail";
                 displayName = "Fail Limit";
@@ -529,6 +532,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Destroy)
             class LimitFail: Edit {
                 property = "FORGE_Module_Destroy_LimitFail";
                 displayName = "Fail Limit";
@@ -641,6 +645,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Hostage)
             class LimitFail: Edit {
                 property = "FORGE_Module_Hostage_LimitFail";
                 displayName = "Fail Limit";
@@ -789,6 +794,7 @@ class CfgVehicles {
                 tooltip = "Unique identifier for this task";
                 typeName = "STRING";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_Delivery)
             class DeliveryZone: Edit {
                 property = "FORGE_Module_Delivery_DeliveryZone";
                 displayName = "Delivery Zone Marker";
@@ -942,6 +948,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_CHAIN_ATTRIBUTES(FORGE_Module_HVT)
             class LimitFail: Edit {
                 property = "FORGE_Module_HVT_LimitFail";
                 displayName = "Fail Limit";

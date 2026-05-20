@@ -19,6 +19,7 @@ PREP(initTaskStore);
 PREP_SUBDIR(generators,attackMissionGenerator);
 
 PREP_SUBDIR(helpers,handleTaskRewards);
+PREP_SUBDIR(helpers,parseTaskChainAttributes);
 PREP_SUBDIR(helpers,parseRewards);
 PREP_SUBDIR(helpers,spawnEnemyWave);
 PREP_SUBDIR(helpers,startTask);

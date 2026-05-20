@@ -24,6 +24,7 @@
  *    Common keys:
  *      "limitFail"     <NUMBER> (default: -1)
  *      "limitSuccess"  <NUMBER> (default: -1)
+ *      "prerequisiteTaskIds" <ARRAY|STRING> (default: []) -- task IDs that must succeed before this task is available
  *      "funds"         <NUMBER> (default: 0)
  *      "ratingFail"    <NUMBER> (default: 0)
  *      "ratingSuccess" <NUMBER> (default: 0)
@@ -123,7 +124,17 @@ private _iedTimer = _taskParams getOrDefault ["iedTimer", 0];
 
 // --- 3. Register catalog entry ---
 
+private _prerequisiteTaskIds = _taskParams getOrDefault [
+    "prerequisiteTaskIds",
+    _taskParams getOrDefault [
+        "prerequisiteTaskIDs",
+        _taskParams getOrDefault ["requiresTaskIds", []]
+    ]
+];
+
 GVAR(TaskStore) call ["registerTaskCatalogEntry", [_taskID, createHashMapFromArray [
+    ["taskID", _taskID],
+    ["taskId", _taskID],
     ["type", _taskType],
     ["title", _title],
     ["description", _description],
@@ -131,7 +142,8 @@ GVAR(TaskStore) call ["registerTaskCatalogEntry", [_taskID, createHashMapFromArr
     ["accepted", false],
     ["requesterUid", _requesterUid],
     ["orgID", "default"],
-    ["source", _source]
+    ["source", _source],
+    ["prerequisiteTaskIds", _prerequisiteTaskIds]
 ]]];
 
 // --- 4. Assemble type-specific handler args ---

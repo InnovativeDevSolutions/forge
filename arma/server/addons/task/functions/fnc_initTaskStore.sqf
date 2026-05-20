@@ -27,6 +27,8 @@ GVAR(TaskStore) = createHashMapObject [[
     ["#create", compileFinal {
         _self set ["participantRegistry", createHashMap];
         _self set ["taskLifecycleRegistry", createHashMap];
+        _self set ["completedTaskRegistry", createHashMap];
+        _self set ["taskDependencyRegistry", createHashMap];
         _self set ["taskEntityRegistries", createHashMapFromArray [
             ["cargo", createHashMap],
             ["hostages", createHashMap],
@@ -41,6 +43,8 @@ GVAR(TaskStore) = createHashMapObject [[
     ["resetMissionState", compileFinal {
         _self set ["participantRegistry", createHashMap];
         _self set ["taskLifecycleRegistry", createHashMap];
+        _self set ["completedTaskRegistry", createHashMap];
+        _self set ["taskDependencyRegistry", createHashMap];
         _self set ["taskEntityRegistries", createHashMapFromArray [
             ["cargo", createHashMap],
             ["hostages", createHashMap],
@@ -210,10 +214,114 @@ GVAR(TaskStore) = createHashMapObject [[
             createHashMapFromArray [["source", "task"]]
         ]]
     }],
+    ["normalizePrerequisiteTaskIds", compileFinal {
+        params [["_value", [], [[], ""]]];
+
+        if (_value isEqualType "") then {
+            _value = [_value];
+        };
+        if !(_value isEqualType []) exitWith { [] };
+
+        private _taskIDs = [];
+        {
+            if !(_x isEqualType "") then { continue; };
+            if (_x isEqualTo "") then { continue; };
+            _taskIDs pushBackUnique _x;
+        } forEach _value;
+
+        _taskIDs
+    }],
+    ["getTaskPrerequisites", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { [] };
+
+        private _dependencyRegistry = _self getOrDefault ["taskDependencyRegistry", createHashMap];
+        +(_dependencyRegistry getOrDefault [_taskID, []])
+    }],
+    ["isTaskCompleted", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { false };
+
+        private _completedRegistry = _self getOrDefault ["completedTaskRegistry", createHashMap];
+        if (_completedRegistry getOrDefault [_taskID, false]) exitWith { true };
+
+        (_self call ["getTaskStatus", [_taskID]]) isEqualTo "succeeded"
+    }],
+    ["areTaskPrerequisitesSatisfied", compileFinal {
+        params [["_taskID", "", [""]], ["_entry", createHashMap, [createHashMap]]];
+
+        private _prerequisites = _self call ["getTaskPrerequisites", [_taskID]];
+        if (_prerequisites isEqualTo [] && { _entry isNotEqualTo createHashMap }) then {
+            _prerequisites = _self call ["normalizePrerequisiteTaskIds", [_entry getOrDefault ["prerequisiteTaskIds", []]]];
+        };
+        if (_prerequisites isEqualTo []) exitWith { true };
+
+        private _satisfied = true;
+        {
+            if !(_self call ["isTaskCompleted", [_x]]) exitWith {
+                _satisfied = false;
+            };
+        } forEach _prerequisites;
+
+        _satisfied
+    }],
+    ["resolveInitialTaskStatus", compileFinal {
+        params [["_taskID", "", [""]], ["_entry", createHashMap, [createHashMap]]];
+
+        if (_self call ["areTaskPrerequisitesSatisfied", [_taskID, _entry]]) exitWith { "available" };
+
+        "locked"
+    }],
+    ["markTaskCompleted", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { false };
+
+        private _completedRegistry = _self getOrDefault ["completedTaskRegistry", createHashMap];
+        _completedRegistry set [_taskID, true];
+        _self set ["completedTaskRegistry", _completedRegistry];
+        true
+    }],
+    ["unlockDependentTasks", compileFinal {
+        params [["_completedTaskID", "", [""]]];
+
+        private _dependencyRegistry = _self getOrDefault ["taskDependencyRegistry", createHashMap];
+        {
+            private _dependentTaskID = _x;
+            private _prerequisites = _y;
+
+            if !(_completedTaskID in _prerequisites) then { continue; };
+            if ((_self call ["getTaskStatus", [_dependentTaskID]]) isNotEqualTo "locked") then { continue; };
+            if !(_self call ["areTaskPrerequisitesSatisfied", [_dependentTaskID]]) then { continue; };
+
+            _self call ["setTaskStatus", [_dependentTaskID, "available"]];
+            ["INFO", format ["Unlocked chained task '%1' after prerequisite '%2' completed.", _dependentTaskID, _completedTaskID]] call EFUNC(common,log);
+        } forEach _dependencyRegistry;
+
+        true
+    }],
     ["registerTaskCatalogEntry", compileFinal {
         params [["_taskID", "", [""]], ["_entry", createHashMap, [createHashMap]]];
 
         if (_taskID isEqualTo "" || { _entry isEqualTo createHashMap }) exitWith { false };
+
+        _entry set ["taskID", _taskID];
+        _entry set ["taskId", _taskID];
+
+        private _prerequisiteTaskIds = _self call ["normalizePrerequisiteTaskIds", [_entry getOrDefault ["prerequisiteTaskIds", []]]];
+        _entry set ["prerequisiteTaskIds", _prerequisiteTaskIds];
+
+        private _dependencyRegistry = _self getOrDefault ["taskDependencyRegistry", createHashMap];
+        if (_prerequisiteTaskIds isEqualTo []) then {
+            _dependencyRegistry deleteAt _taskID;
+        } else {
+            _dependencyRegistry set [_taskID, _prerequisiteTaskIds];
+        };
+        _self set ["taskDependencyRegistry", _dependencyRegistry];
+
+        _entry set ["locked", !(_self call ["areTaskPrerequisitesSatisfied", [_taskID, _entry]])];
 
         private _envelope = _self call [
             "callTaskStateEnvelope",
@@ -240,7 +348,19 @@ GVAR(TaskStore) = createHashMapObject [[
         private _entries = _self call ["callTaskState", ["task:catalog:active", [], []]];
         if !(_entries isEqualType []) exitWith { [] };
 
-        _entries
+        private _visibleEntries = [];
+        {
+            if !(_x isEqualType createHashMap) then { continue; };
+
+            private _taskID = _x getOrDefault ["taskID", _x getOrDefault ["taskId", ""]];
+            if (_taskID isEqualTo "") then { continue; };
+            if ((_self call ["getTaskStatus", [_taskID]]) isEqualTo "locked") then { continue; };
+            if !(_self call ["areTaskPrerequisitesSatisfied", [_taskID, _x]]) then { continue; };
+
+            _visibleEntries pushBack _x;
+        } forEach _entries;
+
+        _visibleEntries
     }],
     ["hasTaskCatalogEntry", compileFinal {
         params [["_taskID", "", [""]]];
@@ -356,6 +476,11 @@ GVAR(TaskStore) = createHashMapObject [[
 
             if (_eventName isNotEqualTo "") then {
                 _self call ["emitTaskLifecycleEvent", [_eventName, _taskID, _normalizedStatus, createHashMap]];
+            };
+
+            if (_normalizedStatus isEqualTo "succeeded") then {
+                _self call ["markTaskCompleted", [_taskID]];
+                _self call ["unlockDependentTasks", [_taskID]];
             };
         };
 

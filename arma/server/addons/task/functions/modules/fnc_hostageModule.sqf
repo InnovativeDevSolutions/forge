@@ -66,6 +66,7 @@ private _supplyRewards = [_logic getVariable ["SupplyRewards", "[]"], _taskID, "
 private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "weapons"] call FUNC(parseRewards);
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
+private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
 
 [
     "hostage",
@@ -77,7 +78,7 @@ private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID,
         ["hostages", _hostageEntities],
         ["shooters", _shooterEntities]
     ],
-    createHashMapFromArray [
+    createHashMapFromArray ([
         ["limitFail", _logic getVariable ["LimitFail", -1]],
         ["limitSuccess", _logic getVariable ["LimitSuccess", -1]],
         ["funds", _logic getVariable ["CompanyFunds", 0]],
@@ -95,7 +96,7 @@ private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID,
         ["weapons", _weaponRewards],
         ["vehicles", _vehicleRewards],
         ["special", _specialRewards]
-    ]
+    ] + _taskChainParams)
 ] call FUNC(startTask);
 
 deleteVehicle _logic;
