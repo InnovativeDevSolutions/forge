@@ -26,6 +26,7 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
     ["resetRuntimeState", compileFinal {
         _self set ["completedTaskRegistry", createHashMap];
         _self set ["taskDependencyRegistry", createHashMap];
+        _self set ["runtimeCatalogRegistry", createHashMap];
         true
     }],
     ["bindTaskOwnership", compileFinal {
@@ -194,6 +195,7 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
 
         private _initialStatus = ["available", "locked"] select !(_self call ["areTaskPrerequisitesSatisfied", [_taskID, _entry]]);
         _entry set ["locked", _initialStatus isEqualTo "locked"];
+        _entry set ["status", _initialStatus];
 
         private _envelope = GVAR(TaskStateGateway) call [
             "callTaskStateEnvelope",
@@ -205,6 +207,10 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         private _registered = _envelope getOrDefault ["success", false];
 
         if (_registered) then {
+            private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+            _runtimeCatalogRegistry set [_taskID, +_entry];
+            _self set ["runtimeCatalogRegistry", _runtimeCatalogRegistry];
+
             GVAR(TaskLifecycleReporter) call ["recordTaskCreated", [_taskID]];
             GVAR(TaskLifecycleReporter) call ["emitTaskLifecycleEvent", ["task.created", _taskID, "created", createHashMap]];
             _self call ["setTaskStatus", [_taskID, _initialStatus]];
@@ -214,21 +220,50 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
     }],
     ["getActiveTaskCatalog", compileFinal {
         private _entries = GVAR(TaskStateGateway) call ["callTaskState", ["task:catalog:active", [], []]];
-        if !(_entries isEqualType []) exitWith { [] };
+        if !(_entries isEqualType []) then { _entries = [] };
+
+        private _entryRegistry = createHashMap;
+        {
+            if !(_x isEqualType createHashMap) then { continue; };
+            private _taskID = _x getOrDefault ["taskID", _x getOrDefault ["taskId", ""]];
+            if (_taskID isEqualTo "") then { continue; };
+            _entryRegistry set [_taskID, +_x];
+        } forEach _entries;
+
+        private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+        {
+            if (_x in _entryRegistry) then { continue; };
+            _entryRegistry set [_x, +_y];
+        } forEach _runtimeCatalogRegistry;
+
+        if (_entries isEqualTo [] && { _runtimeCatalogRegistry isNotEqualTo createHashMap }) then {
+            ["WARNING", format [
+                "Task active catalog backend returned no entries; using %1 runtime catalog entr%2 as fallback.",
+                count _runtimeCatalogRegistry,
+                ["y", "ies"] select ((count _runtimeCatalogRegistry) isNotEqualTo 1)
+            ]] call EFUNC(common,log);
+        };
 
         private _visibleEntries = [];
         {
-            if !(_x isEqualType createHashMap) then { continue; };
-
-            private _taskID = _x getOrDefault ["taskID", _x getOrDefault ["taskId", ""]];
+            private _taskID = _x;
+            private _entry = _y;
+            if !(_entry isEqualType createHashMap) then { continue; };
             if (_taskID isEqualTo "") then { continue; };
 
+            private _entryStatus = toLowerANSI (_entry getOrDefault ["status", ""]);
             private _status = _self call ["getTaskStatus", [_taskID]];
+            if !(_status in ["available", "assigned", "active"]) then {
+                if (_entryStatus in ["available", "assigned", "active"]) then {
+                    _status = _entryStatus;
+                };
+            };
             if !(_status in ["available", "assigned", "active"]) then { continue; };
-            if !(_self call ["areTaskPrerequisitesSatisfied", [_taskID, _x]]) then { continue; };
+            if !(_self call ["areTaskPrerequisitesSatisfied", [_taskID, _entry]]) then { continue; };
 
-            _visibleEntries pushBack _x;
-        } forEach _entries;
+            _entry set ["status", _status];
+            _visibleEntries pushBack _entry;
+        } forEach _entryRegistry;
 
         _visibleEntries
     }],
@@ -238,7 +273,10 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         if (_taskID isEqualTo "") exitWith { false };
 
         private _entry = GVAR(TaskStateGateway) call ["callTaskState", ["task:catalog:get", [_taskID], objNull]];
-        _entry isEqualType createHashMap
+        if (_entry isEqualType createHashMap) exitWith { true };
+
+        private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+        (_runtimeCatalogRegistry getOrDefault [_taskID, createHashMap]) isNotEqualTo createHashMap
     }],
     ["getTaskCatalogEntry", compileFinal {
         params [["_taskID", "", [""]]];
@@ -246,6 +284,11 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         if (_taskID isEqualTo "") exitWith { createHashMap };
 
         [(GVAR(TaskStateGateway) call ["callTaskState", ["task:catalog:get", [_taskID], createHashMap]])] params [["_entry", createHashMap, [createHashMap]]];
+        if !(_entry isEqualType createHashMap) then { _entry = createHashMap };
+        if (_entry isEqualTo createHashMap) then {
+            private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+            _entry = +(_runtimeCatalogRegistry getOrDefault [_taskID, createHashMap]);
+        };
         if !(_entry isEqualType createHashMap) exitWith { createHashMap };
 
         _entry
@@ -315,11 +358,20 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
 
         if (_taskID isEqualTo "" || { _status isEqualTo "" }) exitWith { false };
 
+        private _normalizedStatus = toLowerANSI _status;
+        private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+        private _runtimeEntry = +(_runtimeCatalogRegistry getOrDefault [_taskID, createHashMap]);
+        if (_runtimeEntry isNotEqualTo createHashMap) then {
+            _runtimeEntry set ["status", _normalizedStatus];
+            _runtimeEntry set ["locked", _normalizedStatus isEqualTo "locked"];
+            _runtimeCatalogRegistry set [_taskID, _runtimeEntry];
+            _self set ["runtimeCatalogRegistry", _runtimeCatalogRegistry];
+        };
+
         private _envelope = GVAR(TaskStateGateway) call ["callTaskStateEnvelope", ["task:status:set", [_taskID, _status]]];
         private _statusResult = _envelope getOrDefault ["success", false];
 
         if (_statusResult) then {
-            private _normalizedStatus = toLowerANSI _status;
             private _eventName = GVAR(TaskLifecycleReporter) call ["recordTaskStatus", [_taskID, _normalizedStatus]];
 
             if (_eventName isNotEqualTo "") then {
@@ -330,6 +382,12 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
                 _self call ["markTaskCompleted", [_taskID]];
                 _self call ["unlockDependentTasks", [_taskID]];
             };
+        } else {
+            ["WARNING", format [
+                "Task status backend update failed for %1 -> %2; runtime status was retained for CAD visibility.",
+                _taskID,
+                _normalizedStatus
+            ]] call EFUNC(common,log);
         };
 
         _statusResult
@@ -340,6 +398,13 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         if (_taskID isEqualTo "") exitWith { "" };
 
         [(GVAR(TaskStateGateway) call ["callTaskState", ["task:status:get", [_taskID], ""]])] params [["_status", "", [""]]];
+        if (_status isEqualTo "") then {
+            private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+            private _entry = _runtimeCatalogRegistry getOrDefault [_taskID, createHashMap];
+            if (_entry isNotEqualTo createHashMap) then {
+                _status = _entry getOrDefault ["status", ["available", "locked"] select (_entry getOrDefault ["locked", false])];
+            };
+        };
         _status
     }],
     ["clearTaskStatus", compileFinal {
@@ -350,6 +415,21 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         [(GVAR(TaskStateGateway) call ["callTaskState", ["task:status:clear", [_taskID], false]])] params [["_statusResult", false, [false]]];
 
         _statusResult
+    }],
+    ["clearRuntimeTask", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { false };
+
+        private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+        _runtimeCatalogRegistry deleteAt _taskID;
+        _self set ["runtimeCatalogRegistry", _runtimeCatalogRegistry];
+
+        private _dependencyRegistry = _self getOrDefault ["taskDependencyRegistry", createHashMap];
+        _dependencyRegistry deleteAt _taskID;
+        _self set ["taskDependencyRegistry", _dependencyRegistry];
+
+        true
     }]
 ]];
 

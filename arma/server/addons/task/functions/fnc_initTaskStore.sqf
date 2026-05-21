@@ -147,6 +147,7 @@ GVAR(TaskStore) = createHashMapObject [[
 
         GVAR(TaskLifecycleReporter) call ["clearTaskLifecycle", [_taskID]];
         GVAR(TaskParticipantTracker) call ["clearTaskParticipants", [_taskID]];
+        GVAR(TaskCatalogStore) call ["clearRuntimeTask", [_taskID]];
         GVAR(TaskStateGateway) call ["callTaskState", ["task:clear", [_taskID], false]];
         _self call ["clearTaskEntities", [_taskID]];
         true
