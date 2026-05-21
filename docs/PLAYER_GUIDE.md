@@ -76,7 +76,8 @@ Important task behavior:
 
 ## Phone
 
-The phone provides contacts, messages, email, and local utility apps.
+The phone provides contacts, messages, email, mobile bank access, and local
+utility apps.
 
 ![Phone home screen](images/player/phone_home.jpg)
 
@@ -90,29 +91,34 @@ entering recipient details every time.
 
 ### Messages
 
-Messages are short player-to-player conversations.
+Messages are short player-to-player conversations. Use Messages to start or
+continue a conversation with a contact, read incoming messages, mark messages as
+read, or delete messages you no longer need.
 
 ![Phone messages screen](images/player/phone_messages.jpg)
 
-Use Messages to:
-
-- start or continue a conversation with a contact
-- read incoming messages
-- mark messages as read
-- delete messages you no longer need
+![Example phone message conversation](images/player/phone_message_example.jpg)
 
 ### Email
 
-Email is used for longer player-to-player communication.
+Email is used for longer player-to-player communication. Use Email to send a
+subject and body to another player, read incoming mail, mark email as read, or
+delete old email.
 
 ![Phone email screen](images/player/phone_email.jpg)
 
-Use Email to:
+![Example phone email](images/player/phone_email_example.jpg)
 
-- send a subject and body to another player
-- read incoming mail
-- mark email as read
-- delete old email
+### Wallet
+
+Wallet is the phone version of the bank app. Use it to refresh your account
+view, check your available balance, review cash and pending earnings, deposit all
+pending earnings, and pay your organization credit line when payment is due.
+
+![Phone wallet app](images/player/phone_wallet.jpg)
+
+Deposit Earnings deposits the full pending earnings amount. Players do not enter
+a custom amount for that action.
 
 ### Local Phone Apps
 
