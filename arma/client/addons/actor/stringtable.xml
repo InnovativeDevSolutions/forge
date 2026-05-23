@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project name="FFE">
+    <Package name="Actor">
+        <Key ID="STR_forge_client_actor_displayName">
+            <English>Actor</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableGear">
+            <English>Persistent Gear</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableGearTooltip">
+            <English>Enable Persistent Gear</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableLoc">
+            <English>Persistent Location</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableLocTooltip">
+            <English>Enable Persistent Location</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableVA">
+            <English>Virtual Arsenal</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableVATooltip">
+            <English>Enable Virtual Arsenal</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableVG">
+            <English>Virtual Garage</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_enableVGTooltip">
+            <English>Enable Virtual Garage</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_iMenu">
+            <English>Interaction Menu</English>
+        </Key>
+        <Key ID="STR_forge_client_actor_iMenuTooltip">
+            <English>Open your interaction menu</English>
+        </Key>
+    </Package>
+</Project>

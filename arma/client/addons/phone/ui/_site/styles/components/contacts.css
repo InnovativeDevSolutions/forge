@@ -1,0 +1,96 @@
+/* Contacts App */
+.contact-list {
+    list-style: none;
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: background-color 0.2s;
+
+        &:hover {
+            background-color: #f8f9fa;
+            color: var(--text-tertiary);
+        }
+
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .contact-info {
+            h3 {
+                font-size: 16px;
+                margin-bottom: 4px;
+            }
+
+            p {
+                font-size: 14px;
+                color: #6c757d;
+            }
+        }
+    }
+}
+
+/* Add Contact Form */
+.add-contact-form {
+    background: var(--bg-primary);
+    margin-bottom: 10px;
+
+    h3 {
+        color: var(--text-primary);
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    input {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        transition: border-color 0.2s;
+        width: 100%;
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 4px;
+
+        &:focus {
+            outline: none;
+        }
+
+        &::placeholder {
+            color: var(--text-secondary);
+        }
+    }
+
+    button {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        margin: 0 !important;
+        width: 100% !important;
+
+        &:hover {
+            opacity: 0.9;
+        }
+
+        &:active {
+            opacity: 0.8;
+        }
+    }
+}

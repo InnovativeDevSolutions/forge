@@ -1,0 +1,585 @@
+# Task Usage Guide
+
+The task module stores transient mission task metadata for active server or
+mission lifecycle workflows. SQF still owns Arma-only runtime state such as
+objects and participants.
+
+The server addon at `arma/server/addons/task` also owns task execution:
+creating BIS tasks, registering task entities, tracking participants, binding
+task ownership, applying player/org rewards, and clearing task state when a
+task completes.
+
+Runtime dependencies:
+
+- `forge_server_extension`
+- `forge_server_common`
+- `forge_server_actor`
+- `forge_server_bank`
+- `forge_server_org`
+- `forge_client_notifications`
+
+## Data Model
+
+Catalog entries are flexible JSON objects. The service normalizes these fields
+when a catalog entry is inserted or ownership changes:
+
+- `taskId`
+- `taskID`
+- `accepted`
+- `requesterUid`
+- `orgID`
+- `prerequisiteTaskIds`
+
+Ownership context:
+
+```json
+{
+  "requesterUid": "76561198000000000",
+  "orgId": "default"
+}
+```
+
+## Commands
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `task:reset` | none | `true`. |
+| `task:catalog:active` | none | Active catalog entry array JSON. |
+| `task:catalog:get` | `task_id` | Catalog entry JSON or `null`. |
+| `task:catalog:upsert` | `task_id`, `entry_json` | Stored catalog entry JSON. |
+| `task:catalog:delete` | `task_id` | `true`. |
+| `task:ownership:bind` | `task_id`, `ownership_json` | Ownership mutation result JSON. |
+| `task:ownership:release` | `task_id` | Ownership mutation result JSON. |
+| `task:ownership:accept` | `task_id`, `ownership_json` | Ownership mutation result JSON. |
+| `task:ownership:reward_context` | `task_id` | Reward context JSON. |
+| `task:status:set` | `task_id`, `status` | `true`. |
+| `task:status:get` | `task_id` | Status string JSON. |
+| `task:status:clear` | `task_id` | `true`. |
+| `task:defuse:increment` | `task_id` | New counter value JSON. |
+| `task:defuse:get` | `task_id` | Counter value JSON. |
+| `task:clear` | `task_id` | `true`. |
+
+## Upsert a Catalog Entry
+
+```sqf
+private _entry = createHashMapFromArray [
+    ["title", "Destroy Cache"],
+    ["description", "Destroy the enemy supply cache."],
+    ["reward", 1500]
+];
+
+private _result = "forge_server" callExtension ["task:catalog:upsert", [
+    "task-cache-1",
+    toJSON _entry
+]];
+```
+
+## Mark a Task Active
+
+```sqf
+"forge_server" callExtension ["task:status:set", [
+    "task-cache-1",
+    "active"
+]];
+
+private _active = "forge_server" callExtension ["task:catalog:active", []];
+```
+
+Completed statuses `succeeded` and `failed` are also stored as completed status
+fallbacks. Clearing status removes active and completed state.
+
+## Accept a Task
+
+```sqf
+private _ownership = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["orgId", "default"]
+];
+
+private _result = "forge_server" callExtension ["task:ownership:accept", [
+    "task-cache-1",
+    toJSON _ownership
+]];
+```
+
+`task:ownership:accept` fails if the task is not active or another requester
+already accepted it.
+
+## Rewards
+
+```sqf
+private _result = "forge_server" callExtension ["task:ownership:reward_context", [
+    "task-cache-1"
+]];
+
+private _context = fromJSON (_result select 0);
+```
+
+The reward context contains `requesterUid` and `orgId`.
+
+## Server Task Flows
+
+The task addon provides these server-owned task flows:
+
+- `attack`
+- `defend`
+- `defuse`
+- `delivery`
+- `destroy`
+- `hostage`
+- `hvt`
+
+Mission designers can create tasks in four ways:
+
+- Eden modules for editor-authored tasks.
+- `forge_server_task_fnc_startTask` for script-authored tasks.
+- `forge_server_task_fnc_handler` for pre-registered entities with reputation
+  gating and ownership binding. This path expects the BIS task and catalog
+  entry to already exist if map-task and CAD visibility are required.
+- Direct task function calls for server-owned or mission-authored flows that
+  intentionally fall back to the `default` org. This path expects the BIS task
+  to already exist if map-task visibility is required.
+
+The dynamic mission manager can also generate attack tasks from config. That is
+system-generated content rather than a hand-authored task creation path.
+
+## CAD Compatibility
+
+CAD hydrates assignable tasks from `TaskStore.getActiveTaskCatalog`. A task must
+have a catalog entry and a task status of `available`, `assigned`, or `active`
+before CAD can show it.
+CAD assignment only reserves a task for a group. The task is accepted and task
+logic starts after the assigned group leader acknowledges the assignment. If
+the leader declines, the CAD assignment is removed and the task returns to the
+open contract board.
+
+CAD-compatible creation paths:
+
+- Eden modules: compatible because they delegate to
+  `forge_server_task_fnc_startTask`.
+- `forge_server_task_fnc_startTask`: compatible because it registers the
+  catalog entry, creates the BIS task, and dispatches through the handler.
+- Dynamic mission manager attack tasks: compatible because the mission manager
+  uses `forge_server_task_fnc_startTask`.
+
+Limited or incompatible paths:
+
+- `forge_server_task_fnc_handler`: only compatible if a catalog entry was
+  already registered elsewhere. The handler sets available status and ownership,
+  but it does not create the BIS task shown in the map task tab or upsert the
+  catalog entry.
+- Direct task function calls: not CAD-compatible by default. They bypass
+  `startTask` and usually do not register the task catalog entry or active
+  status that CAD hydrates from. They also only call `BIS_fnc_taskSetState` at
+  completion/failure; they do not create the BIS task first.
+
+## BIS Map Task Prerequisite
+
+Only the Eden task modules and `forge_server_task_fnc_startTask` create the BIS
+task automatically through `BIS_fnc_taskCreate`.
+
+If a mission uses `forge_server_task_fnc_handler` directly or calls a task flow
+function such as `forge_server_task_fnc_attack`, the mission must create a BIS
+task with the same task ID before the Forge task completes. Otherwise the
+success/failure `BIS_fnc_taskSetState` call has no visible map task to update.
+
+That prerequisite can be satisfied with a vanilla Eden task creation module or
+a scripted `BIS_fnc_taskCreate` call. `forge_server_task_fnc_startTask` is the
+preferred Forge path because it handles BIS task creation, Forge catalog
+registration, entity registration, and handler dispatch together.
+
+## Eden Modules
+
+Eden task modules are the normal designer-facing path. Place the module,
+configure its attributes, and sync it to the relevant entities or grouping
+modules.
+
+Available task modules:
+
+- `FORGE_Module_Attack`: sync directly to target units or vehicles.
+- `FORGE_Module_Destroy`: sync directly to objects, vehicles, or units.
+- `FORGE_Module_Defuse`: sync to `FORGE_Module_Explosives` and optionally
+  `FORGE_Module_Protected`.
+- `FORGE_Module_Delivery`: sync to `FORGE_Module_Cargo`; the cargo module syncs
+  to cargo objects.
+- `FORGE_Module_Hostage`: sync to `FORGE_Module_Hostages` and
+  `FORGE_Module_Shooters`.
+- `FORGE_Module_HVT`: sync directly to HVT units.
+- `FORGE_Module_Defend`: configure the defense marker and wave settings; sync
+  enemy units to use their groups as wave templates.
+
+These modules delegate to `forge_server_task_fnc_startTask`.
+
+Each task module also includes an optional chain field:
+
+- `Prerequisite Task IDs`: comma-separated task IDs that must succeed first.
+
+## Mission Designer Guide
+
+This section is the practical Eden setup guide for mission designers.
+
+### General Rules
+
+Use these rules for every Forge task:
+
+1. Give every task a unique `TaskID`.
+2. Use area markers for zone-style fields such as:
+   - `DefenseZone`
+   - `DeliveryZone`
+   - `ExtZone`
+   - `CBRNZone`
+3. Prefer `RECTANGLE` or `ELLIPSE` markers with real size.
+4. Set success and fail limits explicitly instead of relying on defaults.
+5. If a task uses a timer, the countdown now waits until the assigned group
+   leader acknowledges the task.
+6. Grouping modules such as `Explosive Entities`, `Protected Entities`,
+   `Cargo`, `Hostages`, and `Shooters` should be synced to real world objects,
+   not other logic modules.
+7. To chain tasks, set `Prerequisite Task IDs` on the dependent task module.
+   Use comma-separated IDs such as `attack_01, delivery_02`. The dependent
+   task stays hidden from CAD and cannot be assigned until every listed task
+   succeeds.
+8. Reward class fields accept comma-separated class names without brackets,
+   such as `ItemGPS, FirstAidKit`. Legacy SQF array strings such as
+   `["ItemGPS","FirstAidKit"]` are still supported.
+
+### Attack Task
+
+Use `FORGE_Module_Attack` when players need to eliminate hostile units or
+vehicles.
+
+Setup:
+
+1. Place the enemy units or vehicles.
+2. Place `FORGE_Module_Attack`.
+3. Set `TaskID`.
+4. Set `LimitSuccess` to the number of targets that must be killed.
+5. Set `LimitFail` if you want a fail threshold.
+6. Set rewards, rating, and optional `TimeLimit`.
+7. Sync the attack module directly to the target units or vehicles.
+
+Notes:
+
+- This module reads its synced entities directly.
+- `TimeLimit` uses seconds. `0` means no limit.
+
+### Destroy Task
+
+Use `FORGE_Module_Destroy` when players must destroy objects, vehicles, or
+units.
+
+Setup:
+
+1. Place the objects, vehicles, or units that must be destroyed.
+2. Place `FORGE_Module_Destroy`.
+3. Set `TaskID`.
+4. Set `LimitSuccess` to the number of targets that must be destroyed.
+5. Set `LimitFail` if the mission should fail after too many losses.
+6. Set rewards, rating, and optional `TimeLimit`.
+7. Sync the destroy module directly to the targets.
+
+Notes:
+
+- This module reads its synced entities directly.
+- `TimeLimit` uses seconds. `0` means no limit.
+
+### Defuse Task
+
+Use `FORGE_Module_Defuse` when players must defuse one or more explosives while
+protecting other entities.
+
+Required module layout:
+
+```text
+[Defuse Task] --> [Explosive Entities] --> explosive objects
+[Defuse Task] --> [Protected Entities] --> protected objects/vehicles/units
+```
+
+Setup:
+
+1. Place the explosive objects that players must defuse.
+2. Place `FORGE_Module_Explosives`.
+3. Sync each explosive object to `FORGE_Module_Explosives`.
+4. Place the objects, vehicles, or units that must survive.
+5. Place `FORGE_Module_Protected`.
+6. Sync each protected entity to `FORGE_Module_Protected`.
+7. Place `FORGE_Module_Defuse`.
+8. Set `TaskID`.
+9. Set `LimitSuccess` to the number of explosives that must be defused.
+10. Set `LimitFail` to the number of protected entities that can be lost before failure.
+11. Set `TimeLimit` to the IED countdown in seconds. This is per-IED countdown behavior, not a global mission timer.
+12. Set rewards, rating, and end-state options.
+13. Sync `FORGE_Module_Defuse` to `FORGE_Module_Explosives`.
+14. Sync `FORGE_Module_Defuse` to `FORGE_Module_Protected`.
+
+Notes:
+
+- The module reads grouped objects from the `Explosive Entities` and
+  `Protected Entities` modules, not from direct object syncs.
+- Logic objects are filtered out already, so only real explosives and protected
+  entities are counted.
+- The ACE defuse event is wired to the task system and resolves IEDs back to
+  the correct task.
+
+### Delivery Task
+
+Use `FORGE_Module_Delivery` when players must move cargo into a delivery zone.
+
+Required module layout:
+
+```text
+[Delivery Task] --> [Cargo] --> cargo objects
+```
+
+Setup:
+
+1. Place the cargo objects.
+2. Create an area marker for the delivery zone.
+3. Place `FORGE_Module_Cargo`.
+4. Sync each cargo object to `FORGE_Module_Cargo`.
+5. Place `FORGE_Module_Delivery`.
+6. Set `TaskID`.
+7. Set `DeliveryZone` to the marker name.
+8. Set `LimitSuccess` to the number of cargo objects that must arrive.
+9. Set `LimitFail` to the number of cargo objects that can be damaged past the fail threshold.
+10. Set rewards, rating, and optional `TimeLimit`.
+11. Sync `FORGE_Module_Delivery` to `FORGE_Module_Cargo`.
+
+Notes:
+
+- The runtime checks `inArea DeliveryZone`, so the zone must be an area marker.
+
+### Hostage Task
+
+Use `FORGE_Module_Hostage` when players must rescue hostages and move them to
+an extraction zone.
+
+Required module layout:
+
+```text
+[Hostage Task] --> [Hostage Entities] --> hostage units
+[Hostage Task] --> [Shooter Entities] --> hostile shooter units
+```
+
+Setup:
+
+1. Place the hostage AI units.
+2. Place the hostile shooter AI units.
+3. Create an area marker for the extraction zone.
+4. If using the CBRN variant, create an area marker for the `CBRNZone`.
+5. Place `FORGE_Module_Hostages`.
+6. Sync the hostage units to `FORGE_Module_Hostages`.
+7. Place `FORGE_Module_Shooters`.
+8. Sync the shooter units to `FORGE_Module_Shooters`.
+9. Place `FORGE_Module_Hostage`.
+10. Set `TaskID`.
+11. Set `ExtZone` to the extraction marker name.
+12. Set `LimitSuccess` to the number of hostages that must be rescued.
+13. Set `LimitFail` to the number of hostages that can be lost before failure.
+14. Set `Execution` or `CBRN` as needed for the mission variant.
+15. If `CBRN` is enabled, set `CBRNZone`.
+16. Set rewards, rating, and optional `TimeLimit`.
+17. Sync `FORGE_Module_Hostage` to `FORGE_Module_Hostages`.
+18. Sync `FORGE_Module_Hostage` to `FORGE_Module_Shooters`.
+
+Notes:
+
+- Hostages and shooters are filtered to real units only.
+- Hostages are protected immediately on task registration to avoid startup race conditions.
+- The hostage timer now waits until the assigned group leader acknowledges the
+  task before counting down.
+- `ExtZone` is checked with `inArea`, so it must be an area marker.
+
+### HVT Task
+
+Use `FORGE_Module_HVT` when players must capture or eliminate a high-value
+target.
+
+Setup:
+
+1. Place the HVT unit or units.
+2. If using capture mode, create an area marker for the extraction zone.
+3. Place `FORGE_Module_HVT`.
+4. Set `TaskID`.
+5. Set `CaptureHVT` as needed:
+   - enabled for capture/extract
+   - disabled for kill/eliminate
+6. If using capture mode, set `ExtZone` to the extraction marker name.
+7. Set `LimitSuccess` to the number of HVTs that must be captured or eliminated.
+8. Set `LimitFail` if the mission should fail after too many HVT deaths in capture mode.
+9. Set rewards, rating, and optional `TimeLimit`.
+10. Sync the HVT module directly to the HVT unit or units.
+
+Notes:
+
+- Capture mode uses `ExtZone` with `inArea`, so use an area marker.
+- Elimination mode does not require an extraction zone.
+- The HVT timer now waits until the assigned group leader acknowledges the task
+  before counting down.
+
+### Defend Task
+
+Use `FORGE_Module_Defend` when players must hold an area against spawned enemy
+waves.
+
+Setup:
+
+1. Create an area marker for the defense zone.
+2. Place `FORGE_Module_Defend`.
+3. Set `TaskID`.
+4. Set `DefenseZone` to the defense marker name.
+5. Set `DefendTime` to how long the area must be held.
+6. Set `WaveCount`.
+7. Set `WaveCooldown`.
+8. Set `MinBlufor` to the minimum number of friendlies required in the zone.
+9. Place one or more enemy groups or units to use as wave templates.
+10. Sync any unit from each enemy group to the defend module.
+11. Set rewards, rating, and end-state options.
+
+Notes:
+
+- Synced enemy units are treated as templates. Syncing one unit from a group
+  makes the whole group available as a wave composition.
+- If no enemy units are synced, the defend task falls back to default CSAT
+  infantry waves.
+- The defend task waits for the required number of BLUFOR to enter the zone
+  before the timer, waves, and empty-zone failure checks begin.
+- `DefenseZone` must be an area marker.
+
+### Quick Reference
+
+Use direct syncs:
+
+- `Attack Task` -> target units/vehicles
+- `Destroy Task` -> target objects/vehicles/units
+- `HVT Task` -> HVT units
+
+Use grouping modules:
+
+- `Defuse Task` -> `Explosive Entities`, `Protected Entities`
+- `Delivery Task` -> `Cargo`
+- `Hostage Task` -> `Hostage Entities`, `Shooter Entities`
+
+Use area markers:
+
+- `DefenseZone`
+- `DeliveryZone`
+- `ExtZone`
+- `CBRNZone`
+
+## Scripted Start Task
+
+Use `forge_server_task_fnc_startTask` when creating tasks from modules,
+mission scripts, or generated mission-manager content. It registers task
+entities, creates the BIS task, stores the catalog entry, then dispatches
+through `forge_server_task_fnc_handler`.
+
+```sqf
+[
+    "attack",
+    "compound_attack_01",
+    getPosATL leader1,
+    "Attack: East Compound",
+    "Eliminate all hostile forces.",
+    createHashMapFromArray [["targets", [unit1, unit2, unit3]]],
+    createHashMapFromArray [
+        ["limitFail", 0],
+        ["limitSuccess", 3],
+        ["prerequisiteTaskIds", ["recon_01"]],
+        ["funds", 50000],
+        ["ratingFail", -10],
+        ["ratingSuccess", 20],
+        ["timeLimit", 900]
+    ],
+    0,
+    getPlayerUID player,
+    "script"
+] call forge_server_task_fnc_startTask;
+```
+
+## Chained Tasks
+
+Use `prerequisiteTaskIds` when a task should stay hidden until one or more
+other tasks succeed. The task is still registered during mission setup, but it
+is stored with `locked` status, filtered out of CAD, blocked from assignment,
+and its task logic does not start until every prerequisite task has completed
+with `succeeded`.
+
+```sqf
+[
+    "delivery",
+    "supply_delivery_02",
+    getMarkerPos "delivery_zone_02",
+    "Deliver Medical Supplies",
+    "Move the cargo into the marked delivery area.",
+    createHashMapFromArray [["cargo", [cargoBox1, cargoBox2]]],
+    createHashMapFromArray [
+        ["deliveryZone", "delivery_zone_02"],
+        ["limitSuccess", 2],
+        ["prerequisiteTaskIds", ["compound_attack_01"]],
+        ["funds", 30000]
+    ]
+] call forge_server_task_fnc_startTask;
+```
+
+Notes:
+
+- `prerequisiteTaskIds` accepts either a string or an array of task ID strings.
+- All prerequisite tasks must succeed before the chained task unlocks.
+- If a prerequisite fails or never completes, the chained task remains locked.
+
+## Handler Calls
+
+Use `forge_server_task_fnc_handler` directly when the task entities are already
+registered and you want reputation gating plus ownership binding. Create the
+BIS task and catalog entry separately if this task should appear in the map
+task tab or CAD:
+
+```sqf
+[
+    "delivery",
+    ["delivery_1", 1, 3, "delivery_zone", 250000, -75, 300, false, false, 900],
+    250,
+    getPlayerUID player
+] call forge_server_task_fnc_handler;
+```
+
+## Direct Task Calls
+
+Direct task function calls still work for mission-authored or server-owned
+tasks, but they do not provide a requester UID. Ownership falls back to the
+`default` org. Create the BIS task separately if this task should appear in the
+map task tab.
+
+## Timer Semantics
+
+Task time limits use `0` for no limit:
+
+- attack `timeLimit`
+- destroy `timeLimit`
+- delivery `timeLimit`
+- hostage `timeLimit`
+- HVT `timeLimit`
+
+Positive values are measured in seconds. Do not pass `-1` as a no-limit value;
+the task runtime treats any non-zero task time limit as active.
+
+Defuse IED timers are different. `iedTimer` must be greater than `0`, because
+IEDs are expected to have an active countdown. The Eden defuse module defaults
+to `300` seconds.
+
+## Defuse Counter
+
+```sqf
+"forge_server" callExtension ["task:defuse:increment", ["task-cache-1"]];
+private _count = "forge_server" callExtension ["task:defuse:get", ["task-cache-1"]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Task error: %1", _payload];
+};
+```

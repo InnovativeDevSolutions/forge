@@ -1,0 +1,24 @@
+[default]
+workshop = [
+    "450814997",  # CBA_A3
+    "3499977893", # Advanced Dev Tools
+    "623475643",  # 3DEN Enhanced
+    "3023395342", # 3DEN Attributes Fast Load
+]
+presets = []
+dlc = []
+optionals = []
+parameters = [
+    "-skipIntro",
+    "-noSplash",
+    "-showScriptErrors",
+    "-debug",
+    "-filePatching",
+    "-world=empty",
+]
+
+[ace]
+extends = "default"
+workshop = [
+    "463939057", # ACE
+]

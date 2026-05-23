@@ -1,0 +1,67 @@
+# Getting Started
+
+Use this section as the main entry point for the Forge framework.
+
+Forge combines:
+
+- Arma 3 client addons for UX and browser-hosted interfaces
+- Arma 3 server addons for mission integration and authoritative flow control
+- a Rust server extension for command routing and persistence
+- shared Rust crates for models, repositories, and services
+- SurrealDB for durable storage
+
+## Common Commands
+
+```powershell
+cargo test
+npm run build:webui
+.\build-arma.ps1
+```
+
+## Start Here
+
+<u-page-grid>
+<u-page-card icon="i-lucide-network" title="Architecture" to="/getting-started/architecture">
+
+Understand how SQF, Rust services, SurrealDB, and browser UIs fit together.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-boxes" title="Module Reference" to="/getting-started/module-reference">
+
+Review gameplay domains, infrastructure modules, and extension command groups.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-wrench" title="Development Guide" to="/getting-started/development">
+
+See the rules for adding modules and changing boundaries without regressions.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-database" title="SurrealDB Setup" to="/getting-started/surrealdb-setup">
+
+Install SurrealDB, match Forge config values, and choose the right setup path
+for developers or admin-facing roles.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-server-cog" title="Server Extension" to="/server-extension">
+
+Follow the extension architecture, API surface, and SQF usage examples.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-layers-3" title="Server Modules" to="/server-modules">
+
+Dive into the actor, bank, CAD, garage, locker, organization, phone, store,
+task, and owned-storage guides.
+
+</u-page-card>
+
+<u-page-card icon="i-lucide-monitor-smartphone" title="Client Addons" to="/client-addons">
+
+Explore the client bridge model and addon-specific browser integration rules.
+
+</u-page-card>
+</u-page-grid>

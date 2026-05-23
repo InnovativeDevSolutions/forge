@@ -1,0 +1,243 @@
+# Development Guide
+
+This guide covers the usual path for adding or changing a Forge module.
+
+## Local Checks
+
+Before running storage-backed workflows locally, complete
+[SurrealDB Setup](/getting-started/surrealdb-setup).
+
+Run these before pushing Rust or extension changes:
+
+```powershell
+cargo fmt --check
+cargo check
+cargo test
+cargo build
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+Run this after changing browser UI sources:
+
+```powershell
+npm run build:webui
+```
+
+Build Arma packages with:
+
+```powershell
+.\build-arma.ps1
+```
+
+## Module Boundaries
+
+Keep each layer responsible for one kind of work:
+
+<table>
+<thead>
+  <tr>
+    <th>
+      Layer
+    </th>
+    
+    <th>
+      Owns
+    </th>
+    
+    <th>
+      Avoid
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>
+      <code>
+        lib/models
+      </code>
+    </td>
+    
+    <td>
+      Data structures, serde defaults, validation helpers.
+    </td>
+    
+    <td>
+      Database calls, SQF-specific context.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        lib/repositories
+      </code>
+    </td>
+    
+    <td>
+      Repository traits and in-memory stores.
+    </td>
+    
+    <td>
+      SurrealDB-specific code.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        lib/services
+      </code>
+    </td>
+    
+    <td>
+      Business rules, workflow orchestration, structured results.
+    </td>
+    
+    <td>
+      Arma engine calls, extension transport details.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        arma/server/extension
+      </code>
+    </td>
+    
+    <td>
+      Command parsing, context resolution, SurrealDB implementations, serialization to SQF.
+    </td>
+    
+    <td>
+      Business rules that belong in services.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        arma/server/addons
+      </code>
+    </td>
+    
+    <td>
+      Server SQF lifecycle, game-object integration, calls into <code>
+        forge_server
+      </code>
+      
+      .
+    </td>
+    
+    <td>
+      Direct database logic.
+    </td>
+  </tr>
+  
+  <tr>
+    <td>
+      <code>
+        arma/client/addons
+      </code>
+    </td>
+    
+    <td>
+      Client UI, keybinds, local UI events.
+    </td>
+    
+    <td>
+      Authoritative persistence.
+    </td>
+  </tr>
+</tbody>
+</table>
+
+## Adding a Domain Module
+
+1. Add the model in `lib/models/src/<module>.rs`.
+2. Export the model from `lib/models/src/lib.rs`.
+3. Add repository traits in `lib/repositories/src/<module>.rs`.
+4. Add in-memory repository support if the service needs tests or hot state.
+5. Export the traits from `lib/repositories/src/lib.rs`.
+6. Add service logic in `lib/services/src/<module>.rs`.
+7. Add focused unit tests for service behavior.
+8. Export the service from `lib/services/src/lib.rs`.
+9. Add a SurrealDB schema module under `arma/server/extension/src/schema`.
+10. Add the concrete storage adapter under `arma/server/extension/src/storage`.
+11. Register the storage adapter in `arma/server/extension/src/storage.rs`.
+12. Add an extension command group under `arma/server/extension/src/<module>.rs`.
+13. Register the command group in `arma/server/extension/src/lib.rs`.
+14. Add server addon functions under `arma/server/addons/<module>` if SQF needs a module-level API.
+15. Add client addon or browser UI files under `arma/client/addons/<module>` if the module has player-facing UI.
+16. Add documentation in `docs/` and module-level READMEs.
+
+## Extension Command Rules
+
+Commands should return one of these forms:
+
+- JSON string for structured results.
+- `"true"` or `"false"` for simple existence and boolean operations.
+- `"OK"` for successful destructive operations with no response body.
+- `"Error: <message>"` for failures.
+
+Prefer stable JSON shapes over ad hoc strings. SQF callers should always check
+for the `"Error:"` prefix before parsing JSON.
+
+Example:
+
+```sqf
+private _result = "forge_server" callExtension ["actor:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Actor request failed: %1", _payload];
+};
+
+private _actor = fromJSON _payload;
+```
+
+## Persistence Rules
+
+SurrealDB is the durable store. Keep database-specific mapping in the extension
+storage adapters, not in services or repository traits.
+
+When changing persisted data:
+
+- Update or add the matching `.surql` schema module.
+- Update the concrete storage adapter.
+- Preserve existing records when possible through serde defaults or migration
+logic.
+- Add tests at the service level for behavior, and add storage tests only when
+database mapping is the risk.
+
+## Hot-State Rules
+
+Use hot state for data that is read or mutated frequently during a player
+session. Hot-state modules usually provide:
+
+- `init` to load durable state into memory.
+- `get` to read the runtime copy.
+- `override` or focused mutation commands to update the runtime copy.
+- `save` to write the runtime copy back to SurrealDB.
+- `remove` to evict the runtime copy.
+
+Do not assume hot state is durable until `save` succeeds.
+
+## Web UI Rules
+
+Browser UI source files live under each client addon. Built assets usually land
+under that addon's `ui/_site` directory.
+
+Use the existing common bridge in `arma/client/addons/common` when a UI needs
+to send events back to SQF. Keep UI state and rendering in JavaScript, and keep
+server-authoritative decisions in server SQF or Rust services.
+
+## Documentation Checklist
+
+When adding or changing a module, update:
+
+- `docs/MODULE_REFERENCE.md` for framework-level inventory.
+- A module-specific README in the addon directory when SQF or UI usage changes.
+- `arma/server/docs/api-reference.md` when extension commands change.
+- Existing usage guides when payload shapes or workflows change.

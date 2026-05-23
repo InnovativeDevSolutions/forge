@@ -1,0 +1,89 @@
+:root {
+    --store-shell-bg: #e4e3df;
+    --store-surface: #f5f3ef;
+    --store-surface-alt: #ece8e2;
+    --store-surface-strong: #ffffff;
+    --store-border: rgba(74, 91, 110, 0.2);
+    --store-border-strong: rgba(20, 46, 79, 0.2);
+    --store-text-main: #1f2d3d;
+    --store-text-muted: #6a7787;
+    --store-text-subtle: #8792a0;
+    --store-accent: #12365d;
+    --store-accent-soft: #dbe7f3;
+    --store-accent-line: rgba(18, 54, 93, 0.12);
+    --store-success: #2f7d5b;
+    --store-danger: #8a3d3d;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+    color: var(--store-text-main);
+    background: var(--store-shell-bg);
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+:focus-visible {
+    outline: 2px solid rgb(18 54 93 / 0.35);
+    outline-offset: 2px;
+}
+
+#app {
+    width: 100%;
+    height: 100%;
+}
+
+.store-btn {
+    min-height: 2.75rem;
+    padding: 0.72rem 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--store-border-strong);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.store-btn.store-btn-primary {
+    background: rgb(255 255 255 / 0.68);
+    color: var(--store-accent);
+}
+
+.store-btn.store-btn-primary:hover {
+    background: rgb(219 231 243 / 0.88);
+}
+
+.store-btn.store-btn-secondary {
+    background: rgb(255 255 255 / 0.42);
+    color: var(--store-text-muted);
+}
+
+.store-btn.store-btn-secondary:hover {
+    background: rgb(255 255 255 / 0.6);
+    color: var(--store-text-main);
+}
