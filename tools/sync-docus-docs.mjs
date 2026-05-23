@@ -20,16 +20,20 @@ const generatedPages = [
     target: '1.getting-started/3.development.md'
   },
   {
+    source: 'docs/GIT_WORKFLOW.md',
+    target: '1.getting-started/4.git-workflow.md'
+  },
+  {
     source: 'docs/MISSION_DESIGNER_GUIDE.md',
-    target: '1.getting-started/4.mission-designer.md'
+    target: '1.getting-started/5.mission-designer.md'
   },
   {
     source: 'docs/PLAYER_GUIDE.md',
-    target: '1.getting-started/5.player-guide.md'
+    target: '1.getting-started/6.player-guide.md'
   },
   {
     source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/6.surrealdb-setup.md'
+    target: '1.getting-started/7.surrealdb-setup.md'
   },
   {
     source: 'arma/server/docs/README.md',
@@ -427,6 +431,16 @@ npm run build:webui
   to: /getting-started/development
   ---
   See the rules for adding modules and changing boundaries without regressions.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-git-branch
+  title: Git Workflow
+  to: /getting-started/git-workflow
+  ---
+  Follow the branch roles, release baseline, mission storage, and helper commands
+  used by the Forge repository.
   :::
 
   :::u-page-card
