@@ -15,6 +15,15 @@ release tags, and mission branch handling. The short version is:
 - Bring reusable mission logic back to framework branches by copying only the
   needed framework files or code, not by merging the mission branch.
 
+Use the workflow helper for the routine checks:
+
+```powershell
+npm run workflow -- status
+npm run workflow -- doctor
+npm run workflow -- switch dev
+npm run workflow -- switch missions
+```
+
 Example framework workflow:
 
 ```powershell

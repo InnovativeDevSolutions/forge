@@ -13,6 +13,7 @@
     "build:webui": "node tools/build-webui.mjs",
     "docs:sync": "node tools/sync-docus-docs.mjs",
     "docs:dev": "npm --prefix docus run dev",
-    "docs:build": "npm --prefix docus run build"
+    "docs:build": "npm --prefix docus run build",
+    "workflow": "node tools/git-workflow.mjs"
   }
 }
