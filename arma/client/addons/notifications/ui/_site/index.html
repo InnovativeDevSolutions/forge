@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Forge - Notification System</title>
+        <!-- <link rel="stylesheet" href="styles.css"> -->
+        <!--
+            Dynamic Resource Loading
+            The following script loads CSS and JavaScript files dynamically using the A3API
+            This approach is used instead of static HTML imports to work with Arma 3's file system
+        -->
+        <script>
+            Promise.all([
+                A3API.RequestFile(
+                    "forge\\forge_client\\addons\\notifications\\ui\\_site\\styles.css",
+                ),
+                A3API.RequestFile(
+                    "forge\\forge_client\\addons\\notifications\\ui\\_site\\script.js",
+                ),
+            ]).then(([css, js]) => {
+                const style = document.createElement("style");
+                style.textContent = css;
+                document.head.appendChild(style);
+
+                const script = document.createElement("script");
+                script.text = js;
+                document.head.appendChild(script);
+            });
+        </script>
+    </head>
+
+    <body>
+        <div class="notifications-hud" aria-live="polite" aria-atomic="false">
+            <div
+                id="notification-container"
+                class="notification-container"
+                role="region"
+                aria-label="Notifications"
+            ></div>
+        </div>
+        <!-- <script src="script.js"></script> -->
+    </body>
+</html>

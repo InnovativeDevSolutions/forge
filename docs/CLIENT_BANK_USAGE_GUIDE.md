@@ -1,0 +1,89 @@
+# Client Bank Usage Guide
+
+The client bank addon opens the bank and ATM browser UI, forwards banking
+requests to the server bank addon, and pushes account updates back into the
+browser.
+
+## Open Bank UI
+
+Open full bank mode:
+
+```sqf
+call forge_client_bank_fnc_openUI;
+```
+
+Open ATM mode:
+
+```sqf
+[true] call forge_client_bank_fnc_openUI;
+```
+
+The open function creates `RscBank`, sets the bridge mode to `bank` or `atm`,
+loads `ui/_site/index.html`, and routes browser events through
+`forge_client_bank_fnc_handleUIEvents`.
+
+## Bridge and Repository
+
+`forge_client_bank_fnc_initRepository` tracks account load and cached account
+state.
+
+`forge_client_bank_fnc_initUIBridge` owns:
+
+- active browser control tracking
+- bank/ATM mode
+- browser ready handling
+- account hydrate and sync responses
+- deposit, withdrawal, transfer, earnings deposit, credit repayment, PIN
+  validation, and PIN change requests
+- browser notice delivery
+
+## Browser Events
+
+| Event | Client behavior |
+| --- | --- |
+| `bank::ready` | Mark browser ready and request hydrate from the server. |
+| `bank::refresh` | Request fresh bank hydrate data. |
+| `bank::deposit::request` | Forward deposit amount to the server. |
+| `bank::withdraw::request` | Forward withdrawal amount to the server. |
+| `bank::transfer::request` | Forward target, source field, and amount. |
+| `bank::depositEarnings::request` | Request earnings deposit. |
+| `bank::repayCreditLine::request` | Request credit-line repayment. |
+| `bank::pin::request` | Forward PIN validation request. |
+| `bank::pin::change::request` | Forward current and new PIN values for a PIN change. |
+| `bank::close` | Dispose bridge screen state and close the display. |
+
+## Browser Response Events
+
+The bridge sends:
+
+| Event | Purpose |
+| --- | --- |
+| `bank::hydrate` | Full session/account payload. |
+| `bank::sync` | Account patch or sync data. |
+| `bank::notice` | UI-visible notice payload. |
+
+## Request Flow
+
+Example deposit flow:
+
+1. Browser sends `bank::deposit::request` with an `amount`.
+2. Client bridge calls the server bank request event.
+3. Server bank addon validates the request and calls bank hot-state logic.
+4. Server response is caught by the client post-init event handlers.
+5. Client bridge sends `bank::sync` or `bank::notice` back to the browser.
+
+## Authoritative State
+
+Balances, PIN authorization, transfers, checkout charges, credit lines, and
+persistence are server-owned. The client should only display account data and
+request mutations through server events.
+
+PIN changes are available from the full bank UI only. The browser validates the
+current, new, and confirmation fields, but the server extension remains
+authoritative and persists the updated PIN.
+
+## Related Guides
+
+- [Bank Usage Guide](./BANK_USAGE_GUIDE.md)
+- [Client Common Usage Guide](./CLIENT_COMMON_USAGE_GUIDE.md)
+- [Client Store Usage Guide](./CLIENT_STORE_USAGE_GUIDE.md)

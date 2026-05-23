@@ -1,0 +1,26 @@
+name = "forge-server"
+author = "J.Schmidt"
+prefix = "forge_server"
+mainprefix = "forge"
+
+[version]
+path = "addons/main/script_version.hpp"
+git_hash = 0
+
+[files]
+include = [
+    "mod.cpp",
+    "meta.cpp",
+    "icon_64_ca.paa",
+    "icon_128_ca.paa",
+    "icon_128_highlight_ca.paa",
+    "title_ca.paa",
+    "config.example.toml",
+    "LICENSE.md",
+    "README.md",
+    "surrealdb/**/*",
+]
+exclude = []
+
+[properties]
+author = "J.Schmidt"

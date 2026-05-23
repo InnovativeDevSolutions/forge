@@ -1,0 +1,10 @@
+PREP(handleUIEvents);
+PREP(initActionService);
+PREP(initContextService);
+PREP(initHelperService);
+PREP(initPayloadService);
+PREP(initRepository);
+PREP(initUIBridge);
+PREP(initVGRepository);
+PREP(openUI);
+PREP(openVG);

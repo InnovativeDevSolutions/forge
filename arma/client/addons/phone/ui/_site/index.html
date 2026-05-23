@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <script>
+            Promise.all([
+                // Load CSS file
+                A3API.RequestFile("forge\\forge_client\\addons\\phone\\ui\\_site\\dist\\app.bundle.css"),
+                // Load JavaScript file
+                A3API.RequestFile("forge\\forge_client\\addons\\phone\\ui\\_site\\dist\\app.bundle.js")
+            ]).then(([css, js]) => {
+                // Apply CSS
+                const style = document.createElement('style');
+                style.textContent = css;
+                document.head.appendChild(style);
+
+                // Load and execute JavaScript
+                const script = document.createElement('script');
+                script.text = js;
+                document.head.appendChild(script);
+
+                // Initialize the phone interface
+                initializeApp();
+            });
+        </script>
+    </head>
+    <body>
+        <div id="app"></div>
+    </body>
+</html>

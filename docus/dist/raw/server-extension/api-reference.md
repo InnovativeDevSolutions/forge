@@ -1,0 +1,48 @@
+# Forge Server API Reference
+
+The Forge server extension exposes domain-oriented commands through
+`callExtension`. Persistent data is stored through the configured SurrealDB
+connection and schema modules.
+
+## Core Commands
+
+```sqf
+"forge_server" callExtension ["version", []];
+"forge_server" callExtension ["status", []];
+"forge_server" callExtension ["surreal:status", []];
+```
+
+`status` and `surreal:status` return `initializing`, `connected`, or `failed`.
+
+## Domain Commands
+
+Game systems should call the domain APIs instead of raw database operations:
+
+- `actor:*`
+- `bank:*`
+- `garage:*`
+- `locker:*`
+- `org:*`
+- `phone:*`
+- `store:*`
+- `task:*`
+- `cad:*`
+- `owned:garage:*`
+- `owned:locker:*`
+- `transport:*`
+
+Large request and response payloads are routed through the transport layer when
+needed by `forge_server_addons_extension_fnc_extCall`.
+
+## Module Guides
+
+- [Actor](/server-modules/actor)
+- [Bank](/server-modules/bank)
+- [CAD](/server-modules/cad)
+- [Garage](/server-modules/garage)
+- [Locker](/server-modules/locker)
+- [Organization](/server-modules/organization)
+- [Owned Storage](/server-modules/owned-storage)
+- [Phone](/server-modules/phone)
+- [Store](/server-modules/store)
+- [Task](/server-modules/task)

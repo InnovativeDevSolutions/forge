@@ -1,0 +1,22 @@
+[package]
+name = "forge-models"
+version = "0.1.0"
+edition = "2024"
+description = "FORGE data models"
+authors = ["IDSolutions", "J. Schmidt"]
+
+[dependencies]
+arma-rs = { workspace = true, optional = true }
+serde = { workspace = true }
+serde_json = { workspace = true, optional = true }
+forge-shared = { path = "../shared" }
+
+[features]
+default = ["actor", "bank", "member", "org", "task"]
+
+actor = ["arma-rs", "serde_json"]
+bank = ["arma-rs", "serde_json"]
+member = ["arma-rs", "serde_json"]
+org = ["arma-rs", "serde_json"]
+task = ["arma-rs", "serde_json"]
+arma-rs = ["arma-rs/serde_json"]

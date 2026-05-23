@@ -1,0 +1,3 @@
+class CfgSettings {
+    class CBA {};
+};

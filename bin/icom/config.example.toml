@@ -1,0 +1,22 @@
+# Forge ICOM Server Configuration
+# Copy this file to config.toml and modify as needed
+# Place this file in the same directory as the forge-icom executable
+
+[server]
+# Host to bind to
+# - "0.0.0.0" = All network interfaces (default, allows remote connections)
+# - "127.0.0.1" = Localhost only (for local testing)
+host = "0.0.0.0"
+
+# Port to listen on
+port = 9090
+
+# Example configurations for different environments:
+
+# Development (localhost only)
+# host = "127.0.0.1"
+# port = 9090
+
+# Production (all interfaces, custom port)
+# host = "0.0.0.0"
+# port = 19090

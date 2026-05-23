@@ -1,0 +1,16 @@
+# Forge Server Configuration
+# Copy this file to config.toml and place it beside forge_server_x64.dll.
+# Start SurrealDB before launching the Arma server, and keep these values
+# aligned with the running database.
+
+[surreal]
+# SurrealDB HTTP endpoint. Use "127.0.0.1:8000" for a local server.
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+
+# Optional authentication.
+username = "root"
+password = "root"
+
+connect_timeout_ms = 5000

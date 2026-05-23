@@ -1,0 +1,158 @@
+# Owned Storage Usage Guide
+
+Owned storage covers the `owned:locker` and `owned:garage` extension command
+groups. These modules store unlock lists rather than physical item or vehicle
+instances.
+
+Use these modules for virtual arsenal and virtual garage unlocks. Use
+[Locker Usage Guide](./LOCKER_USAGE_GUIDE.md) and
+[Garage Usage Guide](./GARAGE_USAGE_GUIDE.md) for physical inventory and stored
+vehicle instances.
+
+## Owned Locker Model
+
+```json
+{
+  "items": ["FirstAidKit"],
+  "weapons": ["arifle_MX_F"],
+  "magazines": ["30Rnd_65x39_caseless_black_mag"],
+  "backpacks": ["B_AssaultPack_rgr"]
+}
+```
+
+Supported owned locker categories:
+
+- `items`
+- `weapons`
+- `magazines`
+- `backpacks`
+
+New owned lockers are created with default unlocks from the Rust model.
+
+## Owned Garage Model
+
+```json
+{
+  "cars": ["B_Quadbike_01_F"],
+  "armor": [],
+  "helis": [],
+  "planes": [],
+  "naval": [],
+  "other": []
+}
+```
+
+Supported owned garage categories:
+
+- `cars`
+- `armor`
+- `helis`
+- `planes`
+- `naval`
+- `other`
+
+The durable `owned:garage:remove` command currently accepts `heli` for the
+helicopter category. Add, get, and hot remove accept `helis`.
+
+New owned garages are created with default unlocks from the Rust model.
+
+## Owned Locker Commands
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `owned:locker:create` | `uid` | Full owned locker JSON. |
+| `owned:locker:fetch` | `uid` | Full owned locker JSON. |
+| `owned:locker:get` | `uid`, `category` | Category classname array JSON. |
+| `owned:locker:add` | `uid`, `category`, `classnames_json` | Updated category array JSON. |
+| `owned:locker:remove` | `uid`, `category`, `classname` | Updated category array JSON. |
+| `owned:locker:delete` | `uid` | `OK`. |
+| `owned:locker:exists` | `uid` | `true` or `false`. |
+
+## Owned Garage Commands
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `owned:garage:create` | `uid` | Full owned garage JSON. |
+| `owned:garage:fetch` | `uid` | Full owned garage JSON. |
+| `owned:garage:get` | `uid`, `category` | Category classname array JSON. |
+| `owned:garage:add` | `uid`, `category`, `classnames_json` | Updated category array JSON. |
+| `owned:garage:remove` | `uid`, `category`, `classname` | Updated category array JSON. |
+| `owned:garage:delete` | `uid` | `OK`. |
+| `owned:garage:exists` | `uid` | `true` or `false`. |
+
+## Add Virtual Arsenal Unlocks
+
+```sqf
+private _classes = ["arifle_MX_F", "hgun_P07_F"];
+
+private _result = "forge_server" callExtension ["owned:locker:add", [
+    getPlayerUID player,
+    "weapons",
+    toJSON _classes
+]];
+```
+
+## Add Virtual Garage Unlocks
+
+```sqf
+private _classes = ["B_Quadbike_01_F", "B_MRAP_01_F"];
+
+private _result = "forge_server" callExtension ["owned:garage:add", [
+    getPlayerUID player,
+    "cars",
+    toJSON _classes
+]];
+```
+
+## Remove an Unlock
+
+```sqf
+"forge_server" callExtension ["owned:locker:remove", [
+    getPlayerUID player,
+    "weapons",
+    "arifle_MX_F"
+]];
+
+"forge_server" callExtension ["owned:garage:remove", [
+    getPlayerUID player,
+    "cars",
+    "B_Quadbike_01_F"
+]];
+```
+
+## Hot-State Commands
+
+Both owned storage modules support hot state.
+
+Owned locker:
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `owned:locker:hot:init` | `uid` | Full owned locker JSON. |
+| `owned:locker:hot:fetch` | `uid` | Full owned locker JSON. |
+| `owned:locker:hot:get` | `uid`, `category` | Category array JSON. |
+| `owned:locker:hot:override` | `uid`, `locker_json` | Full owned locker JSON. |
+| `owned:locker:hot:save` | `uid` | Current hot owned locker JSON and async durable save. |
+| `owned:locker:hot:remove` | `uid` | `OK`. |
+
+Owned garage:
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `owned:garage:hot:init` | `uid` | Full owned garage JSON. |
+| `owned:garage:hot:fetch` | `uid` | Full owned garage JSON. |
+| `owned:garage:hot:get` | `uid`, `category` | Category array JSON. |
+| `owned:garage:hot:override` | `uid`, `garage_json` | Full owned garage JSON. |
+| `owned:garage:hot:add` | `uid`, `category`, `classnames_json` | Updated category array JSON. |
+| `owned:garage:hot:remove_item` | `uid`, `category`, `classname` | Updated category array JSON. |
+| `owned:garage:hot:save` | `uid` | Current hot owned garage JSON and async durable save. |
+| `owned:garage:hot:remove` | `uid` | `OK`. |
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Owned storage error: %1", _payload];
+};
+```

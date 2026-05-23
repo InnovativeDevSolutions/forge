@@ -1,0 +1,69 @@
+/* Utility classes */
+.hidden {
+    display: none !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease forwards;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .phone-container {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .phone-screen {
+        border-radius: 0;
+    }
+
+    body {
+        padding: 0;
+    }
+}
+
+/* Remove unused styles */
+.home-button-container,
+.home-button,
+.nav-home-button {
+    display: none;
+}
+
+/* Search Bar */
+.search-bar {
+    input {
+        &::placeholder {
+            color: var(--text-secondary);
+        }
+    }
+}

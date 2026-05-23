@@ -1,0 +1,51 @@
+DEFINE TABLE IF NOT EXISTS org SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS org_id ON org TYPE string;
+DEFINE FIELD IF NOT EXISTS owner ON org TYPE string;
+DEFINE FIELD IF NOT EXISTS name ON org TYPE string;
+DEFINE FIELD IF NOT EXISTS funds ON org TYPE number;
+DEFINE FIELD IF NOT EXISTS reputation ON org TYPE int;
+DEFINE FIELD OVERWRITE updated_at ON org TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS org_org_id ON org COLUMNS org_id UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS org_member SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS org_id ON org_member TYPE string;
+DEFINE FIELD IF NOT EXISTS member_uid ON org_member TYPE string;
+DEFINE FIELD OVERWRITE joined_at ON org_member TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS org_member_org ON org_member COLUMNS org_id;
+DEFINE INDEX IF NOT EXISTS org_member_unique ON org_member COLUMNS org_id, member_uid UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS org_credit_line SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS org_id ON org_credit_line TYPE string;
+DEFINE FIELD IF NOT EXISTS uid ON org_credit_line TYPE string;
+DEFINE FIELD IF NOT EXISTS name ON org_credit_line TYPE string;
+DEFINE FIELD IF NOT EXISTS approved_amount ON org_credit_line TYPE number;
+DEFINE FIELD IF NOT EXISTS available_amount ON org_credit_line TYPE number;
+DEFINE FIELD IF NOT EXISTS outstanding_principal ON org_credit_line TYPE number;
+DEFINE FIELD IF NOT EXISTS interest_rate ON org_credit_line TYPE number;
+DEFINE FIELD IF NOT EXISTS amount_due ON org_credit_line TYPE number;
+DEFINE FIELD IF NOT EXISTS amount ON org_credit_line TYPE number;
+DEFINE FIELD OVERWRITE updated_at ON org_credit_line TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS org_credit_line_org ON org_credit_line COLUMNS org_id;
+DEFINE INDEX IF NOT EXISTS org_credit_line_unique ON org_credit_line COLUMNS org_id, uid UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS org_asset SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS org_id ON org_asset TYPE string;
+DEFINE FIELD IF NOT EXISTS category ON org_asset TYPE string;
+DEFINE FIELD IF NOT EXISTS classname ON org_asset TYPE string;
+DEFINE FIELD IF NOT EXISTS asset_type ON org_asset TYPE string;
+DEFINE FIELD IF NOT EXISTS quantity ON org_asset TYPE int;
+DEFINE FIELD OVERWRITE updated_at ON org_asset TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS org_asset_org ON org_asset COLUMNS org_id;
+DEFINE INDEX IF NOT EXISTS org_asset_unique ON org_asset COLUMNS org_id, category, classname UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS org_fleet_vehicle SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS org_id ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS fleet_key ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS classname ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS name ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS fleet_type ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS status ON org_fleet_vehicle TYPE string;
+DEFINE FIELD IF NOT EXISTS damage ON org_fleet_vehicle TYPE string;
+DEFINE FIELD OVERWRITE updated_at ON org_fleet_vehicle TYPE option<datetime>;
+DEFINE INDEX IF NOT EXISTS org_fleet_vehicle_org ON org_fleet_vehicle COLUMNS org_id;
+DEFINE INDEX IF NOT EXISTS org_fleet_vehicle_unique ON org_fleet_vehicle COLUMNS org_id, fleet_key UNIQUE;

@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+    </head>
+    <body>
+        <div class="logo">FORGE OS</div>
+        <div class="header-main">
+            <div class="title-block">
+                <span class="title-kicker">Cad Systems</span>
+                <strong class="title-main">FORGE Command & Dispatch</strong>
+            </div>
+            <div id="operatorStrip" class="operator-strip is-hidden">
+                <div class="operator-info">
+                    <span class="operator-label">Current Group</span>
+                    <strong id="operatorGroupName">No Group</strong>
+                </div>
+                <div class="operator-info">
+                    <span class="operator-label">Location</span>
+                    <strong id="operatorLocation">Unavailable</strong>
+                </div>
+                <div id="operatorControls" class="operator-controls is-hidden">
+                    <select id="operatorRoleSelect" class="operator-select">
+                        <option value="infantry">infantry</option>
+                        <option value="recon">recon</option>
+                        <option value="armor">armor</option>
+                        <option value="air">air</option>
+                        <option value="logistics">logistics</option>
+                        <option value="support">support</option>
+                    </select>
+                    <button
+                        id="operatorRoleBtn"
+                        class="btn btn-operator"
+                        type="button"
+                    >
+                        Update Role
+                    </button>
+                    <select id="operatorStatusSelect" class="operator-select">
+                        <option value="available">available</option>
+                        <option value="en_route">en route</option>
+                        <option value="on_task">on task</option>
+                        <option value="holding">holding</option>
+                        <option value="danger">danger</option>
+                        <option value="unavailable">unavailable</option>
+                    </select>
+                    <button
+                        id="operatorStatusBtn"
+                        class="btn btn-operator"
+                        type="button"
+                    >
+                        Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="modeControls" class="mode-controls is-hidden">
+            <span class="mode-text">Ops</span>
+            <label class="mode-switch" for="modeToggle">
+                <input id="modeToggle" type="checkbox" />
+                <span class="mode-slider"></span>
+            </label>
+            <span class="mode-text">Dispatch</span>
+        </div>
+        <div id="dispatchViewControls" class="dispatch-view-controls is-hidden">
+            <button
+                id="dispatchBoardBtn"
+                class="btn btn-dispatch-view is-active"
+                type="button"
+            >
+                Board
+            </button>
+            <button
+                id="dispatchMapBtn"
+                class="btn btn-dispatch-view"
+                type="button"
+            >
+                Map
+            </button>
+        </div>
+        <div class="controls">
+            <button
+                id="dispatchRefreshBtn"
+                class="btn btn-icon btn-refresh"
+                type="button"
+                aria-label="Refresh board"
+                title="Refresh board"
+            >
+                ↻
+            </button>
+            <button id="btnClose" class="btn btn-icon btn-close">X</button>
+        </div>
+
+        <script>
+            window.MapLoader = {
+                loadCSS(path) {
+                    return A3API.RequestFile(path).then((css) => {
+                        const style = document.createElement("style");
+                        style.textContent = css;
+                        document.head.appendChild(style);
+                    });
+                },
+                loadJS(path) {
+                    return A3API.RequestFile(path).then((js) => {
+                        eval(js);
+                    });
+                },
+                loadAll(resources) {
+                    return resources.reduce((promise, resource) => {
+                        return promise.then(() => {
+                            if (resource.endsWith(".css")) {
+                                return this.loadCSS(resource);
+                            }
+
+                            if (resource.endsWith(".js")) {
+                                return this.loadJS(resource);
+                            }
+
+                            return Promise.resolve();
+                        });
+                    }, Promise.resolve());
+                },
+            };
+
+            MapLoader.loadAll([
+                "forge\\forge_client\\addons\\cad\\ui\\_site\\cad-common.css",
+                "forge\\forge_client\\addons\\cad\\ui\\_site\\cad-topbar.css",
+                "forge\\forge_client\\addons\\cad\\ui\\_site\\cad-shared.js",
+                "forge\\forge_client\\addons\\cad\\ui\\_site\\cad-topbar.js",
+            ]).catch((err) => console.error("[TOPBAR] Load error:", err));
+        </script>
+    </body>
+</html>

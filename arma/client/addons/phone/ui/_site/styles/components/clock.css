@@ -1,0 +1,584 @@
+/* Clock App Styles */
+
+/* Clock Tabs */
+.clock-tabs {
+    display: flex;
+    background: var(--background-secondary);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.clock-tab {
+    flex: 1;
+    padding: 0.75rem 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.clock-tab.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    background: var(--bg-primary);
+}
+
+.clock-tab:hover {
+    color: var(--text-primary);
+    background: var(--background-tertiary);
+}
+
+.clock-content {
+    padding: 0 1rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
+/* World Clock */
+.world-clock {
+    padding-bottom: 2rem;
+}
+
+.local-time-section {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--background-secondary);
+    border-radius: 12px;
+}
+
+.local-time-label {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.local-time-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.local-time {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--accent-color);
+    font-family: 'SF Mono', monospace;
+}
+
+.local-date {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.add-world-clock-button {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.add-world-clock-button:hover {
+    background: var(--accent-color-hover);
+}
+
+.add-clock-form {
+    background: var(--background-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.add-clock-form h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.timezone-select {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.form-buttons button {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-buttons .add-button {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.form-buttons .add-button:hover {
+    background: var(--accent-color-hover);
+}
+
+.form-buttons .add-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.world-clocks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.world-clock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    gap: 1rem;
+}
+
+.clock-info {
+    flex: 1;
+}
+
+.clock-city {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.clock-timezone {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.clock-time-info {
+    text-align: right;
+}
+
+.clock-time {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--accent-color);
+    font-family: 'SF Mono', monospace;
+}
+
+.clock-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.remove-clock-button {
+    background: none;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.remove-clock-button:hover {
+    background: #ff4444;
+    color: white;
+}
+
+/* Stopwatch */
+.stopwatch {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.stopwatch-display {
+    margin-bottom: 2rem;
+}
+
+.stopwatch-time {
+    font-size: 3rem;
+    font-weight: 300;
+    font-family: 'SF Mono', monospace;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.stopwatch-time.running {
+    color: var(--accent-color);
+}
+
+.stopwatch-status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stopwatch-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.control-button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.start-button {
+    background: #4CAF50;
+    color: white;
+}
+
+.start-button:hover {
+    background: #45a049;
+}
+
+.stop-button {
+    background: #f44336;
+    color: white;
+}
+
+.stop-button:hover {
+    background: #da190b;
+}
+
+.lap-button {
+    background: var(--accent-color);
+    color: white;
+}
+
+.lap-button:hover {
+    background: var(--accent-color-hover);
+}
+
+.reset-button {
+    background: var(--text-secondary);
+    color: white;
+}
+
+.reset-button:hover {
+    background: var(--text-primary);
+}
+
+.lap-times-section {
+    text-align: left;
+}
+
+.lap-times-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.lap-times-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.lap-time-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.lap-time-item:last-child {
+    border-bottom: none;
+}
+
+.lap-time-item.fastest {
+    background: rgba(76, 175, 80, 0.1);
+    color: #4CAF50;
+}
+
+.lap-time-item.slowest {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+.lap-number {
+    font-weight: 600;
+}
+
+.lap-indicator {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Timer */
+.timer {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.timer-display {
+    margin-bottom: 2rem;
+}
+
+.timer-time {
+    font-size: 3rem;
+    font-weight: 300;
+    font-family: 'SF Mono', monospace;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.timer-time.finished {
+    color: #f44336;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.timer-status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.time-setters {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.time-setter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.time-setter label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.time-setter input {
+    width: 60px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    text-align: center;
+    font-size: 1.1rem;
+    font-family: 'SF Mono', monospace;
+}
+
+.timer-controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+/* Alarm Clock */
+.alarm-clock {
+    padding-bottom: 2rem;
+}
+
+.add-alarm-button {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.add-alarm-button:hover {
+    background: var(--accent-color-hover);
+}
+
+.add-alarm-form {
+    background: var(--background-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.add-alarm-form h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.add-alarm-form input {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.alarms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.alarm-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    gap: 1rem;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.alarm-item.disabled {
+    opacity: 0.6;
+}
+
+.alarm-info {
+    flex: 1;
+}
+
+.alarm-time {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-family: 'SF Mono', monospace;
+    margin-bottom: 0.25rem;
+}
+
+.alarm-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.alarm-days {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.alarm-controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.toggle-alarm {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.alarm-item.enabled .toggle-alarm {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.remove-alarm {
+    background: none;
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.remove-alarm:hover {
+    background: #ff4444;
+    color: white;
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 375px) {
+    .clock-tabs {
+        font-size: 0.7rem;
+    }
+    
+    .clock-tab {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .local-time {
+        font-size: 2rem;
+    }
+    
+    .stopwatch-time,
+    .timer-time {
+        font-size: 2.5rem;
+    }
+    
+    .time-setters {
+        gap: 1rem;
+    }
+}
+

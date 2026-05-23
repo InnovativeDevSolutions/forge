@@ -1,0 +1,554 @@
+html,
+body {
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--panel);
+    border-left: 1px solid var(--stroke);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+body {
+    opacity: 1;
+    visibility: visible;
+}
+
+.panel-header {
+    padding: 14px;
+    border-bottom: 1px solid var(--stroke);
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.05),
+        transparent
+    );
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h3 {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.panel-content {
+    padding: 14px;
+    height: calc(100% - 56px);
+    overflow: auto;
+}
+
+.placeholder-message {
+    padding: 20px;
+    text-align: center;
+}
+
+.placeholder-message p {
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.cad-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    margin-bottom: 12px;
+}
+
+.cad-tabs.is-two-col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.cad-tabs.is-three-col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.cad-tab {
+    min-width: 0;
+    padding: 8px 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(20, 27, 33, 0.88);
+    color: rgba(243, 246, 249, 0.78);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.cad-tab:hover {
+    background: rgba(31, 40, 47, 0.94);
+    color: #f3f6f9;
+}
+
+.cad-tab.is-active {
+    border-color: rgba(91, 187, 255, 0.42);
+    background: rgba(15, 40, 58, 0.96);
+    color: var(--accent);
+}
+
+.cad-tab-panels {
+    min-height: 0;
+}
+
+.cad-section {
+    display: none;
+}
+
+.cad-section.is-active {
+    display: block;
+}
+
+.cad-section-header {
+    margin-bottom: 8px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.task-accept-btn,
+.task-secondary-btn,
+.cad-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(30, 37, 43, 0.9);
+    color: #f3f6f9;
+}
+
+.task-accept-btn,
+.task-secondary-btn {
+    cursor: pointer;
+}
+
+.task-accept-btn:hover,
+.task-secondary-btn:hover {
+    background: rgba(46, 57, 66, 0.95);
+}
+
+.task-accept-btn:disabled,
+.task-secondary-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.task-status-message {
+    min-height: 18px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #cdd6dd;
+}
+
+.task-status-message[data-type="success"] {
+    color: #79d28a;
+}
+
+.task-status-message[data-type="error"] {
+    color: #ff8a80;
+}
+
+.cad-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.cad-modal.is-hidden {
+    display: none;
+}
+
+.cad-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 8, 12, 0.76);
+}
+
+.cad-modal-dialog {
+    position: relative;
+    width: min(480px, calc(100% - 28px));
+    margin: 32px auto 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(11, 17, 24, 0.98);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+}
+
+.cad-modal-header,
+.cad-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+}
+
+.cad-modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cad-modal-header h3 {
+    margin: 4px 0 0;
+    font-size: 18px;
+    font-weight: 650;
+}
+
+.cad-modal-body {
+    padding: 14px;
+    max-height: 62vh;
+    overflow: auto;
+}
+
+.cad-modal-fields {
+    display: grid;
+    gap: 10px;
+}
+
+.cad-field {
+    display: grid;
+    gap: 6px;
+}
+
+.cad-field span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(233, 241, 248, 0.7);
+}
+
+.cad-input,
+.cad-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(30, 37, 43, 0.9);
+    color: #f3f6f9;
+    box-sizing: border-box;
+    font: inherit;
+}
+
+.cad-textarea {
+    min-height: 74px;
+    resize: vertical;
+}
+
+.cad-icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(24, 31, 40, 0.92);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.cad-modal-actions {
+    justify-content: flex-end;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cad-danger-alert {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 107, 107, 0.36);
+    background: linear-gradient(
+        90deg,
+        rgba(92, 18, 18, 0.94),
+        rgba(128, 29, 29, 0.82)
+    );
+    color: #ffd4cf;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    animation: cad-danger-pulse 1.35s ease-in-out infinite;
+}
+
+.cad-danger-alert.is-hidden {
+    display: none;
+}
+
+.cad-warning-alert {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(246, 198, 84, 0.4);
+    background: linear-gradient(
+        90deg,
+        rgba(89, 64, 12, 0.94),
+        rgba(125, 92, 18, 0.84)
+    );
+    color: #ffe9b2;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    animation: cad-warning-pulse 1.35s ease-in-out infinite;
+}
+
+.cad-warning-alert.is-hidden {
+    display: none;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cad-request-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.cad-request-btn {
+    text-align: left;
+}
+
+.task-action-stack,
+.task-action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-action-row {
+    flex-direction: row;
+}
+
+.task-card {
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(12, 16, 20, 0.62);
+}
+
+.task-card.is-danger,
+.roster-summary-card.is-danger {
+    border-color: rgba(255, 107, 107, 0.34);
+    background: linear-gradient(
+        180deg,
+        rgba(69, 20, 22, 0.78),
+        rgba(28, 17, 21, 0.92)
+    );
+    box-shadow: inset 0 0 0 1px rgba(255, 107, 107, 0.1);
+    animation: cad-danger-pulse 1.35s ease-in-out infinite;
+}
+
+.task-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.task-type {
+    opacity: 0.7;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.task-description {
+    margin: 0 0 8px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.task-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.task-secondary-btn {
+    background: rgba(60, 48, 45, 0.92);
+}
+
+.roster-summary-card {
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(16, 23, 29, 0.82);
+}
+
+.task-alert-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 107, 107, 0.44);
+    background: rgba(95, 23, 23, 0.88);
+    color: #ffd8d1;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.roster-member-card {
+    background: rgba(12, 16, 20, 0.74);
+}
+
+.dispatch-map-group-card {
+    width: 100%;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 0;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+        border-color 120ms ease,
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+.dispatch-map-group-card strong {
+    color: var(--text);
+}
+
+.dispatch-map-group-card .task-type {
+    color: var(--accent);
+    opacity: 0.9;
+}
+
+.dispatch-map-group-card .task-meta {
+    color: var(--muted);
+    opacity: 1;
+}
+
+.dispatch-map-group-card:hover {
+    border-color: rgba(91, 187, 255, 0.26);
+    background: rgba(18, 29, 38, 0.9);
+    transform: translateX(-2px);
+}
+
+.dispatch-map-group-card.is-selected {
+    border-color: rgba(91, 187, 255, 0.52);
+    background: rgba(15, 40, 58, 0.92);
+    box-shadow: inset 0 0 0 1px rgba(91, 187, 255, 0.18);
+}
+
+.dispatch-map-group-card.is-danger:not(.is-selected) {
+    border-color: rgba(255, 107, 107, 0.34);
+    background: linear-gradient(
+        180deg,
+        rgba(69, 20, 22, 0.78),
+        rgba(28, 17, 21, 0.92)
+    );
+}
+
+.dispatch-map-group-card.is-danger .task-meta,
+.roster-summary-card.is-danger .task-meta {
+    color: rgba(255, 232, 228, 0.82);
+}
+
+.dispatch-map-card {
+    width: 100%;
+    text-align: left;
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 0;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+        border-color 120ms ease,
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+.dispatch-map-card strong {
+    color: var(--text);
+}
+
+.dispatch-map-card .task-type {
+    color: var(--accent);
+    opacity: 0.9;
+}
+
+.dispatch-map-card .task-description {
+    color: var(--muted);
+}
+
+.dispatch-map-card .task-meta {
+    color: var(--muted);
+    opacity: 1;
+}
+
+.dispatch-map-card:hover {
+    border-color: rgba(91, 187, 255, 0.26);
+    background: rgba(18, 29, 38, 0.9);
+    transform: translateX(-2px);
+}
+
+.dispatch-map-card.is-selected {
+    border-color: rgba(91, 187, 255, 0.52);
+    background: rgba(15, 40, 58, 0.92);
+    box-shadow: inset 0 0 0 1px rgba(91, 187, 255, 0.18);
+}
+
+.dispatch-map-card.is-warning:not(.is-selected) {
+    border-color: rgba(246, 198, 84, 0.34);
+    background: linear-gradient(
+        180deg,
+        rgba(86, 64, 17, 0.78),
+        rgba(34, 27, 16, 0.92)
+    );
+}
+
+.dispatch-map-card.is-warning .task-meta,
+.dispatch-map-card.is-warning .task-description {
+    color: rgba(255, 243, 214, 0.84);
+}
+
+.roster-leader-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border: 1px solid rgba(91, 187, 255, 0.28);
+    background: rgba(15, 40, 58, 0.82);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+@keyframes cad-danger-pulse {
+    0%,
+    100% {
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 107, 107, 0.08),
+            0 0 0 rgba(255, 107, 107, 0);
+    }
+
+    50% {
+        box-shadow:
+            inset 0 0 0 1px rgba(255, 141, 141, 0.22),
+            0 0 14px rgba(255, 107, 107, 0.14);
+    }
+}
+
+@keyframes cad-warning-pulse {
+    0%,
+    100% {
+        box-shadow:
+            inset 0 0 0 1px rgba(246, 198, 84, 0.08),
+            0 0 0 rgba(246, 198, 84, 0);
+    }
+
+    50% {
+        box-shadow:
+            inset 0 0 0 1px rgba(251, 212, 118, 0.22),
+            0 0 18px rgba(246, 198, 84, 0.16);
+    }
+}

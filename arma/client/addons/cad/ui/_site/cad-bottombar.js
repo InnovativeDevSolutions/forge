@@ -1,0 +1,1 @@
+window.CADBottombar=window.CADBottombar||{init:()=>!0},window.CADBottombar.init();

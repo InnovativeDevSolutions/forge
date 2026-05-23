@@ -1,0 +1,96 @@
+# forge-docus
+
+## Documentation Sets
+
+- [forge-docus](https://innovativedevsolutions.github.io/llms-full.txt)
+
+## Docs
+
+- [Getting Started](https://innovativedevsolutions.github.io/raw/getting-started.md): Use this section as the main entry point for the Forge framework.
+- [Framework Architecture](https://innovativedevsolutions.github.io/raw/getting-started/architecture.md): Forge is organized around domain modules. A domain usually has SQF addon
+entry points, Rust models, repository traits, service logic, extension command
+handlers, and optional browser UI.
+- [Module Reference](https://innovativedevsolutions.github.io/raw/getting-started/module-reference.md): This reference lists the main Forge modules and where each layer lives.
+- [Development Guide](https://innovativedevsolutions.github.io/raw/getting-started/development.md): This guide covers the usual path for adding or changing a Forge module.
+- [SurrealDB Setup](https://innovativedevsolutions.github.io/raw/getting-started/surrealdb-setup.md): Forge uses SurrealDB for durable storage. The Rust server extension connects to
+SurrealDB on startup and applies Forge schema modules automatically, so setup
+comes down to running a reachable database and matching the Forge config.
+- [Forge Server Extension](https://innovativedevsolutions.github.io/raw/server-extension.md): Forge Server is an arma-rs extension for Arma 3 server-side persistence and
+domain services. It exposes game-facing commands and stores durable state in
+SurrealDB.
+- [Forge Server API Reference](https://innovativedevsolutions.github.io/raw/server-extension/api-reference.md): The Forge server extension exposes domain-oriented commands through
+callExtension. Persistent data is stored through the configured SurrealDB
+connection and schema modules.
+- [Forge Server Usage Examples](https://innovativedevsolutions.github.io/raw/server-extension/usage-examples.md): These examples use the domain command surface exposed by the extension.
+Persistence is handled by the server through SurrealDB.
+- [Server Module Guides](https://innovativedevsolutions.github.io/raw/server-modules.md): These pages document the authoritative server-side workflows in Forge.
+- [Actor Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/actor.md): The actor module stores persistent player character data: identity, loadout,
+position, direction, stance, contact fields, state, holster status, rank, and
+organization.
+- [Store Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/store.md): The store module processes checkout requests. It charges a payment source and
+grants purchased items to the player locker, virtual arsenal locker, and
+virtual garage unlocks.
+- [Task Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/task.md): The task module stores transient mission task metadata for active server or
+mission lifecycle workflows. SQF still owns Arma-only runtime state such as
+objects and participants.
+- [Bank Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/bank.md): The bank module stores player account balances, earnings, PINs, and transaction
+strings. The hot-state API also owns the active banking workflows used by the
+UI: deposit, withdraw, transfer, checkout charge, and PIN validation.
+- [CAD Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/cad.md): The CAD module stores transient operational state for dispatch activity,
+assignments, dispatch orders, support requests, group profiles, grouped views,
+and hydrated UI payloads. CAD state is in-memory and follows the active server
+or mission lifecycle.
+- [Economy Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/economy.md): The economy server addon owns Arma-world service behavior for fuel, medical,
+and repair interactions. It does not own money state. Money mutations go
+through extension-backed bank and organization hot state before the world
+effect is applied.
+- [Garage Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/garage.md): The garage module stores physical player vehicles. Each record keeps the
+vehicle classname, generated plate UUID, fuel, overall damage, and detailed hit
+point damage.
+- [Locker Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/locker.md): The locker module stores physical player inventory items by classname. It is
+separate from the virtual arsenal unlock module documented in
+Owned Storage Usage Guide.
+- [Organization Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/organization.md): The organization module stores organization records, members, assets, fleet
+entries, and credit lines. Durable commands manage persisted records directly.
+Hot-state commands support the active organization UI workflows.
+- [Owned Storage Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/owned-storage.md): Owned storage covers the owned:locker and owned:garage extension command
+groups. These modules store unlock lists rather than physical item or vehicle
+instances.
+- [Phone Usage Guide](https://innovativedevsolutions.github.io/raw/server-modules/phone.md): The phone module stores contacts, messages, and emails for each UID. It is a
+server-extension state module backed by SurrealDB.
+- [Client Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons.md): Forge Client contains the Arma client-side addons that open player interfaces,
+handle browser events, cache client-visible state, and forward authoritative
+requests to the server addons.
+- [Client Main Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/main.md): The client main addon provides the shared mod identity, version metadata,
+CBA settings, and macro foundation used by the Forge client addons.
+- [Client Phone Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/phone.md): The client phone addon provides the in-game phone UI for contacts, SMS
+messages, email, and local utility apps such as notes, calendar events, world
+clocks, and alarms.
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/store.md): The client store addon provides the storefront browser UI for catalog browsing,
+category hydration, payment source display, cart handling, and checkout
+requests.
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/common.md): The client common addon contains shared browser UI bridge declarations and
+common client-side browser integration patterns.
+- [Client Actor Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/actor.md): The client actor addon owns the player interaction menu and client-side actor
+repository. It is the main launcher for nearby player actions and other Forge
+client UIs.
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/bank.md): The client bank addon opens the bank and ATM browser UI, forwards banking
+requests to the server bank addon, and pushes account updates back into the
+browser.
+- [Client CAD Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/cad.md): The client CAD addon provides the map and dispatch UI for groups, active
+tasks, task assignment, dispatch orders, support requests, and task
+acknowledge/decline workflows.
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/garage.md): The client garage addon provides player vehicle storage UI, vehicle
+store/retrieve actions, selected nearby vehicle service requests, vehicle
+context building, and the virtual garage view.
+- [Client Locker Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/locker.md): The client locker addon manages personal locker display state, local locker
+container behavior, and virtual arsenal unlock state.
+- [Client Notifications Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/notifications.md): The client notifications addon owns the notification HUD, notification sound,
+and local notification service used by Forge client and server modules.
+- [Client Organization Usage Guide](https://innovativedevsolutions.github.io/raw/client-addons/organization.md): The client organization addon provides the organization portal UI and browser
+bridge for login, registration, membership, invites, credit lines, leave and
+disband flows, assets, fleet, and treasury display.
+
+## Landing
+
+- [Forge Framework Documentation](https://innovativedevsolutions.github.io/raw/index.md): Documentation for the Forge Arma 3 framework, covering architecture, persistence, extension APIs, gameplay modules, and client UIs.

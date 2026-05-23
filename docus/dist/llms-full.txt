@@ -1,0 +1,4206 @@
+# Getting Started
+
+Use this section as the main entry point for the Forge framework.
+
+Forge combines:
+
+- Arma 3 client addons for UX and browser-hosted interfaces
+- Arma 3 server addons for mission integration and authoritative flow control
+- a Rust server extension for command routing and persistence
+- shared Rust crates for models, repositories, and services
+- SurrealDB for durable storage
+
+## Common Commands
+
+```powershell
+cargo test
+npm run build:webui
+.\build-arma.ps1
+```
+
+## Start Here
+
+::u-page-grid
+  :::u-page-card
+  ---
+  icon: i-lucide-network
+  title: Architecture
+  to: https://innovativedevsolutions.github.io/getting-started/architecture
+  ---
+  Understand how SQF, Rust services, SurrealDB, and browser UIs fit together.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-boxes
+  title: Module Reference
+  to: https://innovativedevsolutions.github.io/getting-started/module-reference
+  ---
+  Review gameplay domains, infrastructure modules, and extension command groups.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-wrench
+  title: Development Guide
+  to: https://innovativedevsolutions.github.io/getting-started/development
+  ---
+  See the rules for adding modules and changing boundaries without regressions.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-database
+  title: SurrealDB Setup
+  to: https://innovativedevsolutions.github.io/getting-started/surrealdb-setup
+  ---
+  Install SurrealDB, match Forge config values, and choose the right setup path
+  for developers or admin-facing roles.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-server-cog
+  title: Server Extension
+  to: https://innovativedevsolutions.github.io/server-extension
+  ---
+  Follow the extension architecture, API surface, and SQF usage examples.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-layers-3
+  title: Server Modules
+  to: https://innovativedevsolutions.github.io/server-modules
+  ---
+  Dive into the actor, bank, CAD, garage, locker, organization, phone, store,
+  task, and owned-storage guides.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-monitor-smartphone
+  title: Client Addons
+  to: https://innovativedevsolutions.github.io/client-addons
+  ---
+  Explore the client bridge model and addon-specific browser integration rules.
+  :::
+::
+
+
+# Framework Architecture
+
+Forge is organized around domain modules. A domain usually has SQF addon
+entry points, Rust models, repository traits, service logic, extension command
+handlers, and optional browser UI.
+
+## Runtime Flow
+
+```text
+Arma client UI or SQF action
+  -> client addon bridge
+  -> server addon function
+  -> forge_server callExtension command
+  -> extension command group
+  -> forge-services domain service
+  -> forge-repositories trait
+  -> SurrealDB repository implementation
+  -> SurrealDB
+```
+
+For small payloads, server SQF calls `forge_server` directly through the
+extension bridge. For large payloads, `arma/server/addons/extension` stages
+request and response chunks through the extension transport module.
+
+## Main Layers
+
+### Client Addons
+
+Client addons live under `arma/client/addons`. They own local player UX,
+keybinds, browser UI dialogs, and UI-to-SQF event handling. When a client needs
+durable or authoritative state, it routes work to the matching server addon
+instead of touching persistence directly.
+
+### Server Addons
+
+Server addons live under `arma/server/addons`. They own server-side SQF
+initialization, game-object integration, validation near the Arma runtime, and
+calls into the Rust extension. The `extension` addon is the shared bridge for
+`callExtension` and transport handling.
+
+### Rust Extension
+
+The server extension lives under `arma/server/extension`. It registers the
+`forge_server` command groups, loads configuration, initializes SurrealDB, and
+maps SQF command inputs into service calls.
+
+The extension should stay thin:
+
+- Parse and validate command arguments that arrive from SQF.
+- Resolve Arma-specific context such as player UID when required.
+- Call the matching service.
+- Serialize the service result back to JSON or a simple string.
+
+### Shared Rust Crates
+
+The `lib` workspace contains reusable Rust crates:
+
+- `forge-models`: shared domain structs and serialization rules.
+- `forge-repositories`: storage-agnostic repository traits and in-memory
+  implementations used by tests and hot-state services.
+- `forge-services`: domain behavior, validation, and mutation workflows.
+- `forge-shared`: cross-crate helpers.
+
+### Persistence
+
+Durable storage is SurrealDB. Schema modules live under
+`arma/server/extension/src/schema`, and concrete SurrealDB repository
+implementations live under `arma/server/extension/src/storage`.
+
+Repository traits stay in `lib/repositories` so service logic remains testable
+without a database.
+
+## Hot State
+
+Several domains have `hot` command groups. Hot state keeps a runtime copy of
+frequently accessed data in memory, then saves it back to durable storage when
+requested. This is useful for player state that changes often during a session.
+
+Typical hot-state flow:
+
+```text
+actor:hot:init
+actor:hot:get
+actor:hot:override
+actor:hot:save
+actor:hot:remove
+```
+
+Use hot state for session workflows. Use normal domain commands for direct
+durable CRUD operations.
+
+## Transport Layer
+
+The transport layer exists because Arma extension calls have practical payload
+size limits. It provides chunked request and response handling while still
+routing to the same domain command groups.
+
+Common direct command:
+
+```sqf
+"forge_server" callExtension ["status", []];
+```
+
+Common transport path:
+
+```text
+server addon fnc_extCall
+  -> transport:request:append
+  -> transport:invoke_stored
+  -> transport:response:get
+```
+
+## Configuration
+
+The server extension reads `config.toml` next to the extension DLL. The current
+persistence section is:
+
+```toml
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+username = "root"
+password = "root"
+connect_timeout_ms = 5000
+```
+
+For install links and role-based setup guidance, see
+[SurrealDB Setup](https://innovativedevsolutions.github.io/getting-started/surrealdb-setup).
+
+Check persistence readiness before issuing commands that require storage:
+
+```sqf
+"forge_server" callExtension ["status", []];
+"forge_server" callExtension ["surreal:status", []];
+```
+
+
+# Module Reference
+
+This reference lists the main Forge modules and where each layer lives.
+
+## Directory Map
+
+```text
+arma/client/addons/      Client-side Arma addons and browser UIs
+arma/server/addons/      Server-side Arma addons and extension bridge
+arma/server/extension/   Rust arma-rs extension and SurrealDB adapters
+bin/icom/                Interprocess communication helper
+lib/models/              Shared domain data models
+lib/repositories/        Repository traits and in-memory stores
+lib/services/            Domain services and workflow logic
+lib/shared/              Cross-crate helpers
+tools/                   Web UI build tooling
+docs/                    Framework-level documentation
+```
+
+## Gameplay Domains
+
+| Domain       | Purpose                                                                                                          | Client addon                | Server addon                | Service/model layer                                          | Extension group            |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- | --------------------------- | --------------------------- | ------------------------------------------------------------ | -------------------------- |
+| Actor        | Player identity, loadout, position, status, contact identifiers, and persistent character data.                  | `arma/client/addons/actor`  | `arma/server/addons/actor`  | `lib/models/src/actor.rs`, `lib/services/src/actor.rs`       | `actor:*`                  |
+| Bank         | Player accounts, cash/bank balances, PIN validation, transfers, checkout charging, and transaction context.      | `arma/client/addons/bank`   | `arma/server/addons/bank`   | `lib/models/src/bank.rs`, `lib/services/src/bank.rs`         | `bank:*`, `bank:hot:*`     |
+| CAD          | Dispatch requests, assignments, orders, activity stream, profiles, groups, and hydrated dispatcher views.        | `arma/client/addons/cad`    | `arma/server/addons/cad`    | `lib/models/src/cad.rs`, `lib/services/src/cad.rs`           | `cad:*`                    |
+| Garage       | Player vehicle storage with plate IDs, fuel, damage, and hit point state.                                        | `arma/client/addons/garage` | `arma/server/addons/garage` | `lib/models/src/garage.rs`, `lib/services/src/garage.rs`     | `garage:*`, `garage:hot:*` |
+| Locker       | Player item storage keyed by classname with category and amount.                                                 | `arma/client/addons/locker` | `arma/server/addons/locker` | `lib/models/src/locker.rs`, `lib/services/src/locker.rs`     | `locker:*`, `locker:hot:*` |
+| Organization | Player organizations, membership, treasury, credit lines, shared assets, and fleet data.                         | `arma/client/addons/org`    | `arma/server/addons/org`    | `lib/models/src/org.rs`, `lib/services/src/org.rs`           | `org:*`, `org:hot:*`       |
+| Phone        | Contacts, messages, and email state.                                                                             | `arma/client/addons/phone`  | `arma/server/addons/phone`  | `lib/models/src/phone.rs`, `lib/services/src/phone.rs`       | `phone:*`                  |
+| Store        | Storefront entity setup, catalog hydration, checkout workflows, and checkout charging integration.               | `arma/client/addons/store`  | `arma/server/addons/store`  | `lib/models/src/store.rs`, `lib/services/src/store.rs`       | `store:checkout`           |
+| Task         | Server-owned mission/task flows, catalog, ownership, status, participant tracking, rewards, and defuse counters. | none                        | `arma/server/addons/task`   | `lib/models/src/task.rs`, `lib/services/src/task.rs`         | `task:*`                   |
+| Owned Garage | Organization or owner-scoped vehicle unlock storage.                                                             | via garage/org UI           | server extension only       | `lib/models/src/v_garage.rs`, `lib/services/src/v_garage.rs` | `owned:garage:*`           |
+| Owned Locker | Organization or owner-scoped arsenal unlock storage.                                                             | via locker/org UI           | server extension only       | `lib/models/src/v_locker.rs`, `lib/services/src/v_locker.rs` | `owned:locker:*`           |
+
+Server and extension guides:
+[Actor](https://innovativedevsolutions.github.io/server-modules/actor),
+[Bank](https://innovativedevsolutions.github.io/server-modules/bank),
+[CAD](https://innovativedevsolutions.github.io/server-modules/cad),
+[Economy](https://innovativedevsolutions.github.io/server-modules/economy),
+[Garage](https://innovativedevsolutions.github.io/server-modules/garage),
+[Locker](https://innovativedevsolutions.github.io/server-modules/locker),
+[Organization](https://innovativedevsolutions.github.io/server-modules/organization),
+[Owned Storage](https://innovativedevsolutions.github.io/server-modules/owned-storage),
+[Phone](https://innovativedevsolutions.github.io/server-modules/phone),
+[Store](https://innovativedevsolutions.github.io/server-modules/store),
+[Task](https://innovativedevsolutions.github.io/server-modules/task).
+
+Client guides:
+[Client Overview](https://innovativedevsolutions.github.io/client-addons),
+[Main](https://innovativedevsolutions.github.io/client-addons/main),
+[Common](https://innovativedevsolutions.github.io/client-addons/common),
+[Actor](https://innovativedevsolutions.github.io/client-addons/actor),
+[Bank](https://innovativedevsolutions.github.io/client-addons/bank),
+[CAD](https://innovativedevsolutions.github.io/client-addons/cad),
+[Garage](https://innovativedevsolutions.github.io/client-addons/garage),
+[Locker](https://innovativedevsolutions.github.io/client-addons/locker),
+[Notifications](https://innovativedevsolutions.github.io/client-addons/notifications),
+[Organization](https://innovativedevsolutions.github.io/client-addons/organization),
+[Phone](https://innovativedevsolutions.github.io/client-addons/phone),
+[Store](https://innovativedevsolutions.github.io/client-addons/store).
+
+## Infrastructure Modules
+
+| Module          | Purpose                                                                                                                                                                                                                                      | Location                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `common`        | Shared SQF helpers, base stores, utility functions, and shared UI bridge pieces.                                                                                                                                                             | `arma/client/addons/common`, `arma/server/addons/common` |
+| `extension`     | Server SQF bridge around `forge_server` extension calls and chunked transport.                                                                                                                                                               | `arma/server/addons/extension`                           |
+| `main`          | Mod-level configuration, pre-init wiring, and server/client startup glue.                                                                                                                                                                    | `arma/client/addons/main`, `arma/server/addons/main`     |
+| `economy`       | Server-side fuel, medical, and service economy helpers. Fuel and repair charge organization hot state; medical charges player bank/cash first, then organization funds with repayable member debt when personal funds cannot cover the bill. | `arma/server/addons/economy`                             |
+| `notifications` | Client notification UI, sounds, and UI event handling.                                                                                                                                                                                       | `arma/client/addons/notifications`                       |
+| `icom`          | Rust helper for interprocess communication and event broadcasting.                                                                                                                                                                           | `bin/icom`, `arma/server/extension/src/icom.rs`          |
+| `terrain`       | Extension-side terrain export helper.                                                                                                                                                                                                        | `arma/server/extension/src/terrain.rs`                   |
+| `transport`     | Chunked request/response handling for large extension payloads.                                                                                                                                                                              | `arma/server/extension/src/transport.rs`                 |
+| `surreal`       | SurrealDB connection lifecycle and status reporting.                                                                                                                                                                                         | `arma/server/extension/src/surreal.rs`                   |
+
+## Extension Command Groups
+
+Commands are invoked with:
+
+```sqf
+"forge_server" callExtension ["group:command", [_arg1, _arg2]];
+```
+
+Nested groups use additional `:` separators, for example
+`bank:hot:deposit`.
+
+### Core
+
+| Command          | Purpose                                                             |
+| ---------------- | ------------------------------------------------------------------- |
+| `version`        | Return the extension version string.                                |
+| `status`         | Return SurrealDB connection state.                                  |
+| `surreal:status` | Return SurrealDB connection state directly from the Surreal module. |
+
+### Actor
+
+| Command                                                                                                         | Purpose                                     |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `actor:get`                                                                                                     | Fetch actor data for a resolved player UID. |
+| `actor:create`                                                                                                  | Create actor data from JSON.                |
+| `actor:update`                                                                                                  | Apply actor JSON updates.                   |
+| `actor:exists`                                                                                                  | Return `true` or `false`.                   |
+| `actor:delete`                                                                                                  | Delete actor data.                          |
+| `actor:hot:init`, `actor:hot:get`, `actor:hot:keys`, `actor:hot:override`, `actor:hot:save`, `actor:hot:remove` | Manage actor hot state.                     |
+
+See [Actor Usage Guide](https://innovativedevsolutions.github.io/server-modules/actor) for examples.
+
+### Bank
+
+| Command                                                                                                    | Purpose                                          |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `bank:get`, `bank:create`, `bank:update`, `bank:exists`, `bank:delete`                                     | Durable bank CRUD.                               |
+| `bank:hot:init`, `bank:hot:get`, `bank:hot:override`, `bank:hot:patch`, `bank:hot:save`, `bank:hot:remove` | Manage bank hot state.                           |
+| `bank:hot:deposit`, `bank:hot:withdraw`, `bank:hot:deposit_earnings`, `bank:hot:transfer`                  | Mutate hot bank balances with operation context. |
+| `bank:hot:charge_checkout`                                                                                 | Charge a checkout against hot bank state.        |
+| `bank:hot:validate_pin`                                                                                    | Validate a PIN for bank operations.              |
+
+See [Bank Usage Guide](https://innovativedevsolutions.github.io/server-modules/bank) for examples.
+
+### Garage
+
+| Command                                                                                                                                           | Purpose                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `garage:create`, `garage:get`, `garage:add`, `garage:update`, `garage:patch`, `garage:remove`, `garage:delete`, `garage:exists`                   | Durable player garage operations. |
+| `garage:hot:init`, `garage:hot:get`, `garage:hot:override`, `garage:hot:add`, `garage:hot:remove_vehicle`, `garage:hot:save`, `garage:hot:remove` | Manage player garage hot state.   |
+
+See [Garage Usage Guide](https://innovativedevsolutions.github.io/server-modules/garage) for examples.
+
+### Locker
+
+| Command                                                                                                                         | Purpose                           |
+| ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `locker:create`, `locker:get`, `locker:add`, `locker:update`, `locker:patch`, `locker:remove`, `locker:delete`, `locker:exists` | Durable player locker operations. |
+| `locker:hot:init`, `locker:hot:get`, `locker:hot:override`, `locker:hot:save`, `locker:hot:remove`                              | Manage player locker hot state.   |
+
+See [Locker Usage Guide](https://innovativedevsolutions.github.io/server-modules/locker) for examples.
+
+### Organization
+
+| Command                                                           | Purpose                                                                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `org:get`, `org:create`, `org:update`, `org:exists`, `org:delete` | Durable organization CRUD.                                                                                                                        |
+| `org:assets:get`, `org:assets:update`                             | Manage organization assets.                                                                                                                       |
+| `org:fleet:get`, `org:fleet:update`                               | Manage organization fleet entries.                                                                                                                |
+| `org:members:get`, `org:members:add`, `org:members:remove`        | Manage organization membership.                                                                                                                   |
+| `org:hot:*`                                                       | Runtime organization workflows including registration, invites, credit lines, checkout charging, assets, fleet, leave, disband, save, and remove. |
+
+See [Org Usage Guide](https://innovativedevsolutions.github.io/server-modules/organization) for examples.
+
+### Phone
+
+| Command                                                                                                                    | Purpose                           |
+| -------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `phone:init`                                                                                                               | Initialize phone state for a UID. |
+| `phone:contacts:list`, `phone:contacts:add`, `phone:contacts:remove`                                                       | Manage contacts.                  |
+| `phone:messages:list`, `phone:messages:thread`, `phone:messages:send`, `phone:messages:mark_read`, `phone:messages:delete` | Manage messages.                  |
+| `phone:emails:list`, `phone:emails:send`, `phone:emails:mark_read`, `phone:emails:delete`                                  | Manage emails.                    |
+| `phone:remove`                                                                                                             | Remove phone state for a UID.     |
+
+See [Phone Usage Guide](https://innovativedevsolutions.github.io/server-modules/phone) for examples.
+
+### CAD
+
+| Command Group                                                                                                                                                  | Purpose                          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `cad:activity:append`, `cad:activity:recent`                                                                                                                   | Append and read recent activity. |
+| `cad:assignments:list`, `cad:assignments:assign`, `cad:assignments:acknowledge`, `cad:assignments:decline`, `cad:assignments:upsert`, `cad:assignments:delete` | Manage dispatch assignments.     |
+| `cad:orders:list`, `cad:orders:create`, `cad:orders:create_from_context`, `cad:orders:close`, `cad:orders:upsert`, `cad:orders:delete`                         | Manage orders.                   |
+| `cad:requests:list`, `cad:requests:submit`, `cad:requests:submit_from_context`, `cad:requests:close`, `cad:requests:upsert`, `cad:requests:delete`             | Manage requests.                 |
+| `cad:profiles:list`, `cad:profiles:update_from_context`, `cad:profiles:upsert`, `cad:profiles:delete`                                                          | Manage profiles.                 |
+| `cad:groups:build`                                                                                                                                             | Build grouped CAD state.         |
+| `cad:view:hydrate`                                                                                                                                             | Build the dispatcher view model. |
+
+See [CAD Usage Guide](https://innovativedevsolutions.github.io/server-modules/cad) for examples.
+
+### Task
+
+| Command Group                                                                                             | Purpose                            |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `task:reset`                                                                                              | Reset task state.                  |
+| `task:catalog:active`, `task:catalog:get`, `task:catalog:upsert`, `task:catalog:delete`                   | Manage task catalog entries.       |
+| `task:ownership:bind`, `task:ownership:release`, `task:ownership:accept`, `task:ownership:reward_context` | Manage task ownership and rewards. |
+| `task:status:set`, `task:status:get`, `task:status:clear`                                                 | Manage task status.                |
+| `task:defuse:increment`, `task:defuse:get`                                                                | Manage defuse counters.            |
+| `task:clear`                                                                                              | Clear task state.                  |
+
+See [Task Usage Guide](https://innovativedevsolutions.github.io/server-modules/task) for examples.
+
+### Owned Storage
+
+| Command Group                                                                                                                                            | Purpose                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `owned:garage:create`, `owned:garage:fetch`, `owned:garage:get`, `owned:garage:add`, `owned:garage:remove`, `owned:garage:delete`, `owned:garage:exists` | Owner-scoped vehicle storage.   |
+| `owned:garage:hot:*`                                                                                                                                     | Owner-scoped vehicle hot state. |
+| `owned:locker:create`, `owned:locker:fetch`, `owned:locker:get`, `owned:locker:add`, `owned:locker:remove`, `owned:locker:delete`, `owned:locker:exists` | Owner-scoped item storage.      |
+| `owned:locker:hot:*`                                                                                                                                     | Owner-scoped item hot state.    |
+
+See [Owned Storage Usage Guide](https://innovativedevsolutions.github.io/server-modules/owned-storage) for examples.
+
+### Other Extension Groups
+
+| Command Group                                         | Purpose                               |
+| ----------------------------------------------------- | ------------------------------------- |
+| `store:checkout`                                      | Run store checkout behavior.          |
+| `icom:connect`, `icom:broadcast`, `icom:send_event`   | ICom connection and event forwarding. |
+| `terrain:exportSVG`                                   | Export terrain data as SVG.           |
+| `transport:invoke`, `transport:invoke_stored`         | Invoke commands through transport.    |
+| `transport:request:append`, `transport:request:clear` | Manage stored request chunks.         |
+| `transport:response:get`, `transport:response:clear`  | Manage stored response chunks.        |
+
+## Rust Crates
+
+| Crate                | Role                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `forge-models`       | Domain models and validation. Keep these serializable and free of persistence details.                    |
+| `forge-repositories` | Repository traits and in-memory implementations. Keep these storage-agnostic.                             |
+| `forge-services`     | Business rules and workflows. Depend on repository traits, not concrete databases.                        |
+| `forge-shared`       | Cross-crate helpers. Keep dependencies light.                                                             |
+| `forge-server`       | Arma extension crate. Owns command registration, SurrealDB runtime wiring, and concrete storage adapters. |
+| `forge-icom`         | ICom helper binary and client library.                                                                    |
+
+
+# Development Guide
+
+This guide covers the usual path for adding or changing a Forge module.
+
+## Local Checks
+
+Before running storage-backed workflows locally, complete
+[SurrealDB Setup](https://innovativedevsolutions.github.io/getting-started/surrealdb-setup).
+
+Run these before pushing Rust or extension changes:
+
+```powershell
+cargo fmt --check
+cargo check
+cargo test
+cargo build
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+Run this after changing browser UI sources:
+
+```powershell
+npm run build:webui
+```
+
+Build Arma packages with:
+
+```powershell
+.\build-arma.ps1
+```
+
+## Module Boundaries
+
+Keep each layer responsible for one kind of work:
+
+| Layer                   | Owns                                                                                  | Avoid                                           |
+| ----------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `lib/models`            | Data structures, serde defaults, validation helpers.                                  | Database calls, SQF-specific context.           |
+| `lib/repositories`      | Repository traits and in-memory stores.                                               | SurrealDB-specific code.                        |
+| `lib/services`          | Business rules, workflow orchestration, structured results.                           | Arma engine calls, extension transport details. |
+| `arma/server/extension` | Command parsing, context resolution, SurrealDB implementations, serialization to SQF. | Business rules that belong in services.         |
+| `arma/server/addons`    | Server SQF lifecycle, game-object integration, calls into `forge_server`.             | Direct database logic.                          |
+| `arma/client/addons`    | Client UI, keybinds, local UI events.                                                 | Authoritative persistence.                      |
+
+## Adding a Domain Module
+
+1. Add the model in `lib/models/src/<module>.rs`.
+2. Export the model from `lib/models/src/lib.rs`.
+3. Add repository traits in `lib/repositories/src/<module>.rs`.
+4. Add in-memory repository support if the service needs tests or hot state.
+5. Export the traits from `lib/repositories/src/lib.rs`.
+6. Add service logic in `lib/services/src/<module>.rs`.
+7. Add focused unit tests for service behavior.
+8. Export the service from `lib/services/src/lib.rs`.
+9. Add a SurrealDB schema module under `arma/server/extension/src/schema`.
+10. Add the concrete storage adapter under `arma/server/extension/src/storage`.
+11. Register the storage adapter in `arma/server/extension/src/storage.rs`.
+12. Add an extension command group under `arma/server/extension/src/<module>.rs`.
+13. Register the command group in `arma/server/extension/src/lib.rs`.
+14. Add server addon functions under `arma/server/addons/<module>` if SQF needs a module-level API.
+15. Add client addon or browser UI files under `arma/client/addons/<module>` if the module has player-facing UI.
+16. Add documentation in `docs/` and module-level READMEs.
+
+## Extension Command Rules
+
+Commands should return one of these forms:
+
+- JSON string for structured results.
+- `"true"` or `"false"` for simple existence and boolean operations.
+- `"OK"` for successful destructive operations with no response body.
+- `"Error: <message>"` for failures.
+
+Prefer stable JSON shapes over ad hoc strings. SQF callers should always check
+for the `"Error:"` prefix before parsing JSON.
+
+Example:
+
+```sqf
+private _result = "forge_server" callExtension ["actor:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Actor request failed: %1", _payload];
+};
+
+private _actor = fromJSON _payload;
+```
+
+## Persistence Rules
+
+SurrealDB is the durable store. Keep database-specific mapping in the extension
+storage adapters, not in services or repository traits.
+
+When changing persisted data:
+
+- Update or add the matching `.surql` schema module.
+- Update the concrete storage adapter.
+- Preserve existing records when possible through serde defaults or migration
+  logic.
+- Add tests at the service level for behavior, and add storage tests only when
+  database mapping is the risk.
+
+## Hot-State Rules
+
+Use hot state for data that is read or mutated frequently during a player
+session. Hot-state modules usually provide:
+
+- `init` to load durable state into memory.
+- `get` to read the runtime copy.
+- `override` or focused mutation commands to update the runtime copy.
+- `save` to write the runtime copy back to SurrealDB.
+- `remove` to evict the runtime copy.
+
+Do not assume hot state is durable until `save` succeeds.
+
+## Web UI Rules
+
+Browser UI source files live under each client addon. Built assets usually land
+under that addon's `ui/_site` directory.
+
+Use the existing common bridge in `arma/client/addons/common` when a UI needs
+to send events back to SQF. Keep UI state and rendering in JavaScript, and keep
+server-authoritative decisions in server SQF or Rust services.
+
+## Documentation Checklist
+
+When adding or changing a module, update:
+
+- `docs/MODULE_REFERENCE.md` for framework-level inventory.
+- A module-specific README in the addon directory when SQF or UI usage changes.
+- `arma/server/docs/api-reference.md` when extension commands change.
+- Existing usage guides when payload shapes or workflows change.
+
+
+# SurrealDB Setup
+
+Forge uses SurrealDB for durable storage. The Rust server extension connects to
+SurrealDB on startup and applies Forge schema modules automatically, so setup
+comes down to running a reachable database and matching the Forge config.
+
+## Choose the Right Path
+
+### Developer or Server Operator
+
+Use this path if you are building Forge, running a local test server, or
+hosting the live Arma server.
+
+Official SurrealDB resources:
+
+- [SurrealDB install page](https://surrealdb.com/install){rel="&#x22;nofollow&#x22;"}
+- [SurrealDB CLI `start` reference](https://surrealdb.com/docs/reference/cli/surrealdb-cli/commands/start){rel="&#x22;nofollow&#x22;"}
+
+Install SurrealDB with the official method for your platform:
+
+```powershell
+# Windows
+iwr https://windows.surrealdb.com -useb | iex
+```
+
+```bash
+# macOS
+brew install surrealdb/tap/surreal
+```
+
+```bash
+# Linux
+curl -sSf https://install.surrealdb.com | sh
+```
+
+For Forge, start a persistent local database instead of the default in-memory
+mode:
+
+```powershell
+surreal start surrealkv://forge.db --bind 127.0.0.1:8000 --user root --pass root
+```
+
+Then copy `arma/server/extension/config.example.toml` to `config.toml` next to
+`forge_server_x64.dll` and keep the values aligned with the database you
+started:
+
+```toml
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+username = "root"
+password = "root"
+connect_timeout_ms = 5000
+```
+
+After that:
+
+1. Start the Arma server with the Forge extension enabled.
+2. Let the extension connect and apply the Forge schema modules.
+3. Verify the connection state:
+
+```sqf
+"forge_server" callExtension ["status", []];
+"forge_server" callExtension ["surreal:status", []];
+```
+
+If you change the endpoint, namespace, database, username, or password in
+SurrealDB, change the same values in Forge's `config.toml`.
+
+### Mission Designer or Community Manager/Leader
+
+Use this path if you mostly need to inspect, query, or adjust data for a test
+or live server and you are not changing Forge source code.
+
+Official SurrealDB resources:
+
+- [Surrealist installation](https://surrealdb.com/docs/explore/surrealist/installation){rel="&#x22;nofollow&#x22;"}
+- [Surrealist web app](https://app.surrealdb.com){rel="&#x22;nofollow&#x22;"}
+- [Surrealist local database serving](https://surrealdb.com/docs/explore/surrealist/concepts/local-database-serving){rel="&#x22;nofollow&#x22;"}
+
+Recommended approach:
+
+1. Install **Surrealist Desktop**. It is the better fit for Forge because the
+   official docs note that the web app can be limited when connecting to
+   `localhost` or non-HTTPS endpoints.
+2. Connect Surrealist to the same database Forge uses.
+3. Use the values from the server's `config.toml`:
+
+```text
+Endpoint:   http://127.0.0.1:8000
+Namespace:  forge
+Database:   main
+Username:   root
+Password:   root
+```
+
+If you need your own local sandbox instead of connecting to an existing Forge
+server, install SurrealDB first and follow the developer/server-operator path
+above. Surrealist Desktop can also launch a local database for you after the
+`surreal` executable is installed and available on your `PATH`.
+
+
+# Forge Server Extension
+
+Forge Server is an arma-rs extension for Arma 3 server-side persistence and
+domain services. It exposes game-facing commands and stores durable state in
+SurrealDB.
+
+## Architecture
+
+SQF modules call `forge_server` through `fnc_extCall`. Small requests use the
+direct `callExtension` path, while large payloads are staged through the
+transport layer.
+
+```text
+SQF module
+  -> extension bridge
+  -> domain command
+  -> service layer
+  -> repository
+  -> SurrealDB
+```
+
+## Configuration
+
+Copy `config.example.toml` to `config.toml` next to the extension DLL.
+
+```toml
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+database = "main"
+username = "root"
+password = "root"
+connect_timeout_ms = 5000
+```
+
+For install links and Forge-specific setup steps, see
+[SurrealDB Setup](https://innovativedevsolutions.github.io/getting-started/surrealdb-setup).
+
+## References
+
+- [API Reference](https://innovativedevsolutions.github.io/server-extension/api-reference)
+- [Usage Examples](https://innovativedevsolutions.github.io/server-extension/usage-examples)
+- [Framework Module Guides](https://innovativedevsolutions.github.io/getting-started)
+
+
+# Forge Server API Reference
+
+The Forge server extension exposes domain-oriented commands through
+`callExtension`. Persistent data is stored through the configured SurrealDB
+connection and schema modules.
+
+## Core Commands
+
+```sqf
+"forge_server" callExtension ["version", []];
+"forge_server" callExtension ["status", []];
+"forge_server" callExtension ["surreal:status", []];
+```
+
+`status` and `surreal:status` return `initializing`, `connected`, or `failed`.
+
+## Domain Commands
+
+Game systems should call the domain APIs instead of raw database operations:
+
+- `actor:*`
+- `bank:*`
+- `garage:*`
+- `locker:*`
+- `org:*`
+- `phone:*`
+- `store:*`
+- `task:*`
+- `cad:*`
+- `owned:garage:*`
+- `owned:locker:*`
+- `transport:*`
+
+Large request and response payloads are routed through the transport layer when
+needed by `forge_server_addons_extension_fnc_extCall`.
+
+## Module Guides
+
+- [Actor](https://innovativedevsolutions.github.io/server-modules/actor)
+- [Bank](https://innovativedevsolutions.github.io/server-modules/bank)
+- [CAD](https://innovativedevsolutions.github.io/server-modules/cad)
+- [Garage](https://innovativedevsolutions.github.io/server-modules/garage)
+- [Locker](https://innovativedevsolutions.github.io/server-modules/locker)
+- [Organization](https://innovativedevsolutions.github.io/server-modules/organization)
+- [Owned Storage](https://innovativedevsolutions.github.io/server-modules/owned-storage)
+- [Phone](https://innovativedevsolutions.github.io/server-modules/phone)
+- [Store](https://innovativedevsolutions.github.io/server-modules/store)
+- [Task](https://innovativedevsolutions.github.io/server-modules/task)
+
+
+# Forge Server Usage Examples
+
+These examples use the domain command surface exposed by the extension.
+Persistence is handled by the server through SurrealDB.
+
+## Status Check
+
+```sqf
+["status", []] call forge_server_extension_fnc_extCall params ["_status", "_ok"];
+if (_ok && {_status isEqualTo "connected"}) then {
+    systemChat "Forge persistence is online.";
+};
+```
+
+## Actor Fetch
+
+```sqf
+private _uid = getPlayerUID player;
+["actor:get", [_uid]] call forge_server_extension_fnc_extCall params ["_payload", "_ok"];
+if (_ok) then {
+    private _actor = fromJSON _payload;
+    systemChat format ["Loaded actor %1", _actor getOrDefault ["uid", _uid]];
+};
+```
+
+## Store Checkout
+
+```sqf
+private _checkout = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["requesterName", name player],
+    ["orgId", "default"],
+    ["requesterIsDefaultOrgCeo", false],
+    ["paymentMethod", "bank"],
+    ["items", [
+        createHashMapFromArray [
+            ["classname", "FirstAidKit"],
+            ["category", "item"],
+            ["priceValue", 50],
+            ["quantity", 2]
+        ]
+    ]],
+    ["vehicles", []]
+];
+
+["store:checkout", [toJSON _checkout]] call forge_server_extension_fnc_extCall;
+```
+
+
+# Server Module Guides
+
+These pages document the authoritative server-side workflows in Forge.
+
+Most modules follow the same shape:
+
+1. Server SQF gathers game context and validates mission/runtime assumptions.
+2. The `forge_server` extension routes the request into the matching command group.
+3. Services apply business rules through storage-agnostic repository traits.
+4. The extension persists durable state through SurrealDB adapters when needed.
+
+## Gameplay Domains
+
+::u-page-grid
+  :::u-page-card
+  ---
+  icon: i-lucide-user-round
+  title: Actor
+  to: https://innovativedevsolutions.github.io/server-modules/actor
+  ---
+  Persistent player identity, position, loadout, contact fields, and hot state.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-wallet
+  title: Bank
+  to: https://innovativedevsolutions.github.io/server-modules/bank
+  ---
+  Player funds, transfers, PIN validation, checkout charging, and bank hot state.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-map
+  title: CAD
+  to: https://innovativedevsolutions.github.io/server-modules/cad
+  ---
+  Dispatch requests, assignments, profiles, grouped state, and hydrated views.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-ambulance
+  title: Economy
+  to: https://innovativedevsolutions.github.io/server-modules/economy
+  ---
+  Fuel, service, and medical charging rules across player and organization funds.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-car-front
+  title: Garage
+  to: https://innovativedevsolutions.github.io/server-modules/garage
+  ---
+  Vehicle storage, hot-state updates, and persistence of vehicle condition.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-package
+  title: Locker
+  to: https://innovativedevsolutions.github.io/server-modules/locker
+  ---
+  Player inventory storage, unique item limits, and locker hot-state behavior.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-building-2
+  title: Organization
+  to: https://innovativedevsolutions.github.io/server-modules/organization
+  ---
+  Membership, treasury, shared assets, fleet, and organization hot workflows.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-key-round
+  title: Owned Storage
+  to: https://innovativedevsolutions.github.io/server-modules/owned-storage
+  ---
+  Owner-scoped locker and vehicle unlock storage used by org-linked features.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-smartphone
+  title: Phone
+  to: https://innovativedevsolutions.github.io/server-modules/phone
+  ---
+  Contacts, message threads, and email state for in-game phone workflows.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-shopping-cart
+  title: Store
+  to: https://innovativedevsolutions.github.io/server-modules/store
+  ---
+  Checkout orchestration across pricing, grants, payment sources, and rollback.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-flag
+  title: Task
+  to: https://innovativedevsolutions.github.io/server-modules/task
+  ---
+  Task catalog, ownership, status transitions, defuse counters, and rewards.
+  :::
+::
+
+
+# Actor Usage Guide
+
+The actor module stores persistent player character data: identity, loadout,
+position, direction, stance, contact fields, state, holster status, rank, and
+organization.
+
+## Storage Model
+
+Actor data is persisted through SurrealDB by the server extension.
+
+```json
+{
+  "uid": "76561198000000000",
+  "name": "Player Name",
+  "loadout": {},
+  "position": [1234.5, 6789.0, 0.0],
+  "direction": 90.0,
+  "stance": "STAND",
+  "email": "0160000000@spearnet.mil",
+  "phone_number": "0160000000",
+  "state": "HEALTHY",
+  "holster": true,
+  "rank": null,
+  "organization": "default"
+}
+```
+
+Rules validated by the Rust service:
+
+- `uid` is authoritative from the command argument and must be a 17-digit Steam
+  UID.
+- `name` is optional, but cannot be empty when set and cannot exceed 50
+  characters.
+- `position` must be three finite numbers when set.
+- `direction` must be in the `0.0 <= direction < 360.0` range.
+- `email` must contain `@` and end with `.mil` when set.
+- `phone_number` must start with `0160` and be 10 digits when set.
+- Empty `phone_number`, `email`, or `organization` fields are filled on create.
+
+## Commands
+
+All commands are called on the `actor` group.
+
+| Command        | Arguments           | Returns                                                                          |
+| -------------- | ------------------- | -------------------------------------------------------------------------------- |
+| `actor:get`    | `uid`               | Actor JSON. If no actor exists, returns a default actor but does not persist it. |
+| `actor:create` | `uid`, `actor_json` | Persisted actor JSON.                                                            |
+| `actor:update` | `uid`, `patch_json` | Updated actor JSON.                                                              |
+| `actor:exists` | `uid`               | `true` or `false`.                                                               |
+| `actor:delete` | `uid`               | `OK`.                                                                            |
+
+## Create an Actor
+
+The `uid` field in the JSON is overwritten with the command UID.
+
+```sqf
+private _actor = createHashMapFromArray [
+    ["uid", getPlayerUID player],
+    ["name", name player],
+    ["loadout", getUnitLoadout player],
+    ["position", getPosATL player],
+    ["direction", getDir player],
+    ["stance", stance player],
+    ["email", ""],
+    ["phone_number", ""],
+    ["state", "HEALTHY"],
+    ["holster", true],
+    ["organization", "default"]
+];
+
+private _result = "forge_server" callExtension ["actor:create", [
+    getPlayerUID player,
+    toJSON _actor
+]];
+```
+
+## Update an Actor
+
+`actor:update` accepts a JSON object containing only fields to change.
+
+```sqf
+private _patch = createHashMapFromArray [
+    ["position", getPosATL player],
+    ["direction", getDir player],
+    ["stance", stance player],
+    ["loadout", getUnitLoadout player]
+];
+
+private _result = "forge_server" callExtension ["actor:update", [
+    getPlayerUID player,
+    toJSON _patch
+]];
+```
+
+Supported patch fields are `name`, `position`, `direction`, `stance`, `email`,
+`phone_number`, `state`, `holster`, `rank`, `organization`, and `loadout`.
+`uid` is ignored.
+
+## Hot State
+
+The `actor:hot:*` commands keep a runtime copy of actor data and write it back
+only when `actor:hot:save` runs.
+
+| Command              | Arguments           | Returns                                        |
+| -------------------- | ------------------- | ---------------------------------------------- |
+| `actor:hot:init`     | `uid`               | Actor JSON from durable storage.               |
+| `actor:hot:get`      | `uid`               | Actor JSON.                                    |
+| `actor:hot:keys`     | none                | JSON array of hot actor UIDs.                  |
+| `actor:hot:override` | `uid`, `actor_json` | Actor JSON.                                    |
+| `actor:hot:save`     | `uid`               | Current hot actor JSON and async durable save. |
+| `actor:hot:remove`   | `uid`               | `OK`.                                          |
+
+Use hot state for frequently updated session data such as position and loadout.
+Use durable commands for account creation and administrative changes.
+
+## Error Handling
+
+```sqf
+private _result = "forge_server" callExtension ["actor:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Actor error: %1", _payload];
+};
+
+private _actor = fromJSON _payload;
+```
+
+
+# Store Usage Guide
+
+The store module processes checkout requests. It charges a payment source and
+grants purchased items to the player locker, virtual arsenal locker, and
+virtual garage unlocks.
+
+## Server SQF Module
+
+The server addon uses two long-lived module objects:
+
+- `StorefrontStore` is the storefront workflow facade. It builds hydrate
+  payloads, validates checkout requests, calls the Rust `store:checkout`
+  command, syncs UI patches, and asks related module stores to save hot state.
+- `StoreCatalogService` scans configured item and vehicle categories, builds
+  catalog responses, resolves checkout entries, and calculates authoritative
+  prices.
+
+Editor-placed store entities are initialized by `fnc_initStore` during store
+post-init. The initializer matches non-null mission namespace objects whose
+variable names contain `store` and sets `isStore = true`, following the same
+pattern used by garage entities.
+
+## Checkout Model
+
+`store:checkout` accepts one JSON context.
+
+```json
+{
+  "requesterUid": "76561198000000000",
+  "requesterName": "Player Name",
+  "orgId": "default",
+  "requesterIsDefaultOrgCeo": false,
+  "paymentMethod": "bank",
+  "items": [
+    {
+      "classname": "arifle_MX_F",
+      "category": "weapon",
+      "priceValue": 500,
+      "quantity": 1
+    }
+  ],
+  "vehicles": [
+    {
+      "classname": "B_Quadbike_01_F",
+      "category": "cars",
+      "priceValue": 1500
+    }
+  ]
+}
+```
+
+Rules validated by the Rust service:
+
+- `requesterUid` is required.
+- At least one item or vehicle is required.
+- The checkout total must be greater than zero.
+- Item categories must be `item`, `attachment`, `weapon`, `magazine`, or
+  `backpack`.
+- Vehicle categories must be `cars`, `armor`, `helis`, `planes`, `naval`, or
+  `other`.
+- Payment method must be `cash`, `bank`, `org_funds`, or `credit_line`.
+- Player locker capacity cannot exceed 25 unique items after checkout.
+- Organization funds can only be charged by the org owner or the default org
+  CEO flag.
+
+## Command
+
+| Command          | Arguments       | Returns               |
+| ---------------- | --------------- | --------------------- |
+| `store:checkout` | `checkout_json` | Checkout result JSON. |
+
+## Result Model
+
+```json
+{
+  "chargedTotal": 2000.0,
+  "paymentMethod": "bank",
+  "message": "Checkout completed. $2,000 charged, 1 locker grant(s), 1 vehicle unlock(s).",
+  "lockerGranted": [],
+  "vehicleGranted": [],
+  "lockerPatch": {},
+  "vaPatch": {},
+  "vgaragePatch": {},
+  "bankPatch": {},
+  "orgPatch": {},
+  "orgTargetUids": []
+}
+```
+
+Patch fields are intended for UI updates after checkout. The service commits
+all grants and payment changes together, and attempts rollback if a later write
+fails.
+
+## Player Bank Checkout
+
+```sqf
+private _item = createHashMapFromArray [
+    ["classname", "arifle_MX_F"],
+    ["category", "weapon"],
+    ["priceValue", 500],
+    ["quantity", 1]
+];
+
+private _checkout = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["requesterName", name player],
+    ["orgId", "default"],
+    ["requesterIsDefaultOrgCeo", false],
+    ["paymentMethod", "bank"],
+    ["items", [_item]],
+    ["vehicles", []]
+];
+
+private _result = "forge_server" callExtension ["store:checkout", [toJSON _checkout]];
+```
+
+## Organization Funds Checkout
+
+When `paymentMethod` is `org_funds`, vehicles are also added to the
+organization fleet patch.
+
+```sqf
+private _vehicle = createHashMapFromArray [
+    ["classname", "B_Quadbike_01_F"],
+    ["category", "cars"],
+    ["priceValue", 1500]
+];
+
+private _checkout = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["requesterName", name player],
+    ["orgId", _orgId],
+    ["requesterIsDefaultOrgCeo", false],
+    ["paymentMethod", "org_funds"],
+    ["items", []],
+    ["vehicles", [_vehicle]]
+];
+
+private _result = "forge_server" callExtension ["store:checkout", [toJSON _checkout]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    hint format ["Checkout failed: %1", _payload];
+};
+
+private _checkoutResult = fromJSON _payload;
+```
+
+
+# Task Usage Guide
+
+The task module stores transient mission task metadata for active server or
+mission lifecycle workflows. SQF still owns Arma-only runtime state such as
+objects and participants.
+
+The server addon at `arma/server/addons/task` also owns task execution:
+creating BIS tasks, registering task entities, tracking participants, binding
+task ownership, applying player/org rewards, and clearing task state when a
+task completes.
+
+Runtime dependencies:
+
+- `forge_server_extension`
+- `forge_server_common`
+- `forge_server_actor`
+- `forge_server_bank`
+- `forge_server_org`
+- `forge_client_notifications`
+
+## Data Model
+
+Catalog entries are flexible JSON objects. The service normalizes these fields
+when a catalog entry is inserted or ownership changes:
+
+- `taskId`
+- `taskID`
+- `accepted`
+- `requesterUid`
+- `orgID`
+
+Ownership context:
+
+```json
+{
+  "requesterUid": "76561198000000000",
+  "orgId": "default"
+}
+```
+
+## Commands
+
+| Command                         | Arguments                   | Returns                          |
+| ------------------------------- | --------------------------- | -------------------------------- |
+| `task:reset`                    | none                        | `true`.                          |
+| `task:catalog:active`           | none                        | Active catalog entry array JSON. |
+| `task:catalog:get`              | `task_id`                   | Catalog entry JSON or `null`.    |
+| `task:catalog:upsert`           | `task_id`, `entry_json`     | Stored catalog entry JSON.       |
+| `task:catalog:delete`           | `task_id`                   | `true`.                          |
+| `task:ownership:bind`           | `task_id`, `ownership_json` | Ownership mutation result JSON.  |
+| `task:ownership:release`        | `task_id`                   | Ownership mutation result JSON.  |
+| `task:ownership:accept`         | `task_id`, `ownership_json` | Ownership mutation result JSON.  |
+| `task:ownership:reward_context` | `task_id`                   | Reward context JSON.             |
+| `task:status:set`               | `task_id`, `status`         | `true`.                          |
+| `task:status:get`               | `task_id`                   | Status string JSON.              |
+| `task:status:clear`             | `task_id`                   | `true`.                          |
+| `task:defuse:increment`         | `task_id`                   | New counter value JSON.          |
+| `task:defuse:get`               | `task_id`                   | Counter value JSON.              |
+| `task:clear`                    | `task_id`                   | `true`.                          |
+
+## Upsert a Catalog Entry
+
+```sqf
+private _entry = createHashMapFromArray [
+    ["title", "Destroy Cache"],
+    ["description", "Destroy the enemy supply cache."],
+    ["reward", 1500]
+];
+
+private _result = "forge_server" callExtension ["task:catalog:upsert", [
+    "task-cache-1",
+    toJSON _entry
+]];
+```
+
+## Mark a Task Active
+
+```sqf
+"forge_server" callExtension ["task:status:set", [
+    "task-cache-1",
+    "active"
+]];
+
+private _active = "forge_server" callExtension ["task:catalog:active", []];
+```
+
+Completed statuses `succeeded` and `failed` are also stored as completed status
+fallbacks. Clearing status removes active and completed state.
+
+## Accept a Task
+
+```sqf
+private _ownership = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["orgId", "default"]
+];
+
+private _result = "forge_server" callExtension ["task:ownership:accept", [
+    "task-cache-1",
+    toJSON _ownership
+]];
+```
+
+`task:ownership:accept` fails if the task is not active or another requester
+already accepted it.
+
+## Rewards
+
+```sqf
+private _result = "forge_server" callExtension ["task:ownership:reward_context", [
+    "task-cache-1"
+]];
+
+private _context = fromJSON (_result select 0);
+```
+
+The reward context contains `requesterUid` and `orgId`.
+
+## Server Task Flows
+
+The task addon provides these server-owned task flows:
+
+- `attack`
+- `defend`
+- `defuse`
+- `delivery`
+- `destroy`
+- `hostage`
+- `hvt`
+
+Mission designers can create tasks in four ways:
+
+- Eden modules for editor-authored tasks.
+- `forge_server_task_fnc_startTask` for script-authored tasks.
+- `forge_server_task_fnc_handler` for pre-registered entities with reputation
+  gating and ownership binding. This path expects the BIS task and catalog
+  entry to already exist if map-task and CAD visibility are required.
+- Direct task function calls for server-owned or mission-authored flows that
+  intentionally fall back to the `default` org. This path expects the BIS task
+  to already exist if map-task visibility is required.
+
+The dynamic mission manager can also generate attack tasks from config. That is
+system-generated content rather than a hand-authored task creation path.
+
+## CAD Compatibility
+
+CAD hydrates assignable tasks from `TaskStore.getActiveTaskCatalog`. A task must
+have a catalog entry and active task status before CAD can show and assign it.
+
+CAD-compatible creation paths:
+
+- Eden modules: compatible because they delegate to
+  `forge_server_task_fnc_startTask`.
+- `forge_server_task_fnc_startTask`: compatible because it registers the
+  catalog entry, creates the BIS task, and dispatches through the handler.
+- Dynamic mission manager attack tasks: compatible because the mission manager
+  uses `forge_server_task_fnc_startTask`.
+
+Limited or incompatible paths:
+
+- `forge_server_task_fnc_handler`: only compatible if a catalog entry was
+  already registered elsewhere. The handler sets active status and ownership,
+  but it does not create the BIS task shown in the map task tab or upsert the
+  catalog entry.
+- Direct task function calls: not CAD-compatible by default. They bypass
+  `startTask` and usually do not register the task catalog entry or active
+  status that CAD hydrates from. They also only call `BIS_fnc_taskSetState` at
+  completion/failure; they do not create the BIS task first.
+
+## BIS Map Task Prerequisite
+
+Only the Eden task modules and `forge_server_task_fnc_startTask` create the BIS
+task automatically through `BIS_fnc_taskCreate`.
+
+If a mission uses `forge_server_task_fnc_handler` directly or calls a task flow
+function such as `forge_server_task_fnc_attack`, the mission must create a BIS
+task with the same task ID before the Forge task completes. Otherwise the
+success/failure `BIS_fnc_taskSetState` call has no visible map task to update.
+
+That prerequisite can be satisfied with a vanilla Eden task creation module or
+a scripted `BIS_fnc_taskCreate` call. `forge_server_task_fnc_startTask` is the
+preferred Forge path because it handles BIS task creation, Forge catalog
+registration, entity registration, and handler dispatch together.
+
+## Eden Modules
+
+Eden task modules are the normal designer-facing path. Place the module,
+configure its attributes, and sync it to the relevant entities or grouping
+modules.
+
+Available task modules:
+
+- `FORGE_Module_Attack`: sync directly to target units or vehicles.
+- `FORGE_Module_Destroy`: sync directly to objects, vehicles, or units.
+- `FORGE_Module_Defuse`: sync to `FORGE_Module_Explosives` and optionally
+  `FORGE_Module_Protected`.
+- `FORGE_Module_Delivery`: sync to `FORGE_Module_Cargo`; the cargo module syncs
+  to cargo objects.
+- `FORGE_Module_Hostage`: sync to `FORGE_Module_Hostages` and
+  `FORGE_Module_Shooters`.
+- `FORGE_Module_HVT`: sync directly to HVT units.
+- `FORGE_Module_Defend`: configure the defense marker and wave settings.
+
+These modules delegate to `forge_server_task_fnc_startTask`.
+
+## Scripted Start Task
+
+Use `forge_server_task_fnc_startTask` when creating tasks from modules,
+mission scripts, or generated mission-manager content. It registers task
+entities, creates the BIS task, stores the catalog entry, then dispatches
+through `forge_server_task_fnc_handler`.
+
+```sqf
+[
+    "attack",
+    "compound_attack_01",
+    getPosATL leader1,
+    "Attack: East Compound",
+    "Eliminate all hostile forces.",
+    createHashMapFromArray [["targets", [unit1, unit2, unit3]]],
+    createHashMapFromArray [
+        ["limitFail", 0],
+        ["limitSuccess", 3],
+        ["funds", 50000],
+        ["ratingFail", -10],
+        ["ratingSuccess", 20],
+        ["timeLimit", 900]
+    ],
+    0,
+    getPlayerUID player,
+    "script"
+] call forge_server_task_fnc_startTask;
+```
+
+## Handler Calls
+
+Use `forge_server_task_fnc_handler` directly when the task entities are already
+registered and you want reputation gating plus ownership binding. Create the
+BIS task and catalog entry separately if this task should appear in the map
+task tab or CAD:
+
+```sqf
+[
+    "delivery",
+    ["delivery_1", 1, 3, "delivery_zone", 250000, -75, 300, false, false, 900],
+    250,
+    getPlayerUID player
+] call forge_server_task_fnc_handler;
+```
+
+## Direct Task Calls
+
+Direct task function calls still work for mission-authored or server-owned
+tasks, but they do not provide a requester UID. Ownership falls back to the
+`default` org. Create the BIS task separately if this task should appear in the
+map task tab.
+
+## Timer Semantics
+
+Task time limits use `0` for no limit:
+
+- attack `timeLimit`
+- destroy `timeLimit`
+- delivery `timeLimit`
+- hostage `timeLimit`
+- HVT `timeLimit`
+
+Positive values are measured in seconds. Do not pass `-1` as a no-limit value;
+the task runtime treats any non-zero task time limit as active.
+
+Defuse IED timers are different. `iedTimer` must be greater than `0`, because
+IEDs are expected to have an active countdown. The Eden defuse module defaults
+to `300` seconds.
+
+## Defuse Counter
+
+```sqf
+"forge_server" callExtension ["task:defuse:increment", ["task-cache-1"]];
+private _count = "forge_server" callExtension ["task:defuse:get", ["task-cache-1"]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Task error: %1", _payload];
+};
+```
+
+
+# Bank Usage Guide
+
+The bank module stores player account balances, earnings, PINs, and transaction
+strings. The hot-state API also owns the active banking workflows used by the
+UI: deposit, withdraw, transfer, checkout charge, and PIN validation.
+
+## Storage Model
+
+Bank data is persisted through SurrealDB by the server extension.
+
+```json
+{
+  "uid": "76561198000000000",
+  "name": "Player Name",
+  "bank": 1000.0,
+  "cash": 250.0,
+  "earnings": 0.0,
+  "pin": 1234,
+  "transactions": []
+}
+```
+
+Rules validated by the Rust service:
+
+- `uid` is authoritative from the command argument.
+- `name` cannot be empty.
+- `bank` and `cash` cannot be negative.
+- `pin` must be a four-digit number.
+- Durable `bank:get` requires an existing bank account.
+
+## Durable Commands
+
+| Command       | Arguments           | Returns              |
+| ------------- | ------------------- | -------------------- |
+| `bank:create` | `uid`, `bank_json`  | Persisted bank JSON. |
+| `bank:get`    | `uid`               | Bank JSON.           |
+| `bank:update` | `uid`, `patch_json` | Updated bank JSON.   |
+| `bank:exists` | `uid`               | `true` or `false`.   |
+| `bank:delete` | `uid`               | `OK`.                |
+
+## Create an Account
+
+The `uid` field in the JSON is overwritten with the command UID.
+
+```sqf
+private _account = createHashMapFromArray [
+    ["uid", getPlayerUID player],
+    ["name", name player],
+    ["bank", 0],
+    ["cash", 0],
+    ["earnings", 0],
+    ["pin", 1234],
+    ["transactions", []]
+];
+
+private _result = "forge_server" callExtension ["bank:create", [
+    getPlayerUID player,
+    toJSON _account
+]];
+```
+
+## Hot-State Commands
+
+| Command                     | Arguments                                            | Returns                                       |
+| --------------------------- | ---------------------------------------------------- | --------------------------------------------- |
+| `bank:hot:init`             | `uid`                                                | Bank JSON loaded into hot state.              |
+| `bank:hot:get`              | `uid`                                                | Bank JSON.                                    |
+| `bank:hot:override`         | `uid`, `bank_json`                                   | Bank JSON.                                    |
+| `bank:hot:patch`            | `uid`, `patch_json`                                  | `{ account, patch }`.                         |
+| `bank:hot:deposit`          | `uid`, `amount`, `context_json`                      | `{ account, patch }`.                         |
+| `bank:hot:withdraw`         | `uid`, `amount`, `context_json`                      | `{ account, patch }`.                         |
+| `bank:hot:deposit_earnings` | `uid`, `amount`, `context_json`                      | `{ account, patch }`.                         |
+| `bank:hot:transfer`         | `source_uid`, `target_uid`, `amount`, `context_json` | Transfer result JSON.                         |
+| `bank:hot:charge_checkout`  | `uid`, `amount`, `context_json`                      | `{ account, patch }`.                         |
+| `bank:hot:validate_pin`     | `uid`, `pin`, `context_json`                         | `{}` on success.                              |
+| `bank:hot:save`             | `uid`                                                | Current hot bank JSON and async durable save. |
+| `bank:hot:remove`           | `uid`                                                | `OK`.                                         |
+
+Use hot-state commands for UI workflows. They return patch objects so the UI can
+update only changed fields.
+
+## Deposit and Withdraw
+
+ATM sessions require `atmAuthorized: true`. Full bank sessions can set
+`mode: "bank"`.
+
+```sqf
+private _context = createHashMapFromArray [
+    ["mode", "atm"],
+    ["atmAuthorized", true]
+];
+
+private _deposit = "forge_server" callExtension ["bank:hot:deposit", [
+    getPlayerUID player,
+    "100",
+    toJSON _context
+]];
+
+private _withdraw = "forge_server" callExtension ["bank:hot:withdraw", [
+    getPlayerUID player,
+    "50",
+    toJSON _context
+]];
+```
+
+## Transfer
+
+Transfers are only available from the full bank interface. `fromField` can be
+`bank` or `cash`.
+
+```sqf
+private _context = createHashMapFromArray [
+    ["mode", "bank"],
+    ["atmAuthorized", false],
+    ["fromField", "bank"]
+];
+
+private _result = "forge_server" callExtension ["bank:hot:transfer", [
+    getPlayerUID player,
+    _targetUid,
+    "250",
+    toJSON _context
+]];
+```
+
+## Checkout Charge
+
+Checkout charging supports `sourceField: "cash"` or `sourceField: "bank"`.
+Set `commit` to `false` to preview the patch without saving.
+
+```sqf
+private _context = createHashMapFromArray [
+    ["sourceField", "bank"],
+    ["commit", true]
+];
+
+private _result = "forge_server" callExtension ["bank:hot:charge_checkout", [
+    getPlayerUID player,
+    "125",
+    toJSON _context
+]];
+```
+
+## PIN Validation
+
+PIN entry is only valid in ATM mode.
+
+```sqf
+private _context = createHashMapFromArray [["mode", "atm"]];
+
+private _result = "forge_server" callExtension ["bank:hot:validate_pin", [
+    getPlayerUID player,
+    "1234",
+    toJSON _context
+]];
+```
+
+## Error Handling
+
+```sqf
+private _result = "forge_server" callExtension ["bank:hot:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Bank error: %1", _payload];
+};
+
+private _bank = fromJSON _payload;
+```
+
+
+# CAD Usage Guide
+
+The CAD module stores transient operational state for dispatch activity,
+assignments, dispatch orders, support requests, group profiles, grouped views,
+and hydrated UI payloads. CAD state is in-memory and follows the active server
+or mission lifecycle.
+
+## Data Model
+
+Most CAD records are flexible JSON objects. The service normalizes important
+IDs and returns structured mutation results for higher-level workflows.
+
+Common generated IDs:
+
+- Orders: `cad-order:<sequence>`
+- Requests: `cad-request:<sequence>`
+- Assignments usually share a task ID or order ID.
+
+## Commands
+
+### Activity
+
+| Command               | Arguments       | Returns                     |
+| --------------------- | --------------- | --------------------------- |
+| `cad:activity:append` | `activity_json` | `OK`.                       |
+| `cad:activity:recent` | `limit`         | Recent activity array JSON. |
+
+### Assignments
+
+| Command                       | Arguments                     | Returns                                                 |
+| ----------------------------- | ----------------------------- | ------------------------------------------------------- |
+| `cad:assignments:list`        | none                          | Assignment array JSON.                                  |
+| `cad:assignments:assign`      | `entry_id`, `assignment_json` | Assignment mutation result JSON.                        |
+| `cad:assignments:acknowledge` | `entry_id`, `patch_json`      | Assignment mutation result JSON.                        |
+| `cad:assignments:decline`     | `entry_id`, `patch_json`      | Assignment mutation result JSON and removes assignment. |
+| `cad:assignments:upsert`      | `entry_id`, `assignment_json` | `OK`.                                                   |
+| `cad:assignments:delete`      | `entry_id`                    | `OK`.                                                   |
+
+### Orders
+
+| Command                          | Arguments                | Returns                                                           |
+| -------------------------------- | ------------------------ | ----------------------------------------------------------------- |
+| `cad:orders:list`                | none                     | Order array JSON.                                                 |
+| `cad:orders:create`              | `order_seed_json`        | Dispatch order mutation result JSON.                              |
+| `cad:orders:create_from_context` | `context_json`           | Dispatch order mutation result JSON.                              |
+| `cad:orders:close`               | `entry_id`               | Dispatch order mutation result JSON and removes order/assignment. |
+| `cad:orders:upsert`              | `entry_id`, `order_json` | `OK`.                                                             |
+| `cad:orders:delete`              | `entry_id`               | `OK`.                                                             |
+
+### Requests
+
+| Command                            | Arguments                  | Returns                                           |
+| ---------------------------------- | -------------------------- | ------------------------------------------------- |
+| `cad:requests:list`                | none                       | Request array JSON.                               |
+| `cad:requests:submit`              | `request_json`             | Request mutation result JSON.                     |
+| `cad:requests:submit_from_context` | `context_json`             | Request mutation result JSON.                     |
+| `cad:requests:close`               | `entry_id`                 | Request mutation result JSON and removes request. |
+| `cad:requests:upsert`              | `entry_id`, `request_json` | `OK`.                                             |
+| `cad:requests:delete`              | `entry_id`                 | `OK`.                                             |
+
+### Profiles and Views
+
+| Command                            | Arguments                  | Returns                       |
+| ---------------------------------- | -------------------------- | ----------------------------- |
+| `cad:profiles:list`                | none                       | Profile array JSON.           |
+| `cad:profiles:update_from_context` | `context_json`             | Profile mutation result JSON. |
+| `cad:profiles:upsert`              | `entry_id`, `profile_json` | `OK`.                         |
+| `cad:profiles:delete`              | `entry_id`                 | `OK`.                         |
+| `cad:groups:build`                 | `groups_seed_json`         | Group array JSON.             |
+| `cad:view:hydrate`                 | `hydrate_seed_json`        | Hydrated CAD payload JSON.    |
+
+## Submit a Support Request
+
+```sqf
+private _fields = createHashMapFromArray [
+    ["pickup_location", "Grid 123456"],
+    ["precedence", "urgent"],
+    ["security", "secure"]
+];
+
+private _context = createHashMapFromArray [
+    ["type", "medevac_9line"],
+    ["fields", _fields],
+    ["groupId", "alpha"],
+    ["groupCallsign", "Alpha 1-1"],
+    ["submittedByUid", getPlayerUID player],
+    ["submittedByName", name player],
+    ["priority", "emergency"],
+    ["position", getPosATL player],
+    ["createdAt", diag_tickTime]
+];
+
+private _result = "forge_server" callExtension ["cad:requests:submit_from_context", [
+    toJSON _context
+]];
+```
+
+Supported priority values are `routine`, `priority`, and `emergency`. Unknown
+values normalize to `priority`.
+
+## Create a Dispatch Order
+
+```sqf
+private _context = createHashMapFromArray [
+    ["assigneeGroupId", "bravo"],
+    ["assigneeGroupCallsign", "Bravo 1-1"],
+    ["targetGroupId", "alpha"],
+    ["targetGroupCallsign", "Alpha 1-1"],
+    ["targetPosition", getPosATL player],
+    ["createdByUid", getPlayerUID player],
+    ["createdByName", name player],
+    ["requestId", "cad-request:1"],
+    ["requestType", "logreq"],
+    ["requestTitle", "LOGREQ | Alpha 1-1"],
+    ["requestSummary", "Ammo resupply requested"],
+    ["requestFields", createHashMap],
+    ["note", "Support Alpha 1-1 at current position."],
+    ["priority", "priority"],
+    ["createdAt", diag_tickTime]
+];
+
+private _result = "forge_server" callExtension ["cad:orders:create_from_context", [
+    toJSON _context
+]];
+```
+
+## Assignment Workflow
+
+```sqf
+private _assignment = createHashMapFromArray [
+    ["groupId", "bravo"],
+    ["assigneeGroupCallsign", "Bravo 1-1"],
+    ["assignedByUid", getPlayerUID player],
+    ["assignedByName", name player],
+    ["assignedAt", diag_tickTime],
+    ["state", "assigned"]
+];
+
+"forge_server" callExtension ["cad:assignments:assign", [
+    "task-123",
+    toJSON _assignment
+]];
+
+private _ack = createHashMapFromArray [
+    ["state", "acknowledged"],
+    ["acknowledgedByUid", getPlayerUID player],
+    ["acknowledgedAt", diag_tickTime]
+];
+
+"forge_server" callExtension ["cad:assignments:acknowledge", [
+    "task-123",
+    toJSON _ack
+]];
+```
+
+## Hydrate the CAD UI
+
+```sqf
+private _session = createHashMapFromArray [
+    ["uid", getPlayerUID player],
+    ["orgId", "default"],
+    ["isDispatcher", true],
+    ["groupId", "alpha"],
+    ["isLeader", true]
+];
+
+private _seed = createHashMapFromArray [
+    ["groups", _liveGroups],
+    ["activeTasks", _activeTasks],
+    ["session", _session]
+];
+
+private _result = "forge_server" callExtension ["cad:view:hydrate", [toJSON _seed]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["CAD error: %1", _payload];
+};
+```
+
+
+# Economy Usage Guide
+
+The economy server addon owns Arma-world service behavior for fuel, medical,
+and repair interactions. It does not own money state. Money mutations go
+through extension-backed bank and organization hot state before the world
+effect is applied.
+
+## Dependencies
+
+- `forge_server_common` for logging, formatting, and player lookup.
+- `forge_server_bank` for personal medical billing.
+- `forge_server_org` for organization-funded services and medical fallback
+  debt.
+- `forge_client_actor` and `forge_client_notifications` for targeted client
+  responses.
+
+## Fuel
+
+Fuel is organization-funded.
+
+When refueling stops, `fnc_initFEconomyStore.sqf` calculates the fuel delta and
+cost, charges the player's organization through `OrgStore chargeCheckout`, and
+syncs the organization patch to online members. If organization funds cannot
+cover the refuel, the vehicle is rolled back to the fuel level it had when the
+session started.
+
+Garage UI refuel requests use the server `RefuelService` event. The fuel store
+calculates missing fuel from the vehicle config `fuelCapacity`, charges the
+player's organization, and fills the vehicle only after the organization charge
+succeeds.
+
+## Repair
+
+Repair is organization-funded.
+
+Use the repair service event:
+
+```sqf
+[QEGVAR(economy,RepairService), [_target, _unit, _cost]] call CBA_fnc_serverEvent;
+```
+
+`_cost` is optional. Passing `-1` uses the configured service repair cost.
+The target is only repaired after the organization charge succeeds.
+
+The client garage UI forwards selected nearby vehicle repair requests through
+the same event.
+
+## Medical
+
+Medical is player-funded first.
+
+When a heal is requested, `fnc_initMEconomyStore.sqf` uses this billing order:
+
+1. Charge the player's bank balance when it can cover the medical fee.
+2. Otherwise charge the player's cash when it can cover the fee.
+3. If neither personal balance can cover the fee, charge organization funds.
+4. When organization funds cover the fallback charge, record the same amount as
+   debt on the player's organization credit line.
+
+The heal only completes after one of those charges succeeds. If personal
+billing is unavailable, the heal does not fall back to organization funds
+because the server cannot verify that the player is unable to cover the fee.
+
+## Medical Debt Repayment
+
+Medical fallback debt uses the existing organization credit-line repayment
+flow. The organization treasury is reduced when the service is rendered, and
+the player's credit-line `amount_due` increases by the medical fee. When the
+player repays through the bank credit-line repayment action, player bank funds
+are moved back into the organization treasury.
+
+## Hot-Cache Boundary
+
+The economy addon should stay server-authoritative for world effects such as
+vehicle fuel, vehicle repair, healing, respawn placement, and death inventory
+movement. Bank and organization balances should continue to mutate through the
+extension-backed hot-cache services.
+
+
+# Garage Usage Guide
+
+The garage module stores physical player vehicles. Each record keeps the
+vehicle classname, generated plate UUID, fuel, overall damage, and detailed hit
+point damage.
+
+## Storage Model
+
+Garage data is persisted through SurrealDB by the server extension.
+
+```json
+{
+  "plate-uuid": {
+    "plate": "plate-uuid",
+    "classname": "B_Quadbike_01_F",
+    "fuel": 1.0,
+    "damage": 0.0,
+    "hit_points": {
+      "names": ["hitengine"],
+      "selections": ["engine_hitpoint"],
+      "values": [0.0]
+    }
+  }
+}
+```
+
+Rules validated by the Rust service:
+
+- A player garage can contain up to 5 vehicles.
+- `garage:add` generates a UUID plate automatically.
+- `fuel`, `damage`, and every hit point value must be between `0.0` and `1.0`.
+- `hit_points.names`, `hit_points.selections`, and `hit_points.values` must have
+  the same length.
+- `garage:get`, `garage:patch`, and `garage:remove` require an existing garage.
+- `garage:add` creates an empty garage automatically when one does not exist.
+
+## Commands
+
+All commands are called on the `garage` group.
+
+| Command         | Arguments              | Returns                       |
+| --------------- | ---------------------- | ----------------------------- |
+| `garage:create` | `uid`                  | Empty vehicle map as JSON.    |
+| `garage:get`    | `uid`                  | Vehicle map as JSON.          |
+| `garage:add`    | `uid`, `vehicle_json`  | Updated vehicle map as JSON.  |
+| `garage:update` | `uid`, `vehicles_json` | Replaced vehicle map as JSON. |
+| `garage:patch`  | `uid`, `patch_json`    | Updated vehicle map as JSON.  |
+| `garage:remove` | `uid`, `remove_json`   | Updated vehicle map as JSON.  |
+| `garage:delete` | `uid`                  | `OK`.                         |
+| `garage:exists` | `uid`                  | `true` or `false`.            |
+
+## Error Handling
+
+Every command returns a string payload. Always check for the `Error:` prefix
+before parsing JSON.
+
+```sqf
+private _result = "forge_server" callExtension ["garage:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Garage error: %1", _payload];
+};
+
+private _garage = fromJSON _payload;
+```
+
+## Add a Vehicle
+
+`garage:add` requires `classname`, `fuel`, `damage`, and `hit_points`.
+
+```sqf
+private _hitPointData = getAllHitPointsDamage _vehicle;
+private _hitPoints = createHashMapFromArray [
+    ["names", _hitPointData select 0],
+    ["selections", _hitPointData select 1],
+    ["values", _hitPointData select 2]
+];
+
+private _vehicleData = createHashMapFromArray [
+    ["classname", typeOf _vehicle],
+    ["fuel", fuel _vehicle],
+    ["damage", damage _vehicle],
+    ["hit_points", _hitPoints]
+];
+
+private _result = "forge_server" callExtension ["garage:add", [
+    getPlayerUID player,
+    toJSON _vehicleData
+]];
+
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    hint format ["Failed to store vehicle: %1", _payload];
+};
+
+private _garage = fromJSON _payload;
+```
+
+The returned value is a hash map keyed by generated plate. To find the newly
+stored vehicle, compare returned keys before and after the add, or search by
+classname if your workflow guarantees a unique pending vehicle.
+
+```sqf
+private _storedPlate = "";
+{
+    private _vehicleRecord = _garage get _x;
+    if ((_vehicleRecord get "classname") == typeOf _vehicle) then {
+        _storedPlate = _x;
+    };
+} forEach keys _garage;
+```
+
+## Patch a Vehicle
+
+`garage:patch` updates selected fields for one plate. The `plate` field is
+required. `fuel`, `damage`, and `hit_points` are optional.
+
+```sqf
+private _patch = createHashMapFromArray [
+    ["plate", _vehicle getVariable ["forge_garage_plate", ""]],
+    ["fuel", fuel _vehicle],
+    ["damage", damage _vehicle]
+];
+
+private _result = "forge_server" callExtension ["garage:patch", [
+    getPlayerUID player,
+    toJSON _patch
+]];
+```
+
+## Remove a Vehicle
+
+`garage:remove` expects JSON with a `plate` field.
+
+```sqf
+private _remove = createHashMapFromArray [
+    ["plate", _plate]
+];
+
+private _result = "forge_server" callExtension ["garage:remove", [
+    getPlayerUID player,
+    toJSON _remove
+]];
+```
+
+## Spawn a Stored Vehicle
+
+```sqf
+fnc_spawnGarageVehicle = {
+    params ["_plate"];
+
+    private _result = "forge_server" callExtension ["garage:get", [getPlayerUID player]];
+    private _payload = _result select 0;
+
+    if (_payload find "Error:" == 0) exitWith {
+        hint format ["Failed to load garage: %1", _payload];
+        objNull
+    };
+
+    private _garage = fromJSON _payload;
+    private _vehicleData = _garage getOrDefault [_plate, createHashMap];
+    if (_vehicleData isEqualTo createHashMap) exitWith {
+        hint "Vehicle plate was not found in your garage.";
+        objNull
+    };
+
+    private _vehicle = (_vehicleData get "classname") createVehicle (player getPos [10, getDir player]);
+    _vehicle setFuel (_vehicleData getOrDefault ["fuel", 1]);
+    _vehicle setDamage (_vehicleData getOrDefault ["damage", 0]);
+    _vehicle setVariable ["forge_garage_plate", _plate, true];
+
+    private _hitPoints = _vehicleData getOrDefault ["hit_points", createHashMap];
+    private _names = _hitPoints getOrDefault ["names", []];
+    private _values = _hitPoints getOrDefault ["values", []];
+
+    {
+        _vehicle setHitPointDamage [_x, _values select _forEachIndex];
+    } forEach _names;
+
+    private _remove = createHashMapFromArray [["plate", _plate]];
+    "forge_server" callExtension ["garage:remove", [getPlayerUID player, toJSON _remove]];
+
+    _vehicle
+};
+```
+
+## Hot State
+
+The `garage:hot:*` commands keep a runtime copy of a player's garage and write
+it back only when `garage:hot:save` runs.
+
+| Command                     | Arguments              | Returns                          |
+| --------------------------- | ---------------------- | -------------------------------- |
+| `garage:hot:init`           | `uid`                  | Vehicle map as JSON.             |
+| `garage:hot:get`            | `uid`                  | Vehicle map as JSON.             |
+| `garage:hot:override`       | `uid`, `vehicles_json` | Vehicle map as JSON.             |
+| `garage:hot:add`            | `uid`, `vehicle_json`  | Vehicle map as JSON.             |
+| `garage:hot:remove_vehicle` | `uid`, `remove_json`   | Vehicle map as JSON.             |
+| `garage:hot:save`           | `uid`                  | Current hot vehicle map as JSON. |
+| `garage:hot:remove`         | `uid`                  | `OK`.                            |
+
+Use hot state for session-heavy vehicle workflows. Use the durable commands for
+simple store/retrieve operations.
+
+## Best Practices
+
+- Store the generated plate on spawned vehicles with `setVariable`.
+- Use `garage:patch` for frequent fuel and damage syncs.
+- Use `garage:update` only when replacing the whole vehicle map intentionally.
+- Do not delete the world vehicle until `garage:add` succeeds.
+- Treat vehicle maps as hash maps keyed by plate, not arrays.
+
+
+# Locker Usage Guide
+
+The locker module stores physical player inventory items by classname. It is
+separate from the virtual arsenal unlock module documented in
+[Owned Storage Usage Guide](https://innovativedevsolutions.github.io/server-modules/owned-storage).
+
+## Storage Model
+
+Locker data is persisted through SurrealDB by the server extension.
+
+```json
+{
+  "arifle_MX_F": {
+    "category": "weapon",
+    "classname": "arifle_MX_F",
+    "amount": 1
+  }
+}
+```
+
+Rules validated by the Rust service:
+
+- A locker can contain up to 25 unique classnames.
+- `category` and `classname` cannot be empty.
+- `amount` must be greater than `0`.
+- `locker:add` creates an empty locker automatically when one does not exist.
+- `locker:get`, `locker:patch`, and `locker:remove` require an existing locker.
+- `locker:remove` takes the classname directly, not a JSON object.
+
+## Commands
+
+All commands are called on the `locker` group.
+
+| Command         | Arguments           | Returns                    |
+| --------------- | ------------------- | -------------------------- |
+| `locker:create` | `uid`               | Empty item map as JSON.    |
+| `locker:get`    | `uid`               | Item map as JSON.          |
+| `locker:add`    | `uid`, `item_json`  | Updated item map as JSON.  |
+| `locker:update` | `uid`, `items_json` | Replaced item map as JSON. |
+| `locker:patch`  | `uid`, `patch_json` | Updated item map as JSON.  |
+| `locker:remove` | `uid`, `classname`  | Updated item map as JSON.  |
+| `locker:delete` | `uid`               | `OK`.                      |
+| `locker:exists` | `uid`               | `true` or `false`.         |
+
+## Error Handling
+
+Every command returns a string payload. Always check for the `Error:` prefix
+before parsing JSON.
+
+```sqf
+private _result = "forge_server" callExtension ["locker:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Locker error: %1", _payload];
+};
+
+private _locker = fromJSON _payload;
+```
+
+## Add an Item
+
+`locker:add` creates or overwrites one classname entry.
+
+```sqf
+private _item = createHashMapFromArray [
+    ["category", "weapon"],
+    ["classname", "arifle_MX_F"],
+    ["amount", 1]
+];
+
+private _result = "forge_server" callExtension ["locker:add", [
+    getPlayerUID player,
+    toJSON _item
+]];
+
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    hint format ["Failed to store item: %1", _payload];
+};
+
+private _locker = fromJSON _payload;
+```
+
+## Patch an Amount
+
+`locker:patch` currently patches the `amount` field for an existing classname.
+
+```sqf
+private _patch = createHashMapFromArray [
+    ["classname", "arifle_MX_F"],
+    ["amount", 5]
+];
+
+private _result = "forge_server" callExtension ["locker:patch", [
+    getPlayerUID player,
+    toJSON _patch
+]];
+```
+
+## Remove an Item
+
+`locker:remove` takes the classname as the second argument.
+
+```sqf
+private _result = "forge_server" callExtension ["locker:remove", [
+    getPlayerUID player,
+    "arifle_MX_F"
+]];
+```
+
+## Retrieve an Item
+
+```sqf
+fnc_retrieveLockerItem = {
+    params ["_classname"];
+
+    private _result = "forge_server" callExtension ["locker:get", [getPlayerUID player]];
+    private _payload = _result select 0;
+
+    if (_payload find "Error:" == 0) exitWith {
+        hint format ["Failed to load locker: %1", _payload];
+        false
+    };
+
+    private _locker = fromJSON _payload;
+    private _item = _locker getOrDefault [_classname, createHashMap];
+    if (_item isEqualTo createHashMap) exitWith {
+        hint "Item was not found in your locker.";
+        false
+    };
+
+    private _amount = _item getOrDefault ["amount", 0];
+    if (_amount <= 0) exitWith {
+        hint "Item is out of stock.";
+        false
+    };
+
+    if !(player canAdd _classname) exitWith {
+        hint "Not enough inventory space.";
+        false
+    };
+
+    player addItem _classname;
+
+    if (_amount > 1) then {
+        private _patch = createHashMapFromArray [
+            ["classname", _classname],
+            ["amount", _amount - 1]
+        ];
+        "forge_server" callExtension ["locker:patch", [getPlayerUID player, toJSON _patch]];
+    } else {
+        "forge_server" callExtension ["locker:remove", [getPlayerUID player, _classname]];
+    };
+
+    true
+};
+```
+
+## Replace the Whole Locker
+
+`locker:update` replaces the whole item map. Use it for explicit bulk syncs,
+not single-item changes.
+
+```sqf
+private _items = createHashMapFromArray [
+    ["arifle_MX_F", createHashMapFromArray [
+        ["category", "weapon"],
+        ["classname", "arifle_MX_F"],
+        ["amount", 1]
+    ]]
+];
+
+private _result = "forge_server" callExtension ["locker:update", [
+    getPlayerUID player,
+    toJSON _items
+]];
+```
+
+## Hot State
+
+The `locker:hot:*` commands keep a runtime copy of a player's locker and write
+it back only when `locker:hot:save` runs.
+
+| Command               | Arguments           | Returns                       |
+| --------------------- | ------------------- | ----------------------------- |
+| `locker:hot:init`     | `uid`               | Item map as JSON.             |
+| `locker:hot:get`      | `uid`               | Item map as JSON.             |
+| `locker:hot:override` | `uid`, `items_json` | Item map as JSON.             |
+| `locker:hot:save`     | `uid`               | Current hot item map as JSON. |
+| `locker:hot:remove`   | `uid`               | `OK`.                         |
+
+Use hot state for session-heavy locker workflows. Use the durable commands for
+simple item deposits and withdrawals.
+
+## Best Practices
+
+- Keep categories normalized, for example `weapon`, `magazine`, `item`, or
+  `backpack`.
+- Use `locker:patch` for quantity changes.
+- Use `locker:remove` when quantity reaches zero.
+- Treat the locker response as a hash map keyed by classname.
+- Check capacity before bulk operations that may exceed 25 unique items.
+
+
+# Organization Usage Guide
+
+The organization module stores organization records, members, assets, fleet
+entries, and credit lines. Durable commands manage persisted records directly.
+Hot-state commands support the active organization UI workflows.
+
+## Storage Model
+
+Core organization:
+
+```json
+{
+  "id": "default",
+  "owner": "server",
+  "name": "Default Organization",
+  "funds": 0.0,
+  "reputation": 0,
+  "credit_lines": {}
+}
+```
+
+Hot organization:
+
+```json
+{
+  "id": "default",
+  "owner": "server",
+  "name": "Default Organization",
+  "funds": 0.0,
+  "reputation": 0,
+  "credit_lines": {},
+  "assets": {},
+  "fleet": {},
+  "members": {},
+  "pending_invites": {}
+}
+```
+
+Rules validated by the Rust service:
+
+- `id` must be non-empty and contain only alphanumeric characters or `_`.
+- `owner` must be `server` or a 17-digit Steam UID.
+- `name` cannot be empty, cannot exceed 100 characters, and cannot contain
+  control characters.
+- `funds`, reputation, and credit line amounts cannot be negative.
+- Player registration is rejected when the player already belongs to a
+  non-default organization.
+
+## Durable Commands
+
+| Command              | Arguments               | Returns                    |
+| -------------------- | ----------------------- | -------------------------- |
+| `org:create`         | `org_id`, `org_json`    | Organization JSON.         |
+| `org:get`            | `org_id`                | Organization JSON.         |
+| `org:update`         | `org_id`, `patch_json`  | Updated organization JSON. |
+| `org:exists`         | `org_id`                | `true` or `false`.         |
+| `org:delete`         | `org_id`                | `OK`.                      |
+| `org:assets:get`     | `org_id`                | Asset map JSON.            |
+| `org:assets:update`  | `org_id`, `assets_json` | Updated asset map JSON.    |
+| `org:fleet:get`      | `org_id`                | Fleet map JSON.            |
+| `org:fleet:update`   | `org_id`, `fleet_json`  | Updated fleet map JSON.    |
+| `org:members:get`    | `org_id`                | Member array JSON.         |
+| `org:members:add`    | `org_id`, `member_uid`  | `OK`.                      |
+| `org:members:remove` | `org_id`, `member_uid`  | `OK`.                      |
+
+## Create an Organization
+
+The command key is authoritative for `id`.
+
+```sqf
+private _org = createHashMapFromArray [
+    ["id", _orgId],
+    ["owner", getPlayerUID player],
+    ["name", "Spearnet Logistics"],
+    ["funds", 0],
+    ["reputation", 0],
+    ["credit_lines", createHashMap]
+];
+
+private _result = "forge_server" callExtension ["org:create", [
+    _orgId,
+    toJSON _org
+]];
+```
+
+## Update Organization Funds
+
+```sqf
+private _patch = createHashMapFromArray [
+    ["funds", 5000],
+    ["reputation", 10]
+];
+
+private _result = "forge_server" callExtension ["org:update", [
+    _orgId,
+    toJSON _patch
+]];
+```
+
+Supported durable patch fields are `id`, `owner`, `name`, `funds`,
+`reputation`, and `credit_lines`.
+
+## Assets and Fleet
+
+Assets are grouped by category, then classname.
+
+```sqf
+private _assets = createHashMapFromArray [
+    ["ammo", createHashMapFromArray [
+        ["ACE_30Rnd_65x39_caseless_mag", createHashMapFromArray [
+            ["classname", "ACE_30Rnd_65x39_caseless_mag"],
+            ["type", "ammo"],
+            ["quantity", 20]
+        ]]
+    ]]
+];
+
+"forge_server" callExtension ["org:assets:update", [_orgId, toJSON _assets]];
+```
+
+Fleet is keyed by an internal fleet entry ID.
+
+```sqf
+private _fleet = createHashMapFromArray [
+    ["B_Truck_01_transport_F_0", createHashMapFromArray [
+        ["classname", "B_Truck_01_transport_F"],
+        ["name", "Transport Truck"],
+        ["type", "cars"],
+        ["status", "Ready"],
+        ["damage", "0%"]
+    ]]
+];
+
+"forge_server" callExtension ["org:fleet:update", [_orgId, toJSON _fleet]];
+```
+
+## Hot-State Commands
+
+| Command                      | Arguments                     | Returns                                               |
+| ---------------------------- | ----------------------------- | ----------------------------------------------------- |
+| `org:hot:init`               | `org_id`                      | Hot organization JSON.                                |
+| `org:hot:get`                | `org_id`                      | Hot organization JSON.                                |
+| `org:hot:override`           | `org_id`, `hot_org_json`      | Hot organization JSON.                                |
+| `org:hot:ensure_member`      | `context_json`                | Hot organization JSON.                                |
+| `org:hot:member_invites`     | `member_uid`                  | Invite array JSON.                                    |
+| `org:hot:register`           | `context_json`                | Register result JSON.                                 |
+| `org:hot:invite_member`      | `context_json`                | Invite result JSON.                                   |
+| `org:hot:accept_invite`      | `context_json`                | Invite decision result JSON.                          |
+| `org:hot:decline_invite`     | `context_json`                | Invite decision result JSON.                          |
+| `org:hot:assign_credit_line` | `context_json`                | Mutation result JSON.                                 |
+| `org:hot:repay_credit_line`  | `context_json`                | Repayment result JSON.                                |
+| `org:hot:charge_checkout`    | `context_json`                | Mutation result JSON.                                 |
+| `org:hot:add_assets`         | `context_json`, `assets_json` | Mutation result JSON.                                 |
+| `org:hot:add_fleet`          | `context_json`, `fleet_json`  | Mutation result JSON.                                 |
+| `org:hot:leave`              | `context_json`                | Leave result JSON.                                    |
+| `org:hot:disband`            | `context_json`                | Disband result JSON.                                  |
+| `org:hot:save`               | `org_id`                      | Current hot organization JSON and async durable save. |
+| `org:hot:remove`             | `org_id`                      | `OK`.                                                 |
+
+## Register from UI Context
+
+```sqf
+private _context = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["requesterName", name player],
+    ["orgId", _orgId],
+    ["orgName", "Spearnet Logistics"],
+    ["existingOrgId", "default"]
+];
+
+private _result = "forge_server" callExtension ["org:hot:register", [toJSON _context]];
+```
+
+## Invite and Accept
+
+```sqf
+private _invite = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["requesterName", name player],
+    ["orgId", _orgId],
+    ["requesterIsDefaultOrgCeo", false],
+    ["targetUid", _targetUid],
+    ["targetName", _targetName],
+    ["targetOrgId", "default"]
+];
+
+"forge_server" callExtension ["org:hot:invite_member", [toJSON _invite]];
+
+private _decision = createHashMapFromArray [
+    ["requesterUid", _targetUid],
+    ["requesterName", _targetName],
+    ["orgId", _orgId],
+    ["existingOrgId", "default"]
+];
+
+"forge_server" callExtension ["org:hot:accept_invite", [toJSON _decision]];
+```
+
+## Credit Line Checkout
+
+```sqf
+private _credit = createHashMapFromArray [
+    ["requesterUid", getPlayerUID player],
+    ["orgId", _orgId],
+    ["requesterIsDefaultOrgCeo", false],
+    ["memberUid", _memberUid],
+    ["memberName", _memberName],
+    ["amount", 1000]
+];
+
+"forge_server" callExtension ["org:hot:assign_credit_line", [toJSON _credit]];
+
+private _charge = createHashMapFromArray [
+    ["requesterUid", _memberUid],
+    ["orgId", _orgId],
+    ["requesterIsDefaultOrgCeo", false],
+    ["source", "credit_line"],
+    ["amount", 250],
+    ["commit", true]
+];
+
+"forge_server" callExtension ["org:hot:charge_checkout", [toJSON _charge]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Organization error: %1", _payload];
+};
+```
+
+
+# Owned Storage Usage Guide
+
+Owned storage covers the `owned:locker` and `owned:garage` extension command
+groups. These modules store unlock lists rather than physical item or vehicle
+instances.
+
+Use these modules for virtual arsenal and virtual garage unlocks. Use
+[Locker Usage Guide](https://innovativedevsolutions.github.io/server-modules/locker) and
+[Garage Usage Guide](https://innovativedevsolutions.github.io/server-modules/garage) for physical inventory and stored
+vehicle instances.
+
+## Owned Locker Model
+
+```json
+{
+  "items": ["FirstAidKit"],
+  "weapons": ["arifle_MX_F"],
+  "magazines": ["30Rnd_65x39_caseless_black_mag"],
+  "backpacks": ["B_AssaultPack_rgr"]
+}
+```
+
+Supported owned locker categories:
+
+- `items`
+- `weapons`
+- `magazines`
+- `backpacks`
+
+New owned lockers are created with default unlocks from the Rust model.
+
+## Owned Garage Model
+
+```json
+{
+  "cars": ["B_Quadbike_01_F"],
+  "armor": [],
+  "helis": [],
+  "planes": [],
+  "naval": [],
+  "other": []
+}
+```
+
+Supported owned garage categories:
+
+- `cars`
+- `armor`
+- `helis`
+- `planes`
+- `naval`
+- `other`
+
+The durable `owned:garage:remove` command currently accepts `heli` for the
+helicopter category. Add, get, and hot remove accept `helis`.
+
+New owned garages are created with default unlocks from the Rust model.
+
+## Owned Locker Commands
+
+| Command               | Arguments                            | Returns                        |
+| --------------------- | ------------------------------------ | ------------------------------ |
+| `owned:locker:create` | `uid`                                | Full owned locker JSON.        |
+| `owned:locker:fetch`  | `uid`                                | Full owned locker JSON.        |
+| `owned:locker:get`    | `uid`, `category`                    | Category classname array JSON. |
+| `owned:locker:add`    | `uid`, `category`, `classnames_json` | Updated category array JSON.   |
+| `owned:locker:remove` | `uid`, `category`, `classname`       | Updated category array JSON.   |
+| `owned:locker:delete` | `uid`                                | `OK`.                          |
+| `owned:locker:exists` | `uid`                                | `true` or `false`.             |
+
+## Owned Garage Commands
+
+| Command               | Arguments                            | Returns                        |
+| --------------------- | ------------------------------------ | ------------------------------ |
+| `owned:garage:create` | `uid`                                | Full owned garage JSON.        |
+| `owned:garage:fetch`  | `uid`                                | Full owned garage JSON.        |
+| `owned:garage:get`    | `uid`, `category`                    | Category classname array JSON. |
+| `owned:garage:add`    | `uid`, `category`, `classnames_json` | Updated category array JSON.   |
+| `owned:garage:remove` | `uid`, `category`, `classname`       | Updated category array JSON.   |
+| `owned:garage:delete` | `uid`                                | `OK`.                          |
+| `owned:garage:exists` | `uid`                                | `true` or `false`.             |
+
+## Add Virtual Arsenal Unlocks
+
+```sqf
+private _classes = ["arifle_MX_F", "hgun_P07_F"];
+
+private _result = "forge_server" callExtension ["owned:locker:add", [
+    getPlayerUID player,
+    "weapons",
+    toJSON _classes
+]];
+```
+
+## Add Virtual Garage Unlocks
+
+```sqf
+private _classes = ["B_Quadbike_01_F", "B_MRAP_01_F"];
+
+private _result = "forge_server" callExtension ["owned:garage:add", [
+    getPlayerUID player,
+    "cars",
+    toJSON _classes
+]];
+```
+
+## Remove an Unlock
+
+```sqf
+"forge_server" callExtension ["owned:locker:remove", [
+    getPlayerUID player,
+    "weapons",
+    "arifle_MX_F"
+]];
+
+"forge_server" callExtension ["owned:garage:remove", [
+    getPlayerUID player,
+    "cars",
+    "B_Quadbike_01_F"
+]];
+```
+
+## Hot-State Commands
+
+Both owned storage modules support hot state.
+
+Owned locker:
+
+| Command                     | Arguments            | Returns                                               |
+| --------------------------- | -------------------- | ----------------------------------------------------- |
+| `owned:locker:hot:init`     | `uid`                | Full owned locker JSON.                               |
+| `owned:locker:hot:fetch`    | `uid`                | Full owned locker JSON.                               |
+| `owned:locker:hot:get`      | `uid`, `category`    | Category array JSON.                                  |
+| `owned:locker:hot:override` | `uid`, `locker_json` | Full owned locker JSON.                               |
+| `owned:locker:hot:save`     | `uid`                | Current hot owned locker JSON and async durable save. |
+| `owned:locker:hot:remove`   | `uid`                | `OK`.                                                 |
+
+Owned garage:
+
+| Command                        | Arguments                            | Returns                                               |
+| ------------------------------ | ------------------------------------ | ----------------------------------------------------- |
+| `owned:garage:hot:init`        | `uid`                                | Full owned garage JSON.                               |
+| `owned:garage:hot:fetch`       | `uid`                                | Full owned garage JSON.                               |
+| `owned:garage:hot:get`         | `uid`, `category`                    | Category array JSON.                                  |
+| `owned:garage:hot:override`    | `uid`, `garage_json`                 | Full owned garage JSON.                               |
+| `owned:garage:hot:add`         | `uid`, `category`, `classnames_json` | Updated category array JSON.                          |
+| `owned:garage:hot:remove_item` | `uid`, `category`, `classname`       | Updated category array JSON.                          |
+| `owned:garage:hot:save`        | `uid`                                | Current hot owned garage JSON and async durable save. |
+| `owned:garage:hot:remove`      | `uid`                                | `OK`.                                                 |
+
+## Error Handling
+
+```sqf
+private _payload = _result select 0;
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Owned storage error: %1", _payload];
+};
+```
+
+
+# Phone Usage Guide
+
+The phone module stores contacts, messages, and emails for each UID. It is a
+server-extension state module backed by SurrealDB.
+
+## Storage Model
+
+```json
+{
+  "contacts": ["76561198000000000", "field_commander"],
+  "messages": [
+    {
+      "id": "phone-message:sender:receiver:1",
+      "from": "sender",
+      "to": "receiver",
+      "message": "Text body",
+      "timestamp": 123.45,
+      "read": false
+    }
+  ],
+  "emails": [
+    {
+      "id": "phone-email:sender:receiver:2",
+      "from": "sender",
+      "to": "receiver",
+      "subject": "Subject",
+      "body": "Email body",
+      "timestamp": 123.45,
+      "read": false
+    }
+  ]
+}
+```
+
+Rules validated by the Rust service:
+
+- UID arguments cannot be empty.
+- Message and email bodies cannot be empty.
+- Empty email subjects become `No subject`.
+- Player messages and emails cannot target `field_commander`.
+- `field_commander` can send messages or emails to players.
+- Deleting a message or email removes it only from the requesting UID's index.
+
+## Commands
+
+| Command                    | Arguments                                            | Returns                              |
+| -------------------------- | ---------------------------------------------------- | ------------------------------------ |
+| `phone:init`               | `uid`                                                | Full phone payload.                  |
+| `phone:contacts:list`      | `uid`                                                | Contact UID array.                   |
+| `phone:contacts:add`       | `uid`, `contact_uid`                                 | `true` or `false`.                   |
+| `phone:contacts:remove`    | `uid`, `contact_uid`                                 | `true` or `false`.                   |
+| `phone:messages:list`      | `uid`                                                | Message array.                       |
+| `phone:messages:thread`    | `uid`, `other_uid`                                   | Message array for both participants. |
+| `phone:messages:send`      | `from_uid`, `to_uid`, `message`, `timestamp`         | Message JSON.                        |
+| `phone:messages:mark_read` | `uid`, `message_id`                                  | `true` or `false`.                   |
+| `phone:messages:delete`    | `uid`, `message_id`                                  | `true` or `false`.                   |
+| `phone:emails:list`        | `uid`                                                | Email array.                         |
+| `phone:emails:send`        | `from_uid`, `to_uid`, `subject`, `body`, `timestamp` | Email JSON.                          |
+| `phone:emails:mark_read`   | `uid`, `email_id`                                    | `true` or `false`.                   |
+| `phone:emails:delete`      | `uid`, `email_id`                                    | `true` or `false`.                   |
+| `phone:remove`             | `uid`                                                | `OK`.                                |
+
+## Initialize Phone State
+
+`phone:init` creates phone state if needed and seeds self-contact plus
+`field_commander`.
+
+```sqf
+private _result = "forge_server" callExtension ["phone:init", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Phone init failed: %1", _payload];
+};
+
+private _phone = fromJSON _payload;
+```
+
+## Send a Message
+
+```sqf
+private _timestamp = str diag_tickTime;
+
+private _result = "forge_server" callExtension ["phone:messages:send", [
+    getPlayerUID player,
+    _targetUid,
+    "Move to checkpoint Alpha.",
+    _timestamp
+]];
+```
+
+## Read a Conversation
+
+```sqf
+private _result = "forge_server" callExtension ["phone:messages:thread", [
+    getPlayerUID player,
+    _otherUid
+]];
+
+private _messages = fromJSON (_result select 0);
+```
+
+## Send an Email
+
+```sqf
+private _result = "forge_server" callExtension ["phone:emails:send", [
+    getPlayerUID player,
+    _targetUid,
+    "Supply Request",
+    "Requesting resupply at grid 123456.",
+    str diag_tickTime
+]];
+```
+
+## Mark and Delete Records
+
+```sqf
+"forge_server" callExtension ["phone:messages:mark_read", [
+    getPlayerUID player,
+    _messageId
+]];
+
+"forge_server" callExtension ["phone:emails:delete", [
+    getPlayerUID player,
+    _emailId
+]];
+```
+
+## Error Handling
+
+```sqf
+private _payload = (_result select 0);
+if (_payload find "Error:" == 0) then {
+    systemChat format ["Phone error: %1", _payload];
+};
+```
+
+
+# Client Usage Guide
+
+Forge Client contains the Arma client-side addons that open player interfaces,
+handle browser events, cache client-visible state, and forward authoritative
+requests to the server addons.
+
+Use this guide as the entry point for client-side integration. Domain data,
+validation, persistence, rewards, ownership, and checkout behavior remain
+server-side responsibilities.
+
+## Client Responsibilities
+
+- Open Arma displays and `CT_WEBBROWSER` controls.
+- Load browser UI assets from each addon's `ui/_site` folder.
+- Receive browser alerts through `JSDialog` handlers.
+- Translate browser events into local actions or CBA server events.
+- Cache display state in client repositories.
+- Push server responses back into browser UIs with `ExecJS`.
+- Provide local-only utility state where the feature is intentionally local.
+
+## Authoritative Boundaries
+
+Client repositories are view state. They are useful for rendering, local UI
+decisions, and short-lived session behavior, but they should not be treated as
+durable state.
+
+Authoritative state lives in:
+
+- server SQF addons for mission and player workflow ownership
+- the `forge_server` extension for durable and hot-state domain logic
+- SurrealDB where the extension persists durable domain records
+
+## Common Runtime Flow
+
+Most browser-backed client addons follow this shape:
+
+1. The addon creates a display, finds a browser control, and registers a
+   `JSDialog` event handler.
+2. The browser loads an HTML entrypoint from `ui/_site`.
+3. The browser sends JSON alerts with an `event` name and `data` payload.
+4. `fnc_handleUIEvents.sqf` parses the alert and routes the event.
+5. A bridge object or repository sends a CBA server event when server data is
+   needed.
+6. Server responses are caught in `XEH_postInitClient.sqf`.
+7. The bridge sends browser update events back through `ExecJS`.
+
+Browser alert payload:
+
+```json
+{
+  "event": "module::action",
+  "data": {}
+}
+```
+
+## Open UI Entry Points
+
+| UI                  | Entry point                                 |
+| ------------------- | ------------------------------------------- |
+| Actor menu          | `call forge_client_actor_fnc_openUI;`       |
+| Bank                | `call forge_client_bank_fnc_openUI;`        |
+| ATM                 | `[true] call forge_client_bank_fnc_openUI;` |
+| CAD                 | `call forge_client_cad_fnc_openUI;`         |
+| Garage              | `call forge_client_garage_fnc_openUI;`      |
+| Virtual garage      | `call forge_client_garage_fnc_openVG;`      |
+| Organization portal | `call forge_client_org_fnc_openUI;`         |
+| Phone               | `call forge_client_phone_fnc_openUI;`       |
+| Store               | `call forge_client_store_fnc_openUI;`       |
+
+Notifications are normally opened during client initialization and then updated
+through the notification event/service.
+
+## Addon Guides
+
+- [Client Main Usage Guide](https://innovativedevsolutions.github.io/client-addons/main)
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/client-addons/common)
+- [Client Actor Usage Guide](https://innovativedevsolutions.github.io/client-addons/actor)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client CAD Usage Guide](https://innovativedevsolutions.github.io/client-addons/cad)
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/client-addons/garage)
+- [Client Locker Usage Guide](https://innovativedevsolutions.github.io/client-addons/locker)
+- [Client Notifications Usage Guide](https://innovativedevsolutions.github.io/client-addons/notifications)
+- [Client Organization Usage Guide](https://innovativedevsolutions.github.io/client-addons/organization)
+- [Client Phone Usage Guide](https://innovativedevsolutions.github.io/client-addons/phone)
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/client-addons/store)
+
+## Extension Calls
+
+Client addons should usually call server SQF events, not the `forge_server`
+extension directly. The server addon owns validation context and converts the
+request into extension commands.
+
+Example:
+
+```sqf
+[SRPC(bank,requestDeposit), [getPlayerUID player, 100]] call CFUNC(serverEvent);
+```
+
+Direct extension calls from client code bypass server authorization boundaries
+and should be avoided.
+
+## Browser Bridge Notes
+
+`forge_client_common_fnc_initWebUIBridge` provides reusable bridge and screen
+objects for newer browser UIs. It queues outbound events until a browser screen
+is ready, then delivers payloads through:
+
+```sqf
+_control ctrlWebBrowserAction ["ExecJS", format ["ForgeBridge.receive(%1)", _json]];
+```
+
+Feature addons still own their event names, request payloads, and response
+mapping.
+
+## Development Checklist
+
+- Keep feature-specific behavior in the owning addon.
+- Send authoritative changes to the server addon.
+- Use namespaced browser events such as `bank::deposit::request`.
+- Treat `profileNamespace` as local player preference or utility state only.
+- Make browser-ready events request the current server state before rendering
+  stale data.
+- Queue or ignore bridge responses when the display is closed.
+- Keep mission object setup on the mission/server side and client display logic
+  on the client side.
+
+
+# Client Main Usage Guide
+
+The client `main` addon provides the shared mod identity, version metadata,
+CBA settings, and macro foundation used by the Forge client addons.
+
+## Purpose
+
+Use `forge_client_main` as the foundation dependency for client addons that
+need Forge macros, function naming, settings, or mod-level configuration.
+
+Feature logic should stay in the owning addon. `main` should remain limited to
+shared client configuration and compile infrastructure.
+
+## Key Files
+
+| File                 | Purpose                      |
+| -------------------- | ---------------------------- |
+| `script_mod.hpp`     | Client mod identity.         |
+| `script_version.hpp` | Client mod version values.   |
+| `script_macros.hpp`  | Shared client macros.        |
+| `CfgSettings.hpp`    | Client CBA settings.         |
+| `config.cpp`         | Addon config and mod wiring. |
+
+## Dependency Pattern
+
+Feature addons normally depend on `forge_client_main` in their `config.cpp`.
+
+```cpp
+class forge_client_example {
+    requiredAddons[] = {
+        "forge_client_main"
+    };
+};
+```
+
+## Usage Notes
+
+- Put domain UI, repositories, and event handling in feature addons.
+- Put reusable browser bridge behavior in `forge_client_common`.
+- Put server-only behavior in `arma/server/addons`.
+- Keep settings in `CfgSettings.hpp` when they apply to the client mod as a
+  whole or to a client feature toggle.
+
+## Related Guides
+
+- [Client Usage Guide](https://innovativedevsolutions.github.io/client-addons)
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/client-addons/common)
+- [Development Guide](https://innovativedevsolutions.github.io/getting-started/development)
+
+
+# Client Phone Usage Guide
+
+The client phone addon provides the in-game phone UI for contacts, SMS
+messages, email, and local utility apps such as notes, calendar events, world
+clocks, and alarms.
+
+## Open Phone UI
+
+```sqf
+call forge_client_phone_fnc_openUI;
+```
+
+The phone UI creates `RscPhone`, loads `ui/_site/index.html`, and routes
+browser alerts through `forge_client_phone_fnc_handleUIEvents`.
+
+## State Ownership
+
+Contacts, messages, and emails are server-owned and requested through the
+server phone addon.
+
+Local utility app state is stored in `profileNamespace`:
+
+- notes
+- calendar events
+- world clocks
+- alarms
+- theme/preferences
+
+## Phone Class
+
+`forge_client_phone_fnc_initClass` creates `GVAR(PhoneClass)`.
+
+The phone class currently owns local notes, events, and settings helpers.
+Contacts, messages, and emails continue to use server-backed request/response
+events.
+
+## Browser Events
+
+### Session and Preferences
+
+| Event                | Client behavior                                 |
+| -------------------- | ----------------------------------------------- |
+| `phone::get::player` | Send player UID to browser with `setPlayerUid`. |
+| `phone::get::theme`  | Send saved light/dark theme to browser.         |
+| `phone::set::theme`  | Save theme preference to `profileNamespace`.    |
+
+### Contacts
+
+| Event                            | Client behavior                                  |
+| -------------------------------- | ------------------------------------------------ |
+| `phone::get::contacts`           | Load cached contacts and request server refresh. |
+| `phone::refresh::contacts`       | Request contacts from server.                    |
+| `phone::add::contact`            | Add contact by phone number.                     |
+| `phone::add::contact::by::phone` | Add contact by phone number.                     |
+| `phone::add::contact::by::email` | Add contact by email.                            |
+| `phone::remove::contact`         | Remove contact by UID.                           |
+
+### Messages
+
+| Event                         | Client behavior                  |
+| ----------------------------- | -------------------------------- |
+| `phone::get::messages`        | Request messages from server.    |
+| `phone::get::message::thread` | Request thread with another UID. |
+| `phone::send::message`        | Send SMS through server.         |
+| `phone::mark::message::read`  | Mark message read on server.     |
+| `phone::delete::message`      | Delete message on server.        |
+
+### Email
+
+| Event                      | Client behavior             |
+| -------------------------- | --------------------------- |
+| `phone::get::emails`       | Request emails from server. |
+| `phone::send::email`       | Send email through server.  |
+| `phone::mark::email::read` | Mark email read on server.  |
+| `phone::delete::email`     | Delete email on server.     |
+
+### Local Utility Apps
+
+| Event                  | Client behavior                   |
+| ---------------------- | --------------------------------- |
+| `phone::get::notes`    | Load local notes.                 |
+| `phone::save::note`    | Save local note.                  |
+| `phone::delete::note`  | Delete local note.                |
+| `phone::get::events`   | Load local calendar events.       |
+| `phone::save::event`   | Save local calendar event.        |
+| `phone::delete::event` | Delete local calendar event.      |
+| `phone::get::clocks`   | Load local world clocks.          |
+| `phone::save::clock`   | Save local world clock.           |
+| `phone::delete::clock` | Delete local world clock.         |
+| `phone::get::alarms`   | Load local alarms.                |
+| `phone::save::alarm`   | Save local alarm.                 |
+| `phone::delete::alarm` | Delete local alarm.               |
+| `phone::toggle::alarm` | Toggle local alarm enabled state. |
+
+## Usage Rules
+
+- Send contact, message, and email mutations to the server phone addon.
+- Keep local-only utility apps in `profileNamespace` until they are migrated to
+  server-backed storage.
+- Do not treat local phone utility state as shared multiplayer state.
+- Validate required UID, phone, email, subject, and message fields before
+  sending server requests.
+
+## Related Guides
+
+- [Phone Usage Guide](https://innovativedevsolutions.github.io/server-modules/phone)
+- [Client Notifications Usage Guide](https://innovativedevsolutions.github.io/client-addons/notifications)
+
+
+# Client Store Usage Guide
+
+The client store addon provides the storefront browser UI for catalog browsing,
+category hydration, payment source display, cart handling, and checkout
+requests.
+
+## Open Store UI
+
+```sqf
+call forge_client_store_fnc_openUI;
+```
+
+The UI opens `RscStore`, loads `ui/_site/index.html`, and routes browser alerts
+through `forge_client_store_fnc_handleUIEvents`.
+
+## Bridge
+
+`forge_client_store_fnc_initUIBridge` owns:
+
+- browser control lookup
+- store hydrate requests
+- category requests
+- checkout requests
+- category hydrate/failure responses
+- checkout success/failure responses
+- store config refresh after successful checkout
+
+Store currently uses its own `StoreUIBridge.receive(...)` browser bridge rather
+than the shared `ForgeBridge.receive(...)` delivery used by newer bridges.
+
+## Browser Events
+
+| Event                      | Client behavior                        |
+| -------------------------- | -------------------------------------- |
+| `store::ready`             | Request store hydrate from the server. |
+| `store::category::request` | Request catalog items for a category.  |
+| `store::checkout::request` | Forward checkout JSON to the server.   |
+| `store::close`             | Close the display.                     |
+
+## Browser Response Events
+
+| Event                      | Purpose                                    |
+| -------------------------- | ------------------------------------------ |
+| `store::hydrate`           | Initial storefront/session/config payload. |
+| `store::config::hydrate`   | Refreshed payment/source config.           |
+| `store::category::hydrate` | Category catalog payload.                  |
+| `store::category::failure` | Category request failure.                  |
+| `store::checkout::success` | Checkout success payload.                  |
+| `store::checkout::failure` | Checkout failure payload.                  |
+
+## Category Requests
+
+Category requests require a non-empty category value.
+
+```json
+{
+  "category": "weapons"
+}
+```
+
+The client lowercases the category before forwarding it to the server store
+addon.
+
+## Checkout Requests
+
+Checkout requests send a serialized checkout payload:
+
+```json
+{
+  "checkoutJson": "{\"items\":[],\"paymentSource\":\"cash\"}"
+}
+```
+
+The client only forwards the checkout data. The server store addon and
+extension validate prices, inventory grants, payment source authorization, and
+integration with bank, organization, locker, and garage state.
+
+After a successful checkout, the client asks the server for a fresh store config
+payload so payment-source balances and permissions stay current.
+
+## Authoritative State
+
+Catalog data, prices, checkout validation, money movement, organization funds,
+credit lines, locker grants, garage grants, and persistence are server-owned.
+
+## Related Guides
+
+- [Store Usage Guide](https://innovativedevsolutions.github.io/server-modules/store)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client Organization Usage Guide](https://innovativedevsolutions.github.io/client-addons/organization)
+- [Client Locker Usage Guide](https://innovativedevsolutions.github.io/client-addons/locker)
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/client-addons/garage)
+
+
+# Client Common Usage Guide
+
+The client `common` addon contains shared browser UI bridge declarations and
+common client-side browser integration patterns.
+
+## Purpose
+
+Use `forge_client_common` when a browser-backed feature UI needs reusable
+screen lifecycle behavior:
+
+- active browser control tracking
+- browser ready state
+- pending event queues
+- `ExecJS` payload delivery
+- shared bridge object inheritance through `createHashMapObject`
+
+Feature addons still own their app-specific events and server RPC mapping.
+
+## Shared Bridge
+
+Initialize the bridge declarations with:
+
+```sqf
+private _webUIDeclarations = call forge_client_common_fnc_initWebUIBridge;
+private _bridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
+```
+
+Feature bridges can inherit from the shared declaration:
+
+```sqf
+GVAR(MyUIBridgeBaseClass) = compileFinal createHashMapFromArray [
+    ["#base", _bridgeDeclaration],
+    ["#type", "MyUIBridgeBaseClass"],
+    ["handleReady", compileFinal {
+        params [["_control", controlNull, [controlNull]]];
+
+        _self call ["setActiveBrowserControl", [_control]];
+        _self call ["sendEvent", ["myAddon::hydrate", createHashMap, _control]];
+    }]
+];
+```
+
+## Event Delivery
+
+`sendEvent` builds this payload:
+
+```json
+{
+  "event": "myAddon::event",
+  "data": {}
+}
+```
+
+If the browser control is missing or not ready, the payload is queued on the
+screen object. When the screen marks ready, `flushPendingEvents` delivers the
+queue.
+
+## Screen Lifecycle
+
+The shared screen object tracks:
+
+| Field           | Purpose                                           |
+| --------------- | ------------------------------------------------- |
+| `control`       | Active browser control.                           |
+| `readyState`    | Whether the browser app has sent its ready event. |
+| `pendingEvents` | Outbound events waiting for a ready browser.      |
+
+Call `handleClose` or `dispose` when a display closes so stale controls and
+queued events are cleared.
+
+## Current Consumers
+
+The common bridge pattern is used by the newer bank, CAD, garage, and
+organization client bridges. Store currently keeps its own bridge object and
+browser bridge function names.
+
+## Usage Rules
+
+- Keep bridge inheritance in feature addons thin and explicit.
+- Keep shared code generic; do not add bank, CAD, org, or store-specific logic
+  to `common`.
+- Prefer namespaced events such as `garage::sync`.
+- Send hash maps or arrays that can be safely serialized with `toJSON`.
+- Avoid direct extension calls from the client bridge; send CBA server events.
+
+## Related Guides
+
+- [Client Usage Guide](https://innovativedevsolutions.github.io/client-addons)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client CAD Usage Guide](https://innovativedevsolutions.github.io/client-addons/cad)
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/client-addons/garage)
+- [Client Organization Usage Guide](https://innovativedevsolutions.github.io/client-addons/organization)
+
+
+# Client Actor Usage Guide
+
+The client actor addon owns the player interaction menu and client-side actor
+repository. It is the main launcher for nearby player actions and other Forge
+client UIs.
+
+## Open the Actor Menu
+
+```sqf
+call forge_client_actor_fnc_openUI;
+```
+
+The actor menu opens `RscActorMenu`, loads `ui/_site/index.html`, and routes
+browser alerts through `forge_client_actor_fnc_handleUIEvents`.
+
+## Repository
+
+`forge_client_actor_fnc_initRepository` creates `GVAR(ActorRepository)`.
+
+The repository:
+
+- requests actor initialization from the server
+- saves actor state through the server actor addon
+- caches client-visible actor fields
+- applies position, direction, stance, rank, and loadout on JIP sync when the
+  relevant settings allow it
+- provides nearby interaction actions to the browser UI
+
+Initialize actor state through the repository:
+
+```sqf
+GVAR(ActorRepository) call ["init", []];
+```
+
+Save actor state through the server:
+
+```sqf
+GVAR(ActorRepository) call ["save", [true]];
+```
+
+## Nearby Actions
+
+The menu asks for nearby actions with:
+
+```text
+actor::get::actions
+```
+
+The repository scans objects within 5 meters and returns actions based on
+mission object variables:
+
+| Variable           | Action                                    |
+| ------------------ | ----------------------------------------- |
+| `storeType`        | store                                     |
+| `isAtm`            | ATM                                       |
+| `isBank`           | bank                                      |
+| `isGarage`         | garage                                    |
+| `garageType`       | garage subtype                            |
+| `isLocker`         | virtual arsenal action when VA is enabled |
+| `deviceType`       | device action placeholder                 |
+| nearby player unit | player interaction placeholder            |
+
+The response is pushed into the browser with `updateAvailableActions(...)`.
+
+## Browser Events
+
+| Event                  | Client behavior                         |
+| ---------------------- | --------------------------------------- |
+| `actor::get::actions`  | Refresh nearby actions.                 |
+| `actor::close::menu`   | Close actor menu.                       |
+| `actor::open::atm`     | Open bank UI in ATM mode.               |
+| `actor::open::bank`    | Open bank UI in bank mode.              |
+| `actor::open::cad`     | Open CAD UI.                            |
+| `actor::open::garage`  | Open garage UI.                         |
+| `actor::open::vgarage` | Open virtual garage.                    |
+| `actor::open::org`     | Open organization UI.                   |
+| `actor::open::vlocker` | Open ACE arsenal on `FORGE_Locker_Box`. |
+| `actor::open::phone`   | Open phone UI.                          |
+| `actor::open::store`   | Open store UI.                          |
+
+Device and player interaction events currently display placeholder feedback.
+
+## Authoritative State
+
+Actor persistence is server-owned. The client repository requests and displays
+actor data, but actor creation, durable updates, and hot-state behavior are
+handled by the server actor addon and extension.
+
+## Related Guides
+
+- [Actor Usage Guide](https://innovativedevsolutions.github.io/server-modules/actor)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client CAD Usage Guide](https://innovativedevsolutions.github.io/client-addons/cad)
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/client-addons/garage)
+- [Client Locker Usage Guide](https://innovativedevsolutions.github.io/client-addons/locker)
+- [Client Organization Usage Guide](https://innovativedevsolutions.github.io/client-addons/organization)
+- [Client Phone Usage Guide](https://innovativedevsolutions.github.io/client-addons/phone)
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/client-addons/store)
+
+
+# Client Bank Usage Guide
+
+The client bank addon opens the bank and ATM browser UI, forwards banking
+requests to the server bank addon, and pushes account updates back into the
+browser.
+
+## Open Bank UI
+
+Open full bank mode:
+
+```sqf
+call forge_client_bank_fnc_openUI;
+```
+
+Open ATM mode:
+
+```sqf
+[true] call forge_client_bank_fnc_openUI;
+```
+
+The open function creates `RscBank`, sets the bridge mode to `bank` or `atm`,
+loads `ui/_site/index.html`, and routes browser events through
+`forge_client_bank_fnc_handleUIEvents`.
+
+## Bridge and Repository
+
+`forge_client_bank_fnc_initRepository` tracks account load and cached account
+state.
+
+`forge_client_bank_fnc_initUIBridge` owns:
+
+- active browser control tracking
+- bank/ATM mode
+- browser ready handling
+- account hydrate and sync responses
+- deposit, withdrawal, transfer, earnings deposit, credit repayment, and PIN
+  requests
+- browser notice delivery
+
+## Browser Events
+
+| Event                            | Client behavior                                         |
+| -------------------------------- | ------------------------------------------------------- |
+| `bank::ready`                    | Mark browser ready and request hydrate from the server. |
+| `bank::refresh`                  | Request fresh bank hydrate data.                        |
+| `bank::deposit::request`         | Forward deposit amount to the server.                   |
+| `bank::withdraw::request`        | Forward withdrawal amount to the server.                |
+| `bank::transfer::request`        | Forward target, source field, and amount.               |
+| `bank::depositEarnings::request` | Request earnings deposit.                               |
+| `bank::repayCreditLine::request` | Request credit-line repayment.                          |
+| `bank::pin::request`             | Forward PIN validation request.                         |
+| `bank::close`                    | Dispose bridge screen state and close the display.      |
+
+## Browser Response Events
+
+The bridge sends:
+
+| Event           | Purpose                       |
+| --------------- | ----------------------------- |
+| `bank::hydrate` | Full session/account payload. |
+| `bank::sync`    | Account patch or sync data.   |
+| `bank::notice`  | UI-visible notice payload.    |
+
+## Request Flow
+
+Example deposit flow:
+
+1. Browser sends `bank::deposit::request` with an `amount`.
+2. Client bridge calls the server bank request event.
+3. Server bank addon validates the request and calls bank hot-state logic.
+4. Server response is caught by the client post-init event handlers.
+5. Client bridge sends `bank::sync` or `bank::notice` back to the browser.
+
+## Authoritative State
+
+Balances, PIN authorization, transfers, checkout charges, credit lines, and
+persistence are server-owned. The client should only display account data and
+request mutations through server events.
+
+## Related Guides
+
+- [Bank Usage Guide](https://innovativedevsolutions.github.io/server-modules/bank)
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/client-addons/common)
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/client-addons/store)
+
+
+# Client CAD Usage Guide
+
+The client CAD addon provides the map and dispatch UI for groups, active
+tasks, task assignment, dispatch orders, support requests, and task
+acknowledge/decline workflows.
+
+## Open CAD UI
+
+```sqf
+call forge_client_cad_fnc_openUI;
+```
+
+The CAD UI opens `RscMapUI` and loads separate browser controls for:
+
+- top bar
+- bottom bar
+- side panel
+- dispatcher board
+
+The native Arma map remains part of the same display.
+
+## Repository and Bridge
+
+`forge_client_cad_fnc_initRepository` caches the hydrated CAD payload,
+selected mode, dispatch view, session data, groups, tasks, requests, and
+assignments.
+
+`forge_client_cad_fnc_initUIBridge` owns:
+
+- ready state for side panel, top bar, and dispatcher board
+- operations vs dispatch mode
+- board vs map dispatch view
+- hydrate requests
+- task assignment, acknowledge, and decline requests
+- dispatch order create/close requests
+- support request submit/close requests
+- group status, role, and profile requests
+- map focus actions
+
+## Browser Events
+
+| Event                         | Client behavior                                    |
+| ----------------------------- | -------------------------------------------------- |
+| `cad::topbar::ready`          | Mark top bar ready and push top bar state.         |
+| `cad::ready`                  | Mark side panel ready and request hydrate.         |
+| `cad::dispatcher::ready`      | Mark dispatcher board ready and push hydrate data. |
+| `cad::mode::set`              | Switch between operations and dispatch mode.       |
+| `cad::dispatchView::set`      | Switch dispatch board/map view.                    |
+| `cad::refresh`                | Request fresh CAD hydrate data.                    |
+| `cad::tasks::assign`          | Assign a task to a group.                          |
+| `cad::tasks::acknowledge`     | Acknowledge assigned task.                         |
+| `cad::tasks::decline`         | Decline assigned task.                             |
+| `cad::dispatchOrder::create`  | Create dispatch order.                             |
+| `cad::dispatchOrder::close`   | Close dispatch order.                              |
+| `cad::supportRequest::submit` | Submit support request.                            |
+| `cad::supportRequest::close`  | Close support request.                             |
+| `cad::groups::status`         | Update group status.                               |
+| `cad::groups::role`           | Update group role.                                 |
+| `cad::groups::profile`        | Update status and role together.                   |
+| `cad::groups::focus`          | Center map on a group.                             |
+| `cad::tasks::focus`           | Center map on a task.                              |
+| `cad::requests::focus`        | Center map on a support request.                   |
+| `map::zoomIn`                 | Zoom native map in.                                |
+| `map::zoomOut`                | Zoom native map out.                               |
+| `map::search`                 | Placeholder status update.                         |
+| `map::close`                  | Dispose bridge state and close the display.        |
+
+## Response Events
+
+The bridge pushes:
+
+| Event                       | Purpose                                      |
+| --------------------------- | -------------------------------------------- |
+| `cad::hydrate`              | Full hydrated CAD payload to the side panel. |
+| `cad::assignment::response` | Task assignment/acknowledge/decline result.  |
+| `cad::group::response`      | Group status/role/profile result.            |
+| `cad::request::response`    | Support request result.                      |
+
+Dispatcher board controls also receive direct `ExecJS` status and hydrate
+calls.
+
+## Task Compatibility
+
+CAD task visibility depends on server-side task catalog entries. Tasks created
+through Eden Forge task modules or `forge_server_task_fnc_startTask` are the
+normal CAD-compatible task sources because they register task catalog data.
+
+Direct handler or task-function calls only work with CAD when the task catalog
+entry already exists.
+
+## Authorization Notes
+
+Only dispatcher sessions can enter dispatch mode. If the hydrated session is
+not a dispatcher, the bridge forces the UI back to operations mode.
+
+## Related Guides
+
+- [CAD Usage Guide](https://innovativedevsolutions.github.io/server-modules/cad)
+- [Task Usage Guide](https://innovativedevsolutions.github.io/server-modules/task)
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/client-addons/common)
+
+
+# Client Garage Usage Guide
+
+The client garage addon provides player vehicle storage UI, vehicle
+store/retrieve actions, selected nearby vehicle service requests, vehicle
+context building, and the virtual garage view.
+
+## Open Garage UI
+
+```sqf
+call forge_client_garage_fnc_openUI;
+```
+
+The garage UI opens `RscGarage`, loads `ui/_site/index.html`, and routes
+browser events through `forge_client_garage_fnc_handleUIEvents`.
+
+## Open Virtual Garage
+
+```sqf
+call forge_client_garage_fnc_openVG;
+```
+
+The virtual garage uses mission-configured `FORGE_CfgGarages` locations to set
+the spawn/preview position, opens the BIS garage interface, and restricts the
+available vehicle lists from the virtual garage repository.
+
+## Client Services
+
+| Service                | Purpose                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `GarageRepository`     | Player garage view state.                                                                     |
+| `VGRepository`         | Virtual garage unlock view state.                                                             |
+| `GarageHelperService`  | Vehicle names, hit points, and payload helpers.                                               |
+| `GarageContextService` | Nearby/current vehicle context.                                                               |
+| `GaragePayloadService` | Browser hydrate payload construction.                                                         |
+| `GarageActionService`  | Store/retrieve request handling and selected nearby vehicle refuel/repair request forwarding. |
+| `GarageUIBridge`       | Browser ready, hydrate, and sync delivery.                                                    |
+
+## Browser Events
+
+| Event                                | Client behavior                                                               |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `garage::ready`                      | Mark browser ready and send `garage::hydrate`.                                |
+| `garage::refresh`                    | Send current garage payload as `garage::sync`.                                |
+| `garage::vehicle::retrieve::request` | Forward retrieve request through the action service.                          |
+| `garage::vehicle::store::request`    | Forward store request through the action service.                             |
+| `garage::vehicle::refuel::request`   | Forward selected nearby vehicle refuel request to the server economy service. |
+| `garage::vehicle::repair::request`   | Forward selected nearby vehicle repair request to the server economy service. |
+| `garage::close`                      | Dispose bridge screen state and close the display.                            |
+
+## Browser Response Events
+
+| Event                      | Purpose                                             |
+| -------------------------- | --------------------------------------------------- |
+| `garage::hydrate`          | Initial vehicle and session payload.                |
+| `garage::sync`             | Refreshed vehicle payload.                          |
+| `garage::service::success` | Browser notice for accepted refuel/repair requests. |
+| `garage::service::failure` | Browser notice for rejected refuel/repair requests. |
+
+Server action responses are handled by the action service and notification
+flow.
+
+## Vehicle Service
+
+The selected vehicle detail panel includes refuel and repair actions for nearby
+world vehicles. Stored records must be retrieved first because server economy
+services operate on live vehicle objects, not stored garage records.
+
+Refuel requests use the server economy `RefuelService` event. Repair requests
+use the server economy `RepairService` event. Both services are billed by the
+server economy addon through organization funds.
+
+## Mission Setup
+
+Garage interactions are normally surfaced through the actor menu when nearby
+objects have garage variables such as:
+
+```sqf
+_object setVariable ["isGarage", true, true];
+_object setVariable ["garageType", "cars", true];
+```
+
+Virtual garage access also requires configured garage locations in mission
+config so the preview/spawn position can be resolved.
+
+## Authoritative State
+
+The client gathers vehicle context and sends store/retrieve requests. Stored
+vehicle state, validation, spawning, removal, and persistence are owned by the
+server garage addon and extension.
+
+## Related Guides
+
+- [Garage Usage Guide](https://innovativedevsolutions.github.io/server-modules/garage)
+- [Client Actor Usage Guide](https://innovativedevsolutions.github.io/client-addons/actor)
+- [Client Notifications Usage Guide](https://innovativedevsolutions.github.io/client-addons/notifications)
+
+
+# Client Locker Usage Guide
+
+The client locker addon manages personal locker display state, local locker
+container behavior, and virtual arsenal unlock state.
+
+## Repositories
+
+`forge_client_locker_fnc_initRepository` creates `GVAR(LockerRepository)`.
+
+`forge_client_locker_fnc_initVARepository` creates `GVAR(VARepository)`.
+
+Initialize locker state:
+
+```sqf
+GVAR(LockerRepository) call ["init", []];
+GVAR(VARepository) call ["init", []];
+```
+
+## Locker Container Flow
+
+The repository searches mission namespace variables whose names contain
+`locker` and refer to objects. For each server/mission locker object, it creates
+a local `Box_NATO_Equip_F` at the same position and attaches container event
+handlers.
+
+On container open:
+
+- the local container is cleared
+- cached locker items are inserted into the container
+- over-capacity warnings are emitted when the item count is above 25
+
+On container close:
+
+- cargo, nested container items, and weapon attachments are read back
+- the new locker map is sent to the server with the override request
+- the local repository cache is updated
+
+## Virtual Arsenal Flow
+
+The virtual arsenal repository creates a local `FORGE_Locker_Box` and requests
+virtual arsenal unlocks from the server.
+
+As sync data arrives, it applies unlocks through ACE Arsenal:
+
+| Data key    | Client behavior        |
+| ----------- | ---------------------- |
+| `items`     | Add virtual items.     |
+| `weapons`   | Add virtual weapons.   |
+| `magazines` | Add virtual magazines. |
+| `backpacks` | Add virtual backpacks. |
+
+The actor menu opens the virtual locker with:
+
+```sqf
+[FORGE_Locker_Box, player, false] spawn ace_arsenal_fnc_openBox;
+```
+
+## Server Events
+
+The client repository sends requests for:
+
+- locker initialization
+- locker save
+- locker override after container close
+- virtual arsenal initialization
+- virtual arsenal save
+
+The server locker addon and extension own the saved locker and virtual arsenal
+state.
+
+## Mission Setup
+
+Mission locker objects must be placed into `missionNamespace` with a variable
+name containing `locker`. The client creates local interactive containers from
+those authoritative mission objects.
+
+Example:
+
+```sqf
+missionNamespace setVariable ["forge_locker_alpha", _lockerObject, true];
+```
+
+## Related Guides
+
+- [Locker Usage Guide](https://innovativedevsolutions.github.io/server-modules/locker)
+- [Owned Storage Usage Guide](https://innovativedevsolutions.github.io/server-modules/owned-storage)
+- [Client Actor Usage Guide](https://innovativedevsolutions.github.io/client-addons/actor)
+
+
+# Client Notifications Usage Guide
+
+The client notifications addon owns the notification HUD, notification sound,
+and local notification service used by Forge client and server modules.
+
+## Runtime Behavior
+
+The notification display is created during client initialization. The browser
+HUD sends:
+
+```text
+notifications::ready
+```
+
+When that event is received, `NotificationService` initializes and sends a
+startup notification.
+
+## Create a Notification
+
+Use the notification service when available:
+
+```sqf
+GVAR(NotificationService) call ["create", [
+    "success",
+    "Title",
+    "Notification text.",
+    4000
+]];
+```
+
+Arguments:
+
+| Argument    | Purpose                                                              |
+| ----------- | -------------------------------------------------------------------- |
+| `_type`     | Notification type, such as `success`, `info`, `warning`, or `error`. |
+| `_title`    | Notification title.                                                  |
+| `_content`  | Notification body text.                                              |
+| `_duration` | Display duration in milliseconds.                                    |
+
+The service dispatches a browser `forge:notify` custom event.
+
+## CBA Event Surface
+
+Other addons can use the client notification event:
+
+```sqf
+["forge_client_notifications_recieveNotification", [
+    "warning",
+    "Garage",
+    "Vehicle spawn position is blocked.",
+    3000
+]] call CBA_fnc_localEvent;
+```
+
+The event payload is:
+
+```sqf
+[_type, _title, _content, _duration]
+```
+
+## Usage Rules
+
+- Use the shared notification service instead of opening separate transient
+  browser UIs.
+- Keep server-driven player feedback short and actionable.
+- Treat notification state as transient client UI state.
+- Do not use notifications as the only record of durable domain changes.
+
+## Related Guides
+
+- [Client Usage Guide](https://innovativedevsolutions.github.io/client-addons)
+- [Client Garage Usage Guide](https://innovativedevsolutions.github.io/client-addons/garage)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/client-addons/store)
+
+
+# Client Organization Usage Guide
+
+The client organization addon provides the organization portal UI and browser
+bridge for login, registration, membership, invites, credit lines, leave and
+disband flows, assets, fleet, and treasury display.
+
+## Open Organization UI
+
+```sqf
+call forge_client_org_fnc_openUI;
+```
+
+The UI opens `RscOrg`, loads `ui/_site/index.html`, and routes browser alerts
+through `forge_client_org_fnc_handleUIEvents`.
+
+## Repository and Bridge
+
+`forge_client_org_fnc_initRepository` caches organization portal state.
+
+`forge_client_org_fnc_initUIBridge` owns:
+
+- active browser control tracking
+- portal hydrate requests
+- create/login response routing
+- leave and disband requests
+- credit-line assignment requests
+- invite, accept invite, and decline invite requests
+- targeted browser response events
+
+## Browser Events
+
+| Event                   | Client behavior                                   |
+| ----------------------- | ------------------------------------------------- |
+| `org::ready`            | Mark browser ready and request `org::sync`.       |
+| `org::login::request`   | Request portal hydrate as `org::login::success`.  |
+| `org::create::request`  | Validate org name and request creation on server. |
+| `org::disband::request` | Request disband on server.                        |
+| `org::leave::request`   | Request leave on server.                          |
+| `org::credit::request`  | Request credit-line assignment.                   |
+| `org::invite::request`  | Request member invite.                            |
+| `org::invite::accept`   | Accept invite by org ID.                          |
+| `org::invite::decline`  | Decline invite by org ID.                         |
+| `org::close`            | Close the display.                                |
+
+## Browser Response Events
+
+| Event                            | Purpose                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| `org::sync`                      | Full portal sync payload.                              |
+| `org::login::success`            | Login hydrate payload.                                 |
+| `org::create::success`           | Creation hydrate payload.                              |
+| `org::create::failure`           | Creation validation or server failure.                 |
+| `org::disband::success`          | Requester disband success.                             |
+| `org::disband::failure`          | Disband failure.                                       |
+| `org::portal::revoked`           | Portal state revoked by someone else's disband action. |
+| `org::leave::success`            | Leave success.                                         |
+| `org::leave::failure`            | Leave failure.                                         |
+| `org::credit::success`           | Credit-line request success.                           |
+| `org::credit::failure`           | Credit-line request failure.                           |
+| `org::member::creditUpdated`     | Targeted member credit-line patch.                     |
+| `org::invite::success`           | Invite success.                                        |
+| `org::invite::failure`           | Invite failure.                                        |
+| `org::invite::decision::success` | Invite accept/decline success.                         |
+| `org::invite::decision::failure` | Invite accept/decline failure.                         |
+
+## Request Examples
+
+Create organization request payload:
+
+```json
+{
+  "orgName": "Example Logistics"
+}
+```
+
+Credit-line request payload:
+
+```json
+{
+  "memberUid": "76561198000000000",
+  "memberName": "Player Name",
+  "amount": 2500
+}
+```
+
+Invite request payload:
+
+```json
+{
+  "targetUid": "76561198000000000",
+  "targetName": "Player Name"
+}
+```
+
+## Authoritative State
+
+Organization funds, reputation, membership, invites, credit lines, assets,
+fleet, and persistence are server-owned. The client portal only displays and
+requests changes.
+
+## Related Guides
+
+- [Organization Usage Guide](https://innovativedevsolutions.github.io/server-modules/organization)
+- [Client Common Usage Guide](https://innovativedevsolutions.github.io/client-addons/common)
+- [Client Bank Usage Guide](https://innovativedevsolutions.github.io/client-addons/bank)
+- [Client Store Usage Guide](https://innovativedevsolutions.github.io/client-addons/store)
+
+
+# Forge Framework Documentation
+
+::u-page-hero
+#title
+Forge Framework Documentation
+
+#description
+Forge is a persistent Arma 3 framework that combines SQF addons, a Rust
+`arma-rs` extension, SurrealDB persistence, shared domain crates, and
+browser-backed player interfaces.
+
+Use these docs to understand the runtime architecture, extension API surface,
+server gameplay modules, and client addon integration patterns.
+
+#links
+  :::u-button
+  ---
+  color: primary
+  size: xl
+  to: https://innovativedevsolutions.github.io/getting-started
+  trailing-icon: i-lucide-arrow-right
+  ---
+  Start here
+  :::
+
+  :::u-button
+  ---
+  color: neutral
+  icon: simple-icons-github
+  size: xl
+  to: https://github.com/InnovativeDevSolutions/forge
+  variant: outline
+  ---
+  View source
+  :::
+::
+
+::u-page-section
+#title
+What Forge Covers
+
+#features
+  :::u-page-feature
+  ---
+  icon: i-lucide-boxes
+  ---
+  #title
+  Domain [Modules]{.text-primary}
+
+  #description
+  Actor, bank, CAD, garage, locker, organization, phone, store, task, and
+  owned-storage workflows share a consistent service and extension model.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-server
+  ---
+  #title
+  Rust [Extension]{.text-primary}
+
+  #description
+  The server extension keeps command parsing thin, routes domain requests into
+  services, and persists durable state through SurrealDB.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-database-zap
+  ---
+  #title
+  Durable [Persistence]{.text-primary}
+
+  #description
+  Repository traits stay storage-agnostic while concrete adapters in the
+  extension handle schema and database mapping.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-monitor-smartphone
+  ---
+  #title
+  Browser [UIs]{.text-primary}
+
+  #description
+  Client addons host web-based interfaces inside Arma displays and synchronize
+  state through namespaced browser bridge events.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-arrow-left-right
+  ---
+  #title
+  Transport [Layer]{.text-primary}
+
+  #description
+  Large payloads move through chunked request and response transport while
+  smaller commands still use direct `callExtension` paths.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-wrench
+  ---
+  #title
+  Development [Workflow]{.text-primary}
+
+  #description
+  The docs cover module boundaries, local validation checks, and where new
+  domain logic belongs across Rust, SQF, and web UI layers.
+  :::
+::
+
+::u-page-section
+#title
+Documentation Areas
+
+#features
+  :::u-page-feature
+  ---
+  icon: i-lucide-rocket
+  to: https://innovativedevsolutions.github.io/getting-started
+  ---
+  #title
+  [Getting Started]{.text-primary}
+
+  #description
+  Framework overview, architecture, module reference, and development rules.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-server-cog
+  to: https://innovativedevsolutions.github.io/server-extension
+  ---
+  #title
+  Server [Extension]{.text-primary}
+
+  #description
+  Extension architecture, command surface, and SQF usage examples.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-layers-3
+  to: https://innovativedevsolutions.github.io/server-modules
+  ---
+  #title
+  Server [Modules]{.text-primary}
+
+  #description
+  Gameplay-domain usage guides for persistence, hot state, and command flows.
+  :::
+
+  :::u-page-feature
+  ---
+  icon: i-lucide-monitor-smartphone
+  to: https://innovativedevsolutions.github.io/client-addons
+  ---
+  #title
+  Client [Addons]{.text-primary}
+
+  #description
+  Browser bridge, client UX entry points, and addon-specific event contracts.
+  :::
+::

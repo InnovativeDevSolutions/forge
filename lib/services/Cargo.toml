@@ -1,0 +1,12 @@
+[package]
+name = "forge-services"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+forge-models = { path = "../models" }
+forge-repositories = { path = "../repositories" }
+forge-shared = { path = "../shared" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+uuid = { workspace = true }
