@@ -4,6 +4,24 @@ This repository uses `master` as the clean framework branch. Mission folders are
 kept off `master` so the framework can be versioned without bundling local test
 missions or playable mission copies.
 
+## Workflow Helper
+
+The repository includes a small helper for the common branch checks and branch
+switching commands:
+
+```powershell
+npm run workflow -- status
+npm run workflow -- doctor
+npm run workflow -- switch dev
+npm run workflow -- switch missions
+npm run workflow -- start-feature cad-task-request
+npm run workflow -- release-check
+```
+
+The helper refuses branch switches and feature branch creation when the working
+tree has uncommitted changes. Use the manual Git commands below when you need
+more control.
+
 ## Branch Roles
 
 - `master`: framework source, addon code, Rust extension code, docs, tooling,
