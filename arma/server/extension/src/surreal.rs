@@ -1,7 +1,10 @@
 //! SurrealDB connection bootstrap for persistent storage.
 
 use arma_rs::Group;
-use std::sync::{LazyLock, OnceLock, RwLock as StdRwLock};
+use std::sync::{
+    Arc, LazyLock, RwLock as StdRwLock,
+    atomic::{AtomicU64, Ordering},
+};
 use surrealdb::Surreal;
 use surrealdb::engine::remote::http::{Client, Http};
 use surrealdb::opt::auth::Root;
@@ -10,17 +13,20 @@ use tokio::time::{Duration, sleep, timeout};
 use crate::config::SurrealConfig;
 use crate::log;
 use crate::schema;
+use crate::{RUNTIME, config};
 
 pub type SurrealDb = Surreal<Client>;
 
 const CLIENT_READY_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_READY_POLL_INTERVAL: Duration = Duration::from_millis(25);
 
-static SURREAL_DB: OnceLock<SurrealDb> = OnceLock::new();
+static SURREAL_DB: LazyLock<StdRwLock<Option<Arc<SurrealDb>>>> =
+    LazyLock::new(|| StdRwLock::new(None));
 static SURREAL_CONNECTION_STATE: LazyLock<StdRwLock<SurrealConnectionState>> =
     LazyLock::new(|| StdRwLock::new(SurrealConnectionState::Disabled));
 static SURREAL_FAILURE_REASON: LazyLock<StdRwLock<Option<String>>> =
     LazyLock::new(|| StdRwLock::new(None));
+static SURREAL_INIT_GENERATION: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SurrealConnectionState {
@@ -36,6 +42,7 @@ pub fn prepare() {
 }
 
 pub async fn initialize(config: SurrealConfig) {
+    let generation = SURREAL_INIT_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     prepare();
 
     log::log(
@@ -52,6 +59,9 @@ pub async fn initialize(config: SurrealConfig) {
 
     let db = match connection {
         Err(_) => {
+            if !is_current_generation(generation) {
+                return;
+            }
             log::log(
                 "surreal",
                 "ERROR",
@@ -69,6 +79,9 @@ pub async fn initialize(config: SurrealConfig) {
         }
         Ok(Ok(db)) => db,
         Ok(Err(error)) => {
+            if !is_current_generation(generation) {
+                return;
+            }
             log::log(
                 "surreal",
                 "ERROR",
@@ -80,8 +93,15 @@ pub async fn initialize(config: SurrealConfig) {
         }
     };
 
+    if !is_current_generation(generation) {
+        return;
+    }
+
     log::log("surreal", "DEBUG", "Applying SurrealDB schemas");
     if let Err(error) = schema::apply_all(&db).await {
+        if !is_current_generation(generation) {
+            return;
+        }
         log::log(
             "surreal",
             "ERROR",
@@ -92,18 +112,21 @@ pub async fn initialize(config: SurrealConfig) {
         return;
     }
 
-    if SURREAL_DB.set(db).is_ok() {
-        log::log("surreal", "INFO", "Connected to SurrealDB server");
-        *SURREAL_CONNECTION_STATE.write().unwrap() = SurrealConnectionState::Connected;
-    } else {
-        log::log("surreal", "ERROR", "Failed to set SurrealDB client");
-        set_failure_reason("Failed to set SurrealDB client".to_string());
-        *SURREAL_CONNECTION_STATE.write().unwrap() = SurrealConnectionState::Failed;
+    if !is_current_generation(generation) {
+        return;
     }
+
+    *SURREAL_DB.write().unwrap() = Some(Arc::new(db));
+    log::log("surreal", "INFO", "Connected to SurrealDB server");
+    *SURREAL_CONNECTION_STATE.write().unwrap() = SurrealConnectionState::Connected;
 }
 
 fn set_failure_reason(reason: String) {
     *SURREAL_FAILURE_REASON.write().unwrap() = Some(reason);
+}
+
+fn is_current_generation(generation: u64) -> bool {
+    SURREAL_INIT_GENERATION.load(Ordering::SeqCst) == generation
 }
 
 fn failure_reason() -> String {
@@ -136,8 +159,8 @@ async fn connect(config: SurrealConfig) -> Result<SurrealDb, String> {
     Ok(db)
 }
 
-pub async fn client() -> Result<&'static SurrealDb, String> {
-    if let Some(db) = SURREAL_DB.get() {
+pub async fn client() -> Result<Arc<SurrealDb>, String> {
+    if let Some(db) = SURREAL_DB.read().unwrap().clone() {
         return Ok(db);
     }
 
@@ -148,9 +171,9 @@ pub async fn client() -> Result<&'static SurrealDb, String> {
         })
 }
 
-async fn wait_for_client() -> Result<&'static SurrealDb, String> {
+async fn wait_for_client() -> Result<Arc<SurrealDb>, String> {
     loop {
-        if let Some(db) = SURREAL_DB.get() {
+        if let Some(db) = SURREAL_DB.read().unwrap().clone() {
             return Ok(db);
         }
 
@@ -179,6 +202,17 @@ pub fn status() -> String {
     }
 }
 
+pub fn reconnect() -> String {
+    let surreal_config = config::load().surreal.clone();
+    prepare();
+    RUNTIME.spawn(async move {
+        initialize(surreal_config).await;
+    });
+    "reconnect initiated".to_string()
+}
+
 pub fn group() -> Group {
-    Group::new().command("status", status)
+    Group::new()
+        .command("status", status)
+        .command("reconnect", reconnect)
 }
