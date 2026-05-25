@@ -7,6 +7,11 @@ on:
     paths:
       - '**/*.md'
       - 'docus/public/**'
+      - 'docus/content/**'
+      - 'docus/app.config.ts'
+      - 'docus/nuxt.config.ts'
+      - 'docus/package*.json'
+      - 'tools/sync-docus-docs.mjs'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
