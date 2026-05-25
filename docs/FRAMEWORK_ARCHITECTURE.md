@@ -6,7 +6,7 @@ handlers, and optional browser UI.
 
 ## Runtime Flow
 
-![Architectural Flow Diagram](architecture-flow.svg)
+![Architectural Flow Diagram](images/architecture-flow.svg)
 
 ```text
 Arma client UI or SQF action
