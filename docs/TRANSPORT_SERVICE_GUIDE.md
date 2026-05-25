@@ -2,7 +2,7 @@
 
 The transport service provides paid point-to-point travel for players and
 nearby vehicles or passengers. It is framework-owned: missions only need placed
-transport objects and optional arrival markers with the expected variable names.
+transport objects and arrival markers with the expected variable names.
 
 ## Mission Contract
 
@@ -135,9 +135,3 @@ These screenshots show the default transport setup and player workflow:
 ![Player transport destination submenu](images/player/transport_destination_menu.jpg)
 
 ![Player transport completion notification](images/player/transport_complete.jpg)
-
-## Mission-Side Code Requirement
-
-No mission-side transport service, addAction script, or server event bridge is
-required. The framework handles menu discovery, destination selection, pricing,
-billing, cargo movement, and EventBus notifications.

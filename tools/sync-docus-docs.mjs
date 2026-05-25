@@ -100,6 +100,10 @@ const generatedPages = [
     target: '3.server-modules/11.task.md'
   },
   {
+    source: 'docs/TRANSPORT_SERVICE_GUIDE.md',
+    target: '3.server-modules/12.transport-service.md'
+  },
+  {
     source: 'docs/CLIENT_USAGE_GUIDE.md',
     target: '4.client-addons/0.index.md'
   },
@@ -435,16 +439,6 @@ npm run build:webui
 
   :::u-page-card
   ---
-  icon: i-lucide-git-branch
-  title: Git Workflow
-  to: /getting-started/git-workflow
-  ---
-  Follow the branch roles, release baseline, mission storage, and helper commands
-  used by the Forge repository.
-  :::
-
-  :::u-page-card
-  ---
   icon: i-lucide-map
   title: Mission Designer Guide
   to: /getting-started/mission-designer
@@ -629,6 +623,16 @@ Most modules follow the same shape:
   to: /server-modules/task
   ---
   Task catalog, ownership, status transitions, defuse counters, and rewards.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-route
+  title: Transport Service
+  to: /server-modules/transport-service
+  ---
+  Paid point-to-point player and cargo transport configured through Eden
+  objects and arrival markers.
   :::
 ::
 `
