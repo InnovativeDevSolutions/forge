@@ -58,6 +58,37 @@ switch (_event) do {
     case "actor::open::phone": { [] spawn EFUNC(phone,openUI); };
     case "actor::open::iplayer": { hint "Player interaction is not yet implemented." };
     case "actor::open::store": { [] spawn EFUNC(store,openUI); };
+    case "actor::request::transport": {
+        if !(_data isEqualType createHashMap) exitWith {
+            hint "Invalid transport request.";
+        };
+
+        private _destination = _data getOrDefault ["destination", createHashMap];
+        if !(_destination isEqualType createHashMap) exitWith {
+            hint "Invalid transport destination.";
+        };
+
+        private _fromNode = objectFromNetId (_data getOrDefault ["netId", ""]);
+        private _toNode = objectFromNetId (_destination getOrDefault ["netId", ""]);
+
+        if (isNull _fromNode || { isNull _toNode }) exitWith {
+            hint "Transport destination is no longer available.";
+        };
+
+        private _options = createHashMapFromArray [
+            ["label", _data getOrDefault ["label", "Transport"]],
+            ["nodePrefix", _data getOrDefault ["nodePrefix", "transport"]],
+            ["vehiclePrefix", _data getOrDefault ["vehiclePrefix", "transport_vehicle"]],
+            ["arrivalPrefix", _data getOrDefault ["arrivalPrefix", "transport_arrival"]],
+            ["maxIndexedNodes", _data getOrDefault ["maxIndexedNodes", 10]],
+            ["baseFare", _data getOrDefault ["baseFare", 100]],
+            ["pricePerKm", _data getOrDefault ["pricePerKm", 50]],
+            ["cargoRadius", _data getOrDefault ["cargoRadius", 25]],
+            ["includeCargo", _data getOrDefault ["includeCargo", true]]
+        ];
+
+        [SRPC(transport,requestTransport), [player, _fromNode, _toNode, _options]] call CFUNC(serverEvent);
+    };
     default { hint format ["Unhandled UI event: %1", _event]; };
 };
 

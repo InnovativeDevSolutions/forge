@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Placeholder: Player transport completion</title>
+  <desc id="desc">Capture the player and cargo after a successful transport request.</desc>
+  <rect width="1280" height="720" fill="#202733"/>
+  <rect x="80" y="70" width="1120" height="580" rx="8" fill="#2f3948" stroke="#7d8aa0" stroke-width="4" stroke-dasharray="18 14"/>
+  <text x="640" y="280" fill="#f3f5f7" font-family="Arial, sans-serif" font-size="48" text-anchor="middle">PLACEHOLDER IMAGE</text>
+  <text x="640" y="352" fill="#d7dde7" font-family="Arial, sans-serif" font-size="30" text-anchor="middle">Player: transport complete</text>
+  <text x="640" y="410" fill="#aeb9c9" font-family="Arial, sans-serif" font-size="24" text-anchor="middle">Show arrival at the destination with moved vehicles nearby.</text>
+</svg>

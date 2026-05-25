@@ -27,6 +27,42 @@ Rules validated by the Rust service:
 - `locker:get`, `locker:patch`, and `locker:remove` require an existing locker.
 - `locker:remove` takes the classname directly, not a JSON object.
 
+## Multiple Locker Objects
+
+Editor-placed locker objects are templates and access points, not separate
+durable inventories. During server post-init, any mission namespace object
+whose variable name contains `locker` is hidden globally. During client setup,
+each client reads the hidden object's classname, ASL position, vector direction,
+and vector up, then creates a matching local locker object with
+`createVehicleLocal`.
+
+The local clone is the object the player actually opens. On `ContainerOpened`,
+the client clears the clone and fills it from the player's UID-owned locker
+state. On `ContainerClosed`, the client reads the clone's cargo and sends a
+full locker override back to the server.
+
+There is no explicit maximum number of editor-placed locker access points. The
+practical limit is mission performance and how many local container objects are
+reasonable for the scenario.
+
+All locker access points load and save the same player locker, keyed by player
+UID. Opening `locker`, `locker_hq`, or `locker_outpost_1` does not create
+separate persistent inventories; those objects are separate local access clones
+for the same underlying player locker.
+
+## Store Grants and Duplicate Inventory
+
+The store checkout path grants items to the UID-owned locker hot state, not to a
+specific placed locker object. Item grants are merged by classname:
+
+- buying a new classname adds one new locker entry
+- buying an existing classname increases that entry's amount
+- checkout fails if the result would exceed 25 unique classnames
+
+Having more than one locker object on the map does not duplicate store grants.
+Duplicate quantities can only come from repeated checkout requests or repeated
+manual locker writes, not from the number of placed locker access points.
+
 ## Commands
 
 All commands are called on the `locker` group.

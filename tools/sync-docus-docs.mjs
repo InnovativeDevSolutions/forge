@@ -20,16 +20,20 @@ const generatedPages = [
     target: '1.getting-started/3.development.md'
   },
   {
+    source: 'docs/GIT_WORKFLOW.md',
+    target: '1.getting-started/4.git-workflow.md'
+  },
+  {
     source: 'docs/MISSION_DESIGNER_GUIDE.md',
-    target: '1.getting-started/4.mission-designer.md'
+    target: '1.getting-started/5.mission-designer.md'
   },
   {
     source: 'docs/PLAYER_GUIDE.md',
-    target: '1.getting-started/5.player-guide.md'
+    target: '1.getting-started/6.player-guide.md'
   },
   {
     source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/6.surrealdb-setup.md'
+    target: '1.getting-started/7.surrealdb-setup.md'
   },
   {
     source: 'arma/server/docs/README.md',
@@ -94,6 +98,10 @@ const generatedPages = [
   {
     source: 'docs/TASK_USAGE_GUIDE.md',
     target: '3.server-modules/11.task.md'
+  },
+  {
+    source: 'docs/TRANSPORT_SERVICE_GUIDE.md',
+    target: '3.server-modules/12.transport-service.md'
   },
   {
     source: 'docs/CLIENT_USAGE_GUIDE.md',
@@ -615,6 +623,16 @@ Most modules follow the same shape:
   to: /server-modules/task
   ---
   Task catalog, ownership, status transitions, defuse counters, and rewards.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-route
+  title: Transport Service
+  to: /server-modules/transport-service
+  ---
+  Paid point-to-point player and cargo transport configured through Eden
+  objects and arrival markers.
   :::
 ::
 `

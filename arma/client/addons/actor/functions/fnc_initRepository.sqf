@@ -121,6 +121,12 @@ GVAR(ActorRepositoryBaseClass) = compileFinal createHashMapFromArray [
             ];
             private _deviceType = _x getVariable ["deviceType", ""];
             private _isPlayer = _x isKindOf "Man" && isPlayer _x;
+            private _objectName = vehicleVarName _x;
+            private _transportPrefix = _x getVariable ["transportNodePrefix", "transport"];
+            private _isTransport = _x getVariable ["isTransport", false];
+            if (!_isTransport && { _objectName isNotEqualTo "" }) then {
+                _isTransport = _objectName isEqualTo _transportPrefix || { (_objectName find format ["%1_", _transportPrefix]) == 0 };
+            };
 
             if (_isStore) then { _nearbyActions pushBack ["store", true]; };
             if (_isAtm) then { _nearbyActions pushBack ["atm", true]; };
@@ -129,6 +135,55 @@ GVAR(ActorRepositoryBaseClass) = compileFinal createHashMapFromArray [
             if (_isGarage) then { _nearbyActions pushBack ["garage", _garageContext]; };
             if (_isGarage && GVAR(enableVG)) then { _nearbyActions pushBack ["vg", _garageContext]; };
             if (_deviceType isNotEqualTo "") then { _nearbyActions pushBack ["device", _deviceType]; };
+            if (_isTransport) then {
+                private _fromTransportNode = _x;
+                private _maxIndexedNodes = _x getVariable ["transportMaxIndexedNodes", 10];
+                private _baseFare = _x getVariable ["transportBaseFare", 100];
+                private _pricePerKm = _x getVariable ["transportPricePerKm", 50];
+                private _vehiclePrefix = _x getVariable ["transportVehiclePrefix", format ["%1_vehicle", _transportPrefix]];
+                private _arrivalPrefix = _x getVariable ["transportArrivalPrefix", format ["%1_arrival", _transportPrefix]];
+                private _nodeNames = [_transportPrefix];
+
+                for "_i" from 1 to _maxIndexedNodes do {
+                    _nodeNames pushBack format ["%1_%2", _transportPrefix, _i];
+                };
+
+                private _destinations = [];
+                {
+                    private _node = missionNamespace getVariable [_x, objNull];
+                    if (!isNull _node && { _node isNotEqualTo _fromTransportNode }) then {
+                        private _nodeLabel = _node getVariable ["transportLabel", vehicleVarName _node];
+                        if (_nodeLabel isEqualTo "") then { _nodeLabel = "Transport Point"; };
+
+                        private _distanceMeters = _fromTransportNode distance2D _node;
+                        private _cost = round (_baseFare + ((_distanceMeters / 1000) * _pricePerKm));
+                        _destinations pushBack createHashMapFromArray [
+                            ["netId", netId _node],
+                            ["name", vehicleVarName _node],
+                            ["label", _nodeLabel],
+                            ["cost", _cost]
+                        ];
+                    };
+                } forEach _nodeNames;
+
+                if (_destinations isNotEqualTo []) then {
+                    private _transportContext = createHashMapFromArray [
+                        ["netId", netId _x],
+                        ["name", _objectName],
+                        ["label", _x getVariable ["transportLabel", "Transport"]],
+                        ["nodePrefix", _transportPrefix],
+                        ["vehiclePrefix", _vehiclePrefix],
+                        ["arrivalPrefix", _arrivalPrefix],
+                        ["maxIndexedNodes", _maxIndexedNodes],
+                        ["baseFare", _baseFare],
+                        ["pricePerKm", _pricePerKm],
+                        ["cargoRadius", _x getVariable ["transportCargoRadius", 25]],
+                        ["includeCargo", _x getVariable ["transportIncludeCargo", true]],
+                        ["destinations", _destinations]
+                    ];
+                    _nearbyActions pushBack ["transport", _transportContext];
+                };
+            };
             if (_isPlayer && { _x isNotEqualTo player }) then { _nearbyActions pushBack ["player", name _x]; };
         } forEach (player nearObjects 5);
 
