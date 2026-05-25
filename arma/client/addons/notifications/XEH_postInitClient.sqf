@@ -5,7 +5,7 @@
 }, {
     ("NotificationHudLayer" call BFUNC(rscLayer)) cutRsc ["RscNotifications", "PLAIN"];
     call FUNC(openUI);
-    if (isNil QGVAR(NotificationService)) then { call FUNC(initService); };
+    if (isNil QGVAR(NotificationService)) then { call FUNC(initService); true };
 }] call CFUNC(waitUntilAndExecute);
 
 [QGVAR(recieveNotification), {

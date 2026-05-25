@@ -1,7 +1,7 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(LockerRepository)) then { call FUNC(initRepository); };
-if (isNil QGVAR(VARepository)) then { call FUNC(initVARepository); };
+if (isNil QGVAR(LockerRepository)) then { call FUNC(initRepository); true };
+if (isNil QGVAR(VARepository)) then { call FUNC(initVARepository); true };
 
 [QGVAR(initLocker), {
     GVAR(LockerRepository) call ["init", []];

@@ -37,6 +37,7 @@ GVAR(WebUIScreenDeclaration) = compileFinal createHashMapFromArray [
         _self set ["control", _control];
         _self set ["readyState", false];
         _self set ["pendingEvents", []];
+        true
     }],
     ["dispose", compileFinal {
         _self set ["control", controlNull];
@@ -86,7 +87,8 @@ GVAR(WebUIScreenDeclaration) = compileFinal createHashMapFromArray [
 GVAR(WebUIBridgeDeclaration) = compileFinal createHashMapFromArray [
     ["#type", "IWebUIBridge"],
     ["#create", compileFinal {
-        _self set ["screen", createHashMapObject [GVAR(WebUIScreenDeclaration)]];
+        _self set ["screen", createHashMapObject [GVAR(WebUIScreenDeclaration), []]];
+        true
     }],
     ["deliverPayload", compileFinal {
         params [["_control", controlNull, [controlNull]], ["_payload", createHashMap, [createHashMap]]];
@@ -132,7 +134,7 @@ GVAR(WebUIBridgeDeclaration) = compileFinal createHashMapFromArray [
         };
 
         if (!_hasScreen) then {
-            _screen = createHashMapObject [GVAR(WebUIScreenDeclaration)];
+            _screen = createHashMapObject [GVAR(WebUIScreenDeclaration), []];
             _self set ["screen", _screen];
         };
 

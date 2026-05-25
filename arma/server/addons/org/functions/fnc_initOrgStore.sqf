@@ -148,8 +148,9 @@ GVAR(OrgModel) = compileFinal createHashMapObject [[
     }]
 ]];
 
-GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
-    ["#base", EGVAR(common,BaseStore)],
+GVAR(OrgBaseStore) = compileFinal ([
+    EGVAR(common,BaseStore),
+    createHashMapFromArray [
     ["#type", "OrgBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Org Store Initialized!"] call EFUNC(common,log);
@@ -157,20 +158,7 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
         ["org:exists", ["default"]] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
         if !(_isSuccess) exitWith {
             ["ERROR", "Failed to check for default org!"] call EFUNC(common,log);
-
-            private _defaultOrg = createHashMapFromArray [
-                ["id", "default"],
-                ["owner", "server"],
-                ["name", "Forge Dynamics"],
-                ["funds", 200000],
-                ["reputation", 0],
-                ["credit_lines", createHashMap],
-                ["assets", createHashMap],
-                ["fleet", createHashMap],
-                ["members", createHashMap],
-                ["pending_invites", createHashMap]
-            ];
-            _defaultOrg
+            true
         };
 
         if (_result != "true") then {
@@ -207,7 +195,7 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
             ];
         };
 
-        _loadedDefaultOrg
+        true
     }],
     ["callHotOrg", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];
@@ -1363,7 +1351,13 @@ GVAR(OrgBaseStore) = compileFinal createHashMapFromArray [
 
         _finalOrg
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(OrgStore) = createHashMapObject [GVAR(OrgBaseStore)];
-GVAR(OrgStore)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(OrgStore) = createHashMapObject [GVAR(OrgBaseStore), []];
+true

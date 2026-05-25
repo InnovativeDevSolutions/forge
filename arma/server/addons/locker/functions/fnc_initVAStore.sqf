@@ -36,11 +36,13 @@ GVAR(VArsenalModel) = compileFinal createHashMapObject [[
     }]
 ]];
 
-GVAR(VABaseStore) = compileFinal createHashMapFromArray [
-    ["#base", EGVAR(common,BaseStore)],
+GVAR(VABaseStore) = compileFinal ([
+    EGVAR(common,BaseStore),
+    createHashMapFromArray [
     ["#type", "VABaseStore"],
     ["#create", compileFinal {
         ["INFO", "VArsenal Store Initialized!"] call EFUNC(common,log);
+        true
     }],
     ["callHotVArsenal", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];
@@ -88,7 +90,13 @@ GVAR(VABaseStore) = compileFinal createHashMapFromArray [
         if (_uid isEqualTo "") exitWith { createHashMap };
         _self call ["callHotVArsenal", ["owned:locker:hot:save", [_uid]]]
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(VAStore) = createHashMapObject [GVAR(VABaseStore)];
-GVAR(VAStore)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(VAStore) = createHashMapObject [GVAR(VABaseStore), []];
+true
