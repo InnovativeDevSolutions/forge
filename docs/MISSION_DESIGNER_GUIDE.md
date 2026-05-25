@@ -151,7 +151,7 @@ Minimum Eden setup:
 Transport nodes are generic paid travel points. They can represent ferries,
 airports, bus stops, teleport terminals, or any other mission transport system.
 The framework owns the menu, billing, cargo scan, and movement logic. The
-mission only needs placed objects and optional arrival markers.
+mission only needs placed objects and arrival markers.
 
 ![Eden transport location one](images/eden/transport_loc_1.jpg)
 
@@ -171,7 +171,7 @@ transport_2
 transport_10
 ```
 
-Place optional arrival markers with matching suffixes:
+Place arrival markers with matching suffixes:
 
 ```text
 transport_arrival

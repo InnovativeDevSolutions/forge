@@ -227,7 +227,7 @@ Player workflow:
 1. Stand near a transport point.
 2. Open the actor interaction menu.
 3. Select Transport.
-4. Select a destination from the transport submenu, or select Close to return
+4. Select a destination from the transport submenu, or select Back to return
    to the default interaction menu.
 
 ![Transport destination submenu](images/player/transport_destination_menu.jpg)
