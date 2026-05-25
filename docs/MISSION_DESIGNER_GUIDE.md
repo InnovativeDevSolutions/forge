@@ -30,6 +30,7 @@ case-sensitive in some initializers, so use lower-case names.
 | Store | name contains `store` | `isStore = true` | Store UI | Store catalog and checkout behavior are configured server-side. |
 | Garage | name contains `garage` | `isGarage = true` | Garage UI and virtual garage | Include a garage category in the name or set `garageType` manually. |
 | Locker | name contains `locker` | local `isLocker = true` | Virtual arsenal action | The server hides the editor object; each client creates a local locker at the same position. |
+| Transport | `transport`, `transport_1` through `transport_10` | discovered by variable name or `isTransport = true` | Transport destination menu | Paid player and cargo transfer between named transport nodes. |
 
 Recommended object names:
 
@@ -38,6 +39,8 @@ atm
 bank
 store
 locker
+transport
+transport_1
 garage_hq
 garage_hq_2
 ```
@@ -60,6 +63,7 @@ _atmTerminal setVariable ["isAtm", true, true];
 _storeCounter setVariable ["isStore", true, true];
 _garageTerminal setVariable ["isGarage", true, true];
 _garageTerminal setVariable ["garageType", "cars", true];
+_transportNode setVariable ["isTransport", true, true];
 ```
 
 Supported garage types are:
@@ -142,6 +146,75 @@ Minimum Eden setup:
 2. Set its Eden variable name to something containing `store`.
 3. Test that the actor menu shows the store action within 5 meters.
 
+## Transport Setup
+
+Transport nodes are generic paid travel points. They can represent ferries,
+airports, bus stops, teleport terminals, or any other mission transport system.
+The framework owns the menu, billing, cargo scan, and movement logic. The
+mission only needs placed objects and optional arrival markers.
+
+![Eden transport location one](images/eden/transport_loc_1.jpg)
+
+![Eden transport location two](images/eden/transport_loc_2.jpg)
+
+![Eden transport node object placement](images/eden/transport_obj_1.jpg)
+
+![Eden transport node variable name](images/eden/transport_obj_1_var.jpg)
+
+Place transport node objects with these variable names:
+
+```text
+transport
+transport_1
+transport_2
+...
+transport_10
+```
+
+Place optional arrival markers with matching suffixes:
+
+```text
+transport_arrival
+transport_arrival_1
+transport_arrival_2
+...
+transport_arrival_10
+```
+
+![Eden transport arrival marker placement](images/eden/transport_arrival_mrkr.jpg)
+
+![Eden transport arrival marker variable name](images/eden/transport_arrival_mrkr_var.jpg)
+
+Objects that should be excluded from the nearby cargo scan, such as the actual
+boat or transport vehicle used as set dressing, should use:
+
+```text
+transport_vehicle
+transport_vehicle_1
+transport_vehicle_2
+...
+transport_vehicle_10
+```
+
+![Eden transport vehicle exclusion object placement](images/eden/transport_veh_obj.jpg)
+
+![Eden transport vehicle exclusion object variable name](images/eden/transport_veh_obj_var.jpg)
+
+Minimum Eden setup:
+
+1. Place at least two transport node objects.
+2. Name them `transport`, `transport_1`, and so on.
+3. Place matching `transport_arrival*` markers where players and cargo should
+   appear.
+4. Name any set-dressing transport vehicles `transport_vehicle*` so they are
+   not moved as cargo.
+5. Test that the actor menu shows Transport within 5 meters of a node.
+
+The default fare is `$100 + distance in kilometers * $50`. The server charges
+player bank first, player cash second, then organization credit line fallback.
+See [Transport Service Guide](./TRANSPORT_SERVICE_GUIDE.md) for override
+variables and implementation details.
+
 ## Bank and ATM Setup
 
 Bank and ATM objects intentionally expose different workflows.
@@ -179,7 +252,7 @@ Minimum Eden setup:
 Locker objects are slightly different from other interaction objects. The
 server finds editor-placed objects whose variable names contain `locker`, hides
 those global objects, and each client creates a local locker object at the same
-position.
+position using the placed object's classname and orientation.
 
 ![Locker object placement](images/eden/locker_obj.jpg)
 
@@ -191,6 +264,11 @@ Minimum Eden setup:
 2. Set its Eden variable name to something containing `locker`.
 3. Do not use `forge_locker_box`.
 4. Test that the local locker appears and opens the virtual arsenal action.
+
+There is no editor-side maximum number of locker access points. Multiple locker
+objects on a map create multiple local access clones, but all of those clones
+load and save the same UID-owned player locker state. They do not create
+separate persistent lockers or cause store grants to duplicate by themselves.
 
 ## Medical Spawn Setup
 
