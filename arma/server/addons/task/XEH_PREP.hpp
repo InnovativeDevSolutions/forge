@@ -14,15 +14,26 @@ PREP(makeObject);
 PREP(makeShooter);
 PREP(makeTarget);
 PREP(missionManager);
+PREP(requestMissionTask);
 PREP(initTaskStore);
 
 PREP_SUBDIR(generators,attackMissionGenerator);
+PREP_SUBDIR(generators,captureHvtMissionGenerator);
+PREP_SUBDIR(generators,defendMissionGenerator);
+PREP_SUBDIR(generators,defuseMissionGenerator);
+PREP_SUBDIR(generators,deliveryMissionGenerator);
+PREP_SUBDIR(generators,destroyMissionGenerator);
+PREP_SUBDIR(generators,hostageMissionGenerator);
+PREP_SUBDIR(generators,hvtMissionGenerator);
 
+PREP_SUBDIR(helpers,getEnemyFactionUnitPool);
+PREP_SUBDIR(helpers,getMissionSettingRange);
 PREP_SUBDIR(helpers,handleTaskRewards);
 PREP_SUBDIR(helpers,parseTaskChainAttributes);
 PREP_SUBDIR(helpers,parseRewards);
 PREP_SUBDIR(helpers,spawnEnemyWave);
 PREP_SUBDIR(helpers,startTask);
+PREP_SUBDIR(helpers,updateEnemyCountFromActivePlayers);
 
 PREP_SUBDIR(modules,attackModule);
 PREP_SUBDIR(modules,cargoModule);

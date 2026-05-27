@@ -95,7 +95,8 @@ Mission designers can create tasks in four ways:
   intentionally fall back to the `default` org. This path expects the BIS task
   to already exist if map-task visibility is required.
 
-The dynamic mission manager can also generate attack tasks from config. That is
+The dynamic mission manager can also generate attack, defend, defuse, delivery,
+destroy, hostage, HVT kill, and HVT capture tasks from config. That is
 system-generated content rather than a hand-authored task creation path.
 
 ### CAD Compatibility
@@ -110,7 +111,7 @@ CAD-compatible creation paths:
 - Eden modules: compatible because they delegate to `fnc_startTask.sqf`
 - `fnc_startTask.sqf`: compatible because it registers the catalog entry,
   creates the BIS task, and dispatches through `fnc_handler.sqf`
-- dynamic mission manager attack tasks: compatible because the mission manager
+- dynamic mission manager tasks: compatible because the mission manager
   uses `fnc_startTask.sqf`
 
 Limited or incompatible paths:
@@ -244,7 +245,8 @@ Task module emits the following events to the event bus:
 - `task.notification.requested` - participant notifications pending dispatch
 
 ## Notes
-- the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; mission generation only runs when the `forge_task_enableGenerator` CBA setting is enabled
+- the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; timer-based mission generation only runs when the `forge_task_enableGenerator` CBA setting is enabled
+- CAD can request a specific generated mission type through `fnc_requestMissionTask.sqf`
 - it starts server-owned tasks through `fnc_handler.sqf` and binds them to the `default` org
 - task lifecycle for the mission manager is tracked through `TaskStore` status entries
 - task backend state is intentionally transient and resets with the active server/mission lifecycle

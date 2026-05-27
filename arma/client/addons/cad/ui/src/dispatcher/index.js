@@ -1,6 +1,16 @@
 const dispatcherFormatters = window.cadDispatcherFormatters || {};
 const dispatcherModals = window.cadDispatcherModals || {};
 const dispatcherRender = window.cadDispatcherRender || {};
+const defaultTaskTypes = [
+    { value: "attack", label: "Attack" },
+    { value: "defend", label: "Defend" },
+    { value: "delivery", label: "Delivery" },
+    { value: "destroy", label: "Destroy" },
+    { value: "defuse", label: "Defuse" },
+    { value: "hostage", label: "Hostage" },
+    { value: "hvtkill", label: "Kill HVT" },
+    { value: "hvtcapture", label: "Capture HVT" },
+];
 
 window.cadDispatcher = {
     contracts: [],
@@ -11,16 +21,7 @@ window.cadDispatcher = {
     editingGroupId: "",
     viewingRequestId: "",
     convertingRequestId: "",
-    taskTypes: [
-        { value: "attack", label: "Attack" },
-        { value: "defend", label: "Defend" },
-        { value: "delivery", label: "Delivery" },
-        { value: "destroy", label: "Destroy" },
-        { value: "defuse", label: "Defuse" },
-        { value: "hostage", label: "Hostage" },
-        { value: "hvtkill", label: "Kill HVT" },
-        { value: "hvtcapture", label: "Capture HVT" },
-    ],
+    taskTypes: defaultTaskTypes.slice(),
     statuses: [
         "available",
         "en_route",
@@ -133,6 +134,14 @@ window.cadDispatcher = {
         this.requests = Array.isArray(payload.requests) ? payload.requests : [];
         this.groups = Array.isArray(payload.groups) ? payload.groups : [];
         this.activity = Array.isArray(payload.activity) ? payload.activity : [];
+        if (Array.isArray(payload.generatedTaskTypes)) {
+            this.taskTypes = payload.generatedTaskTypes
+                .map((entry) => ({
+                    value: String(entry?.value || "").trim(),
+                    label: String(entry?.label || entry?.value || "").trim(),
+                }))
+                .filter((entry) => entry.value);
+        }
         this.session =
             payload.session && typeof payload.session === "object"
                 ? payload.session
@@ -223,6 +232,14 @@ window.cadDispatcher = {
         this.closeOrderModal();
     },
     requestGeneratedTask() {
+        if (!this.taskTypes.length) {
+            this.setStatus(
+                "Generated task requests are disabled by server settings.",
+                "error",
+            );
+            return;
+        }
+
         const taskType = document.getElementById(
             "dispatcherTaskTypeSelect",
         ).value;

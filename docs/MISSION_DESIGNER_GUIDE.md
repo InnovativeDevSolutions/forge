@@ -728,6 +728,21 @@ Validation:
 
 ## Mission Manager Blacklist Markers
 
+Generated missions are configured through mission-local `CfgMissions.hpp`.
+Place it in the mission folder and include it from `description.ext` so mission
+designers own task weights, reward ranges, time limits, HVT/hostage class
+pools, defuse device pools, delivery cargo, destroy targets, and the
+`locationReuseCooldown`.
+
+If a mission does not define `CfgMissions`, the task addon falls back to the
+framework copy at `arma/server/addons/task/CfgMissions.hpp`. Treat the
+framework file as the default schema and mission copies as the tuning layer.
+
+The generated mission system supports `attack`, `defend`, `defuse`,
+`delivery`, `destroy`, `hostage`, `hvtkill`, and `hvtcapture`. The
+`forge_task_enableGenerator` CBA setting gates both timer-based generation and
+CAD dispatcher-requested generation.
+
 The dynamic mission generator avoids rectangle and ellipse area markers whose
 marker name or marker text starts with `blklist`.
 
