@@ -104,7 +104,7 @@ The dispatcher-generated task dropdown is hydrated from the server
 `generatedTaskTypes` payload. The UI has a built-in fallback list for loading or
 older payload compatibility, but any hydrate payload that includes
 `generatedTaskTypes` replaces that fallback. An empty hydrated list disables the
-request control, which is how `forge_task_enableGenerator = false` is surfaced
+request control, which is how `forge_server_task_enableGenerator = false` is surfaced
 client-side.
 
 ## Authorization Notes

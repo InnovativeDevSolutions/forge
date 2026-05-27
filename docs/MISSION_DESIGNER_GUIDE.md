@@ -740,7 +740,7 @@ framework file as the default schema and mission copies as the tuning layer.
 
 The generated mission system supports `attack`, `defend`, `defuse`,
 `delivery`, `destroy`, `hostage`, `hvtkill`, and `hvtcapture`. The
-`forge_task_enableGenerator` CBA setting gates both timer-based generation and
+`forge_server_task_enableGenerator` CBA setting gates both timer-based generation and
 CAD dispatcher-requested generation.
 
 The dynamic mission generator avoids rectangle and ellipse area markers whose
