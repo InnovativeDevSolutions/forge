@@ -245,7 +245,7 @@ Task module emits the following events to the event bus:
 - `task.notification.requested` - participant notifications pending dispatch
 
 ## Notes
-- the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; timer-based mission generation only runs when the `forge_task_enableGenerator` CBA setting is enabled
+- the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; timer-based mission generation only runs when the `forge_server_task_enableGenerator` CBA setting is enabled
 - CAD can request a specific generated mission type through `fnc_requestMissionTask.sqf`
 - it starts server-owned tasks through `fnc_handler.sqf` and binds them to the `default` org
 - task lifecycle for the mission manager is tracked through `TaskStore` status entries

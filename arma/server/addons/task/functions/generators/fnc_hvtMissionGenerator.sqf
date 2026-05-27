@@ -28,19 +28,28 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         _self set ["aiGroupsConfig", (_missionConfig >> "AIGroups")];
         _self set ["hvtConfig", (_missionConfig >> "MissionTypes" >> "HVTKill")];
         _self set ["generatorType", "hvtkill"];
+        ["INFO", format ["Mission generator registered. Type=hvtkill, ConfigPath=%1", _missionConfig]] call EFUNC(common,log);
     }],
     ["getGeneratorType", compileFinal {
         _self getOrDefault ["generatorType", "hvtkill"]
     }],
     ["getMissionInterval", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
+        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
         private _interval = getNumber (_missionConfig >> "missionInterval");
+        if (_settings isEqualType createHashMap) then {
+            _interval = _settings getOrDefault ["missionInterval", _interval];
+        };
         if (_interval <= 0) then { _interval = 300; };
         _interval
     }],
     ["getMaxConcurrentMissions", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
+        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
         private _maxConcurrent = getNumber (_missionConfig >> "maxConcurrentMissions");
+        if (_settings isEqualType createHashMap) then {
+            _maxConcurrent = _settings getOrDefault ["maxConcurrentMissions", _maxConcurrent];
+        };
         if (_maxConcurrent <= 0) then { _maxConcurrent = 1; };
         _maxConcurrent
     }],

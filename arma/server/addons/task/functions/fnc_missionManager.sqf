@@ -18,6 +18,34 @@
 
 if !(isServer) exitWith { false };
 if !(isNil QGVAR(MissionManagerPFH)) exitWith { false };
+
+if (
+    !(missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) &&
+    { !(isNil "forge_pmc_fnc_setupMenu_applySettings") }
+) exitWith {
+    if !(missionNamespace getVariable [QGVAR(MissionManagerStartupPending), false]) then {
+        missionNamespace setVariable [QGVAR(MissionManagerStartupPending), true, true];
+        ["INFO", "Mission manager startup deferred until mission setup settings are applied."] call EFUNC(common,log);
+
+        [] spawn {
+            waitUntil {
+                sleep 1;
+                (missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) || { time > 180 }
+            };
+
+            if !(missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) then {
+                ["INFO", "Mission manager startup applying mission setup fallback settings after timeout."] call EFUNC(common,log);
+                [] call forge_pmc_fnc_setupMenu_applySettings;
+            };
+
+            missionNamespace setVariable [QGVAR(MissionManagerStartupPending), false, true];
+            call FUNC(missionManager);
+        };
+    };
+
+    true
+};
+
 if (isNil QGVAR(AttackMissionGeneratorBaseClass)) then { call FUNC(attackMissionGenerator); };
 if (isNil QGVAR(DefendMissionGeneratorBaseClass)) then { call FUNC(defendMissionGenerator); };
 if (isNil QGVAR(DefuseMissionGeneratorBaseClass)) then { call FUNC(defuseMissionGenerator); };
@@ -44,6 +72,10 @@ GVAR(MissionManagerBaseClass) = compileFinal createHashMapFromArray [
             ["hvtkill", createHashMapObject [GVAR(KillHvtMissionGeneratorBaseClass)]],
             ["hvtcapture", createHashMapObject [GVAR(CaptureHvtMissionGeneratorBaseClass)]]
         ]];
+        ["INFO", format [
+            "Mission manager registered generator entries: %1",
+            (_self getOrDefault ["generators", []]) apply { _x param [0, ""] }
+        ]] call EFUNC(common,log);
     }],
     ["getGenerators", compileFinal {
         (_self getOrDefault ["generators", []]) apply { _x param [1, createHashMap, [createHashMap]] }

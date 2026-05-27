@@ -77,7 +77,7 @@ the task mission manager as `generatedTaskTypes`; the client uses that hydrated
 list for the dropdown.
 
 Generated mission requests are controlled by the server CBA setting
-`forge_task_enableGenerator`:
+`forge_server_task_enableGenerator`:
 
 - Enabled: CAD receives the generated task type list and dispatchers can request
   a specific generator type.
