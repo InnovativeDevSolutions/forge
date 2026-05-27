@@ -1,6 +1,6 @@
 #include "script_component.hpp"
 
-if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
+if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); true };
 if (isNil QGVAR(TaskLifecycleEventLogTokens)) then {
     private _logTaskLifecycleEvent = {
         params ["_event"];

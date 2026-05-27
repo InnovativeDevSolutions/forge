@@ -105,11 +105,13 @@ GVAR(ActorModel) = compileFinal createHashMapObject [[
     }]
 ]];
 
-GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
-    ["#base", EGVAR(common,BaseStore)],
+GVAR(ActorBaseStore) = compileFinal ([
+    EGVAR(common,BaseStore),
+    createHashMapFromArray [
     ["#type", "ActorBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Actor Store Initialized!"] call EFUNC(common,log);
+        true
     }],
     ["cacheActor", compileFinal {
         params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
@@ -561,7 +563,13 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
 
         _self call ["override", [_uid, _finalActor, false]]
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(ActorStore) = createHashMapObject [GVAR(ActorBaseStore)];
-GVAR(ActorStore)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(ActorStore) = createHashMapObject [GVAR(ActorBaseStore), []];
+true

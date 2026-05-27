@@ -6,7 +6,7 @@ PREP_RECOMPILE_END;
 
 // private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 
-if (isNil QGVAR(PhoneStore)) then { [] call FUNC(initPhoneStore); };
+if (isNil QGVAR(PhoneStore)) then { [] call FUNC(initPhoneStore); true };
 
 // Contact Management Events
 [QGVAR(requestInitPhone), {

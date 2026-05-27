@@ -193,12 +193,19 @@ const actionDefinitions = {
         description: "Access your virtual garage",
         action: "actor::open::vgarage",
     },
+    transport: {
+        id: "transport",
+        title: "Transport",
+        description: "Show available travel destinations",
+        action: "actor::show::transport",
+    },
 };
 
 const initialState = {
     availableActions: [],
     menuItems: [...baseMenuItems],
     baseMenuItems: [...baseMenuItems],
+    defaultMenuItems: [...baseMenuItems],
     actionDefinitions: { ...actionDefinitions },
 };
 
@@ -244,6 +251,7 @@ function actorReducer(state = initialState, action) {
                 ...state,
                 availableActions: action.payload,
                 menuItems: newMenuItems,
+                defaultMenuItems: newMenuItems,
             };
 
         case ActionTypes.SET_MENU_ITEMS:
@@ -426,6 +434,43 @@ function RadialMenu() {
 
     const handleItemClick = (item) => {
         console.log("Menu item clicked:", item);
+        if (item.action === "actor::show::default") {
+            store.dispatch(
+                actions.setMenuItems(state.defaultMenuItems || state.baseMenuItems),
+            );
+            return;
+        }
+
+        if (item.action === "actor::show::transport") {
+            const context = item.context || {};
+            const destinations = Array.isArray(context.destinations)
+                ? context.destinations
+                : [];
+            const transportItems = [
+                {
+                    id: "transport-back",
+                    title: "Back",
+                    description: "Return to the default interaction menu",
+                    action: "actor::show::default",
+                },
+                ...destinations.map((destination, index) => ({
+                    id: `transport-destination-${index}`,
+                    title: destination.cost
+                        ? `${destination.label || destination.name || "Destination"} - $${destination.cost}`
+                        : destination.label || destination.name || "Destination",
+                    description: "Request transport to this destination",
+                    action: "actor::request::transport",
+                    context: {
+                        ...context,
+                        destination,
+                    },
+                })),
+            ];
+
+            store.dispatch(actions.setMenuItems(transportItems));
+            return;
+        }
+
         const alert = {
             event: item.action,
             data: item.context || {},

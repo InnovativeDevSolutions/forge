@@ -23,12 +23,15 @@
 private _webUIDeclarations = call EFUNC(common,initWebUIBridge);
 private _webUIBridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
 
-GVAR(CADUIBridgeBaseClass) = compileFinal createHashMapFromArray [
-    ["#base", _webUIBridgeDeclaration],
+GVAR(CADUIBridgeBaseClass) = compileFinal ([
+    _webUIBridgeDeclaration,
+    createHashMapFromArray [
     ["#type", "CADUIBridgeBaseClass"],
     ["#create", compileFinal {
+        _self set ["screen", createHashMapObject [EGVAR(common,WebUIScreenDeclaration), []]];
         _self set ["dispatcherReady", false];
         _self set ["topBarReady", false];
+        true
     }],
     ["getActiveBrowserControl", compileFinal {
         private _display = uiNamespace getVariable [QGVAR(Display), displayNull];
@@ -482,7 +485,13 @@ GVAR(CADUIBridgeBaseClass) = compileFinal createHashMapFromArray [
             ["success", _result getOrDefault ["success", false]]
         ]]]
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(CADUIBridge) = createHashMapObject [GVAR(CADUIBridgeBaseClass)];
-GVAR(CADUIBridge)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(CADUIBridge) = createHashMapObject [GVAR(CADUIBridgeBaseClass), []];
+true

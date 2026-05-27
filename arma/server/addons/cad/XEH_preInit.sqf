@@ -91,20 +91,23 @@ call FUNC(registerEventListeners);
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
 
-    if (isNil "forge_pmc_fnc_requestMissionTask") exitWith {
-        _result set ["message", "This mission does not expose dispatcher-generated tasks."];
+    if !(isNil QEFUNC(task,requestMissionTask)) then {
+        _result = [_taskType, _metadata, _uid] call EFUNC(task,requestMissionTask);
+    } else {
+        if (isNil "forge_pmc_fnc_requestMissionTask") exitWith {
+            _result set ["message", "This mission does not expose dispatcher-generated tasks."];
+            [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
+        };
+
+        _result = [_taskType, _metadata, _uid] call forge_pmc_fnc_requestMissionTask;
+    };
+
+    if !(_result getOrDefault ["success", false]) exitWith {
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
 
-    // Temporary mission-owned integration point. This keeps simulator-specific
-    // generator logic in the mission until CAD/task grows a framework-level
-    // on-demand generation interface.
-    _result = [_taskType, _metadata, _uid] call forge_pmc_fnc_requestMissionTask;
     [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
-
-    if (_result getOrDefault ["success", false]) then {
-        [CRPC(cad,invalidateCadState), []] call CFUNC(globalEvent);
-    };
+    [CRPC(cad,invalidateCadState), []] call CFUNC(globalEvent);
 }] call CFUNC(addEventHandler);
 
 [QGVAR(requestSubmitCadSupportRequest), {

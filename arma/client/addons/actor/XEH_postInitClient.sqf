@@ -23,7 +23,7 @@ player addEventHandler ["Respawn", {
     [SRPC(economy,onRespawn), [_unit, _corpse, _uid]] call CFUNC(serverEvent);
 }];
 
-if (isNil QGVAR(ActorRepository)) then { call FUNC(initRepository); };
+if (isNil QGVAR(ActorRepository)) then { call FUNC(initRepository); true };
 
 GVAR(resetMedicalSpectator) = {
     player switchMove "";

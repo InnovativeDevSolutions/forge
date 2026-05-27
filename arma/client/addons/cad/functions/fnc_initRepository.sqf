@@ -30,6 +30,7 @@ GVAR(CADRepository) = createHashMapObject [[
         _self set ["requests", []];
         _self set ["assignments", []];
         _self set ["activity", []];
+        _self set ["generatedTaskTypes", []];
         _self set ["session", createHashMap];
         _self set ["mode", "operations"];
         _self set ["dispatchView", "board"];
@@ -41,6 +42,7 @@ GVAR(CADRepository) = createHashMapObject [[
             ["requests", +(_self getOrDefault ["requests", []])],
             ["assignments", +(_self getOrDefault ["assignments", []])],
             ["activity", +(_self getOrDefault ["activity", []])],
+            ["generatedTaskTypes", +(_self getOrDefault ["generatedTaskTypes", []])],
             ["session", +(_self getOrDefault ["session", createHashMap])],
             ["mode", _self getOrDefault ["mode", "operations"]],
             ["dispatchView", _self getOrDefault ["dispatchView", "board"]]
@@ -72,6 +74,7 @@ GVAR(CADRepository) = createHashMapObject [[
         _self set ["requests", +(_payload getOrDefault ["requests", []])];
         _self set ["assignments", +(_payload getOrDefault ["assignments", []])];
         _self set ["activity", +(_payload getOrDefault ["activity", []])];
+        _self set ["generatedTaskTypes", +(_payload getOrDefault ["generatedTaskTypes", []])];
         _self set ["session", +(_payload getOrDefault ["session", createHashMap])];
         true
     }],

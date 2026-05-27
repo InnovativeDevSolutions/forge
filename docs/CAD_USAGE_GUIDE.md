@@ -69,6 +69,26 @@ Common generated IDs:
 | `cad:groups:build` | `groups_seed_json` | Group array JSON. |
 | `cad:view:hydrate` | `hydrate_seed_json` | Hydrated CAD payload JSON. |
 
+## Generated Mission Requests
+
+Dispatchers can request framework-generated mission tasks from the CAD
+dispatcher board. The server hydrates the available generated task types from
+the task mission manager as `generatedTaskTypes`; the client uses that hydrated
+list for the dropdown.
+
+Generated mission requests are controlled by the server CBA setting
+`forge_task_enableGenerator`:
+
+- Enabled: CAD receives the generated task type list and dispatchers can request
+  a specific generator type.
+- Disabled: CAD receives an empty generated task type list, the task request UI
+  is disabled, and server-side request handling rejects any manual request.
+
+The framework-owned request entry point is
+`forge_server_task_fnc_requestMissionTask`. Server CAD calls that first and only
+falls back to a mission-local `forge_pmc_fnc_requestMissionTask` when the
+framework entry point is unavailable.
+
 ## Submit a Support Request
 
 ```sqf
@@ -175,6 +195,7 @@ private _session = createHashMapFromArray [
 private _seed = createHashMapFromArray [
     ["groups", _liveGroups],
     ["activeTasks", _activeTasks],
+    ["generatedTaskTypes", _generatedTaskTypes],
     ["session", _session]
 ];
 

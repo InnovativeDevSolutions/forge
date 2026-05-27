@@ -19,6 +19,13 @@
 if !(isServer) exitWith { false };
 if !(isNil QGVAR(MissionManagerPFH)) exitWith { false };
 if (isNil QGVAR(AttackMissionGeneratorBaseClass)) then { call FUNC(attackMissionGenerator); };
+if (isNil QGVAR(DefendMissionGeneratorBaseClass)) then { call FUNC(defendMissionGenerator); };
+if (isNil QGVAR(DefuseMissionGeneratorBaseClass)) then { call FUNC(defuseMissionGenerator); };
+if (isNil QGVAR(DeliveryMissionGeneratorBaseClass)) then { call FUNC(deliveryMissionGenerator); };
+if (isNil QGVAR(DestroyMissionGeneratorBaseClass)) then { call FUNC(destroyMissionGenerator); };
+if (isNil QGVAR(HostageMissionGeneratorBaseClass)) then { call FUNC(hostageMissionGenerator); };
+if (isNil QGVAR(KillHvtMissionGeneratorBaseClass)) then { call FUNC(hvtMissionGenerator); };
+if (isNil QGVAR(CaptureHvtMissionGeneratorBaseClass)) then { call FUNC(captureHvtMissionGenerator); };
 
 #pragma hemtt ignore_variables ["_self"]
 GVAR(MissionManagerBaseClass) = compileFinal createHashMapFromArray [
@@ -27,10 +34,54 @@ GVAR(MissionManagerBaseClass) = compileFinal createHashMapFromArray [
         _self set ["lastMissionGenerationAt", -1e10];
         _self set ["recentLocationRegistry", []];
         _self set ["activeMissionRegistry", createHashMap];
-        _self set ["generators", [createHashMapObject [GVAR(AttackMissionGeneratorBaseClass)]]];
+        _self set ["generators", [
+            ["attack", createHashMapObject [GVAR(AttackMissionGeneratorBaseClass)]],
+            ["defend", createHashMapObject [GVAR(DefendMissionGeneratorBaseClass)]],
+            ["defuse", createHashMapObject [GVAR(DefuseMissionGeneratorBaseClass)]],
+            ["delivery", createHashMapObject [GVAR(DeliveryMissionGeneratorBaseClass)]],
+            ["destroy", createHashMapObject [GVAR(DestroyMissionGeneratorBaseClass)]],
+            ["hostage", createHashMapObject [GVAR(HostageMissionGeneratorBaseClass)]],
+            ["hvtkill", createHashMapObject [GVAR(KillHvtMissionGeneratorBaseClass)]],
+            ["hvtcapture", createHashMapObject [GVAR(CaptureHvtMissionGeneratorBaseClass)]]
+        ]];
     }],
     ["getGenerators", compileFinal {
+        (_self getOrDefault ["generators", []]) apply { _x param [1, createHashMap, [createHashMap]] }
+    }],
+    ["getGeneratorEntries", compileFinal {
         _self getOrDefault ["generators", []]
+    }],
+    ["getGeneratorByType", compileFinal {
+        params [["_generatorType", "", [""]]];
+
+        private _result = createHashMap;
+        {
+            if ((_x param [0, "", [""]]) isEqualTo _generatorType) exitWith {
+                _result = _x param [1, createHashMap, [createHashMap]];
+            };
+        } forEach (_self call ["getGeneratorEntries", []]);
+
+        _result
+    }],
+    ["getGeneratedTaskTypes", compileFinal {
+        private _labels = createHashMapFromArray [
+            ["attack", "Attack"],
+            ["defend", "Defend"],
+            ["defuse", "Defuse"],
+            ["delivery", "Delivery"],
+            ["destroy", "Destroy"],
+            ["hostage", "Hostage"],
+            ["hvtkill", "Kill HVT"],
+            ["hvtcapture", "Capture HVT"]
+        ];
+
+        (_self call ["getGeneratorEntries", []]) apply {
+            private _generatorType = _x param [0, "", [""]];
+            createHashMapFromArray [
+                ["value", _generatorType],
+                ["label", _labels getOrDefault [_generatorType, _generatorType]]
+            ]
+        }
     }],
     ["getActiveMissionIds", compileFinal {
         private _activeMissionRegistry = _self getOrDefault ["activeMissionRegistry", createHashMap];
@@ -119,15 +170,44 @@ GVAR(MissionManagerBaseClass) = compileFinal createHashMapFromArray [
             ""
         };
 
-        private _startedTaskID = "";
+        private _missionConfig = missionConfigFile >> "CfgMissions";
+        if !(isClass _missionConfig) then {
+            _missionConfig = configFile >> "CfgMissions";
+        };
+        private _weightsConfig = _missionConfig >> "MissionWeights";
+        private _weighted = [];
+        private _totalWeight = 0;
         {
-            private _taskID = _x call ["startMission", [_self]];
-            if (_taskID isNotEqualTo "") exitWith {
-                _startedTaskID = _taskID;
-            };
-        } forEach (_self call ["getGenerators", []]);
+            private _generatorType = _x param [0, "", [""]];
+            private _generator = _x param [1, createHashMap, [createHashMap]];
+            if (_generatorType isEqualTo "" || { _generator isEqualTo createHashMap }) then { continue; };
 
-        _startedTaskID
+            private _weight = getNumber (_weightsConfig >> _generatorType);
+            if (_weight <= 0) then { _weight = 1; };
+
+            _totalWeight = _totalWeight + _weight;
+            _weighted pushBack [_generatorType, _generator, _totalWeight];
+        } forEach (_self call ["getGeneratorEntries", []]);
+
+        if (_weighted isEqualTo [] || { _totalWeight <= 0 }) exitWith { "" };
+
+        private _roll = random _totalWeight;
+        private _selected = _weighted select 0;
+        {
+            if (_roll <= (_x param [2, 0, [0]])) exitWith {
+                _selected = _x;
+            };
+        } forEach _weighted;
+
+        private _generatorType = _selected param [0, "", [""]];
+        private _generator = _selected param [1, createHashMap, [createHashMap]];
+        private _taskID = _generator call ["startMission", [_self]];
+        if (_taskID isEqualTo "") exitWith {
+            ["WARNING", format ["Mission manager failed to start '%1' generated mission.", _generatorType]] call EFUNC(common,log);
+            ""
+        };
+
+        _taskID
     }]
 ];
 
@@ -154,6 +234,8 @@ if (isNil QGVAR(MissionManagerTaskEventTokens)) then {
 
 if (GVAR(enableGenerator)) then {
     GVAR(MissionManagerPFH) = [{
+        if !(GVAR(enableGenerator)) exitWith {};
+
         GVAR(MissionManager) call ["cleanupCompletedMissions", []];
 
         private _now = diag_tickTime;

@@ -299,6 +299,16 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
 
         private _permissionService = _self get "PermissionService";
         private _groupRepository = _self get "GroupRepository";
+        private _generatedTaskTypes = [];
+        if (missionNamespace getVariable [QEGVAR(task,enableGenerator), false]) then {
+            if (isNil QEGVAR(task,MissionManager) && { !(isNil QEFUNC(task,missionManager)) }) then {
+                call EFUNC(task,missionManager);
+            };
+
+            if !(isNil QEGVAR(task,MissionManager)) then {
+                _generatedTaskTypes = EGVAR(task,MissionManager) call ["getGeneratedTaskTypes", []];
+            };
+        };
 
         private _groupID = _groupRepository call ["getPlayerGroupId", [_uid]];
         private _session = createHashMapFromArray [
@@ -311,6 +321,7 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         private _seed = createHashMapFromArray [
             ["groups", _groupRepository call ["buildGroups", []]],
             ["activeTasks", EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []]],
+            ["generatedTaskTypes", _generatedTaskTypes],
             ["session", _session]
         ];
         private _emptyPayload = createHashMapFromArray [
@@ -319,6 +330,7 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
             ["requests", []],
             ["assignments", []],
             ["activity", []],
+            ["generatedTaskTypes", _generatedTaskTypes],
             ["session", _session]
         ];
         private _persistenceService = _self getOrDefault ["PersistenceService", createHashMap];
@@ -330,7 +342,9 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
 
         private _hydrateResult = _persistenceService call ["buildHydratePayload", [_seed]];
         if (_hydrateResult getOrDefault ["success", false]) exitWith {
-            _hydrateResult getOrDefault ["data", createHashMap]
+            private _data = _hydrateResult getOrDefault ["data", createHashMap];
+            _data set ["generatedTaskTypes", _generatedTaskTypes];
+            _data
         };
 
         ["WARNING", "CAD hydrate failed in the extension; returning seed-only payload."] call EFUNC(common,log);

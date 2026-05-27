@@ -18,6 +18,21 @@ window.cadDispatcherModals = {
             return;
         }
 
+        const saveButton = document.getElementById(
+            "dispatcherTaskModalSaveBtn",
+        );
+        const hasTaskTypes = this.taskTypes.length > 0;
+        taskTypeSelect.disabled = !hasTaskTypes;
+        if (saveButton) {
+            saveButton.disabled = !hasTaskTypes;
+        }
+
+        if (!hasTaskTypes) {
+            taskTypeSelect.innerHTML =
+                '<option value="">No generated tasks available</option>';
+            return;
+        }
+
         taskTypeSelect.innerHTML = this.buildTaskTypeOptions(
             taskTypeSelect.value || this.taskTypes[0]?.value || "",
         );

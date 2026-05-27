@@ -6,6 +6,8 @@ PREP_RECOMPILE_END;
 
 GVAR(PlayerBootstrapRegistry) = createHashMap;
 
+if (isServer) then { "forge_server" callExtension ["surreal:reconnect", []]; };
+
 ["forge_icom_event", {
     params [["_event", "", [""]], ["_data", createHashMap, [createHashMap]]];
 

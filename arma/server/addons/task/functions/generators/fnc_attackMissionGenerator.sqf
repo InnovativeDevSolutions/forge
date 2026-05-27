@@ -1,17 +1,17 @@
 #include "..\script_component.hpp"
 
 /*
- * Author: IDSolutions
- * Attack mission generator used by the dynamic mission manager.
+ * Author: IDSolutions, Blackbox AI, MrPākehā
+ * Defines the Attack mission generator base class used by the dynamic
+ * mission manager. The generator selects a location, spawns required
+ * entities, registers a Forge task, and cleans up manager state when the
+ * task completes.
  *
  * Arguments:
  * None
  *
  * Return Value:
- * None
- *
- * Example:
- * [] call forge_server_task_fnc_attackMissionGenerator
+ * N/A. Defines GVAR(AttackMissionGeneratorBaseClass) in missionNamespace.
  *
  * Public: No
  */
@@ -21,6 +21,9 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     ["#type", "AttackMissionGeneratorBaseClass"],
     ["#create", compileFinal {
         private _missionConfig = missionConfigFile >> "CfgMissions";
+        if !(isClass _missionConfig) then {
+            _missionConfig = configFile >> "CfgMissions";
+        };
         _self set ["missionConfig", _missionConfig];
         _self set ["aiGroupsConfig", (_missionConfig >> "AIGroups")];
         _self set ["attackConfig", (_missionConfig >> "MissionTypes" >> "Attack")];
@@ -85,6 +88,7 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         private _safeDist = 800;
         private _playerPos = _center;
         private _minEdgeDist = _safeDist + 200;
+        private _searchRadius = (_worldSize / 2 - _minEdgeDist) max 500;
 
         private _recentLocationRegistry = _self call ["pruneRecentLocations", [_manager]];
         private _activeMissionPositions = _self call ["getActiveMissionPositions", [_manager]];
@@ -104,7 +108,7 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
 
         while { _attempt < _maxAttempts && { _taskPos isEqualTo [] } } do {
             _attempt = _attempt + 1;
-            private _candidate = [_center, _worldSize / 2 - _minEdgeDist, _worldSize / 2 - _minEdgeDist, 3, 0, 0.3, 0] call BIS_fnc_findSafePos;
+            private _candidate = [_center, _searchRadius, _searchRadius, 3, 0, 0.3, 0] call BFUNC(findSafePos);
 
             if (_candidate isEqualTo [0, 0, 0]) then { continue; };
             if (_candidate distance2D _playerPos < _safeDist) then { continue; };
@@ -134,7 +138,7 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
                 };
             } forEach _blkListMarkers;
 
-            if (!_inBlkList) then {
+            if !(_inBlkList) then {
                 _taskPos = _candidate;
             };
         };
@@ -161,35 +165,42 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
             };
         } forEach ("true" configClasses _aiGroupsConfig);
 
-        if (_groups isEqualTo []) exitWith {
-            ["WARNING", "Attack mission generator: no AI group configs are suitable for attack missions."] call EFUNC(common,log);
-            grpNull
-        };
+        private _side = missionNamespace getVariable ["ENEMY_SIDE", east];
+        private _sideText = str _side;
+        private _group = createGroup _side;
+        [] call FUNC(updateEnemyCountFromActivePlayers);
 
-        private _groupConfig = selectRandom _groups;
-        private _side = getText (_groupConfig >> "side");
-        private _group = createGroup (call compile _side);
-        private _minUnits = getNumber (_attackConfig >> "minUnits");
-        private _maxUnits = getNumber (_attackConfig >> "maxUnits");
+        private _enemyMult = missionNamespace getVariable ["forge_pmc_enemyCountMultiplier", 1];
+        private _minUnitsBase = getNumber (_attackConfig >> "minUnits");
+        private _maxUnitsBase = getNumber (_attackConfig >> "maxUnits");
         private _patrolRadius = getNumber (_attackConfig >> "patrolRadius");
 
-        if (_minUnits <= 0) then { _minUnits = 4; };
-        if (_maxUnits < _minUnits) then { _maxUnits = _minUnits; };
+        if (_minUnitsBase <= 0) then { _minUnitsBase = 4; };
+        if (_maxUnitsBase < _minUnitsBase) then { _maxUnitsBase = _minUnitsBase; };
         if (_patrolRadius <= 0) then { _patrolRadius = 200; };
 
-        private _targetUnitCount = floor random [_minUnits, ceil ((_minUnits + _maxUnits) / 2), _maxUnits + 1];
-        private _unitPool = [];
-        {
-            if ((getText (_x >> "side")) isNotEqualTo _side) then { continue; };
+        private _minUnits = floor ((_minUnitsBase max 1) * _enemyMult);
+        private _maxUnits = ceil ((_maxUnitsBase max _minUnitsBase) * _enemyMult);
+        if (_minUnits <= 0) then { _minUnits = 1; };
+        if (_maxUnits < _minUnits) then { _maxUnits = _minUnits; };
 
+        private _targetUnitCount = floor random [_minUnits, ceil ((_minUnits + _maxUnits) / 2), _maxUnits + 1];
+        private _enemyFaction = missionNamespace getVariable ["ENEMY_FACTION_STR", missionNamespace getVariable ["enemyFaction", "IND_G_F"]];
+        private _unitPool = [_enemyFaction, _side] call FUNC(getEnemyFactionUnitPool);
+
+        if (_unitPool isEqualTo [] && { _groups isNotEqualTo [] }) then {
             {
-                _unitPool pushBack createHashMapFromArray [
-                    ["vehicle", getText (_x >> "vehicle")],
-                    ["rank", getText (_x >> "rank")],
-                    ["position", getArray (_x >> "position")]
-                ];
-            } forEach ("true" configClasses (_x >> "Units"));
-        } forEach _groups;
+                if ((getText (_x >> "side")) isNotEqualTo _sideText) then { continue; };
+
+                {
+                    _unitPool pushBack createHashMapFromArray [
+                        ["vehicle", getText (_x >> "vehicle")],
+                        ["rank", getText (_x >> "rank")],
+                        ["position", getArray (_x >> "position")]
+                    ];
+                } forEach ("true" configClasses (_x >> "Units"));
+            } forEach _groups;
+        };
 
         if (_unitPool isEqualTo []) exitWith {
             ["WARNING", format ["Attack mission generator: selected AI group side '%1' produced an empty unit pool.", _side]] call EFUNC(common,log);
@@ -301,10 +312,10 @@ GVAR(AttackMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         };
 
         private _taskID = format ["task_attack_%1", round (diag_tickTime * 1000)];
-        private _rewardRange = getArray (_attackConfig >> "Rewards" >> "money");
-        private _reputationRange = getArray (_attackConfig >> "Rewards" >> "reputation");
-        private _penaltyRange = getArray (_attackConfig >> "penalty");
-        private _timeRange = getArray (_attackConfig >> "timeLimit");
+        private _rewardRange = [_attackConfig, ["Rewards", "money"], "moneyMin", "moneyMax", [25000, 60000]] call FUNC(getMissionSettingRange);
+        private _reputationRange = [_attackConfig, ["Rewards", "reputation"], "reputationMin", "reputationMax", [6, 14]] call FUNC(getMissionSettingRange);
+        private _penaltyRange = [_attackConfig, ["penalty"], "penaltyMin", "penaltyMax", [-8, -3]] call FUNC(getMissionSettingRange);
+        private _timeRange = [_attackConfig, ["timeLimit"], "timeLimitMin", "timeLimitMax", [900, 1800]] call FUNC(getMissionSettingRange);
         private _rewards = _self call ["rollRewards"];
         private _fundsReward = _rewardRange call BFUNC(randomNum);
         private _reputationReward = _reputationRange call BFUNC(randomNum);
