@@ -24,6 +24,7 @@ connect_timeout_ms = 5000
 
 ```text
 arma/
+  mod/         Shared client/server config addon built as @forge_mod
   client/      Client-side addons and browser UIs
   server/      Server-side addons and extension crate
 bin/
@@ -44,13 +45,16 @@ npm run build:webui
 .\build-arma.ps1
 ```
 
+`.\build-arma.ps1` builds `arma/mod`, `arma/client`, and `arma/server`. Load
+the resulting `@forge_mod` on both clients and servers, `@forge_client` on
+clients, and `@forge_server` on the server only.
+
 ## Documentation
 
 - [Framework Documentation](./docs/README.md)
 - [Framework Architecture](./docs/FRAMEWORK_ARCHITECTURE.md)
 - [Module Reference](./docs/MODULE_REFERENCE.md)
 - [Development Guide](./docs/DEVELOPMENT_GUIDE.md)
-- [Git Workflow](./docs/GIT_WORKFLOW.md)
 
 ## Extension Status
 

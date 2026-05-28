@@ -34,5 +34,6 @@ Thumbs.db
 
 # Arma
 arma/ui/map-viewer/
+arma/mod/.hemttout/
 arma/server/surrealdb/forge.db/
 promo/

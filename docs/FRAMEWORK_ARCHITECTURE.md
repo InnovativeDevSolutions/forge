@@ -6,10 +6,11 @@ handlers, and optional browser UI.
 
 ## Runtime Flow
 
-![Architectural Flow Diagram](images/architecture-flow.svg)
+![Architectural Flow Diagram](architecture-flow.svg)
 
 ```text
 Arma client UI or SQF action
+  -> shared config classes from @forge_mod
   -> client addon bridge
   -> server addon function
   -> forge_server callExtension command
@@ -26,6 +27,17 @@ request and response chunks through the extension transport module.
 
 ## Main Layers
 
+### Shared Mod
+
+The shared mod lives under `arma/mod` and builds to `@forge_mod`. It contains
+mission-facing config classes that must exist on both clients and servers, such
+as Forge task Eden modules and shared vehicle definitions. Missions should
+depend on these `forge_mod_*` addons when placing Forge modules.
+
+`@forge_mod` does not own server runtime behavior. Task module config can point
+at server-owned functions, but those functions still live in `@forge_server`
+and execute only where the server mod is loaded.
+
 ### Client Addons
 
 Client addons live under `arma/client/addons`. They own local player UX,
@@ -39,6 +51,10 @@ Server addons live under `arma/server/addons`. They own server-side SQF
 initialization, game-object integration, validation near the Arma runtime, and
 calls into the Rust extension. The `extension` addon is the shared bridge for
 `callExtension` and transport handling.
+
+Server addons may require `forge_mod_*` addons for shared class definitions.
+They should keep authoritative logic in `@forge_server` so clients only need
+shared config and client UX packages.
 
 ### Rust Extension
 

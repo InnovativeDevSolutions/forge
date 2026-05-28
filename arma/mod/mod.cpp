@@ -1,0 +1,15 @@
+dir = "@forge_mod";
+author = "J.Schmidt";
+name = "Forge Mod";
+description = "Forge Shared Mod - Version 1.0.0";
+overview = "";
+overviewPicture = "title_ca.paa";
+picture = "title_ca.paa";
+logoSmall = "icon_64_ca.paa";
+logo = "icon_128_ca.paa";
+logoOver = "icon_128_highlight_ca.paa";
+tooltip = "Forge Mod";
+tooltipOwned = "IDS Owned";
+action  = "https://innovativedevsolutions.org";
+actionName  = "Website";
+dlcColor[] = {0.45, 0.47, 0.41, 1};

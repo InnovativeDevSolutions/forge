@@ -1,21 +1,21 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Build both arma/client and arma/server using hemtt
+    Build arma/mod, arma/client, and arma/server using hemtt
 
 .DESCRIPTION
-    This script runs hemtt build for both the client and server Arma mods.
+    This script runs hemtt build for the shared, client, and server Arma mods.
     It changes to each directory and runs the build command.
 
 .PARAMETER Target
-    Specify which target to build: 'client', 'server', or 'both' (default)
+    Specify which target to build: 'mod', 'client', 'server', or 'all' (default)
 
 .PARAMETER BuildUI
     Rebuild the web UI bundles before running the client build.
 
 .EXAMPLE
     .\build-arma.ps1
-    Builds both client and server
+    Builds shared, client, and server mods
 
 .EXAMPLE
     .\build-arma.ps1 -Target client
@@ -28,8 +28,8 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet('client', 'server', 'both')]
-    [string]$Target = 'both',
+    [ValidateSet('mod', 'client', 'server', 'all')]
+    [string]$Target = 'all',
 
     [Parameter(Mandatory=$false)]
     [switch]$BuildUI
@@ -77,16 +77,21 @@ function Build-HemttProject {
 
 $clientPath = Join-Path $scriptDir "arma\client"
 $serverPath = Join-Path $scriptDir "arma\server"
+$modPath = Join-Path $scriptDir "arma\mod"
 
 try {
-    if ($Target -eq 'client' -or $Target -eq 'both') {
+    if ($Target -eq 'mod' -or $Target -eq 'all') {
+        Build-HemttProject -ProjectPath $modPath -ProjectName "Shared Mod"
+    }
+
+    if ($Target -eq 'client' -or $Target -eq 'all') {
         if ($BuildUI) {
             Build-WebUIAssets
         }
         Build-HemttProject -ProjectPath $clientPath -ProjectName "Client"
     }
     
-    if ($Target -eq 'server' -or $Target -eq 'both') {
+    if ($Target -eq 'server' -or $Target -eq 'all') {
         Build-HemttProject -ProjectPath $serverPath -ProjectName "Server"
     }
     
