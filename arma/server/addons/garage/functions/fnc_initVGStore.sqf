@@ -38,13 +38,11 @@ GVAR(VGarageModel) = compileFinal createHashMapObject [[
     }]
 ]];
 
-GVAR(VGBaseStore) = compileFinal ([
-    EGVAR(common,BaseStore),
-    createHashMapFromArray [
+GVAR(VGBaseStore) = compileFinal createHashMapFromArray [
+    ["#base", EGVAR(common,BaseStore)],
     ["#type", "VGBaseStore"],
     ["#create", compileFinal {
         ["INFO", "VGarage Store Initialized!"] call EFUNC(common,log);
-        true
     }],
     ["callHotVGarage", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];
@@ -92,13 +90,7 @@ GVAR(VGBaseStore) = compileFinal ([
         if (_uid isEqualTo "") exitWith { createHashMap };
         _self call ["callHotVGarage", ["owned:garage:hot:save", [_uid]]]
     }]
-]] call {
-    params ["_base", "_child"];
+];
 
-    private _merged = +_base;
-    { _merged set [_x, _y]; } forEach _child;
-    _merged
-});
-
-GVAR(VGarageStore) = createHashMapObject [GVAR(VGBaseStore), []];
-true
+GVAR(VGarageStore) = createHashMapObject [GVAR(VGBaseStore)];
+GVAR(VGarageStore)

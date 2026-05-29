@@ -2,7 +2,7 @@
 
 The transport service provides paid point-to-point travel for players and
 nearby vehicles or passengers. It is framework-owned: missions only need placed
-transport objects and arrival markers with the expected variable names.
+transport objects and optional arrival markers with the expected variable names.
 
 ## Mission Contract
 
@@ -110,28 +110,26 @@ this setVariable ["transportIncludeCargo", true, true];
 
 Only use overrides when the default `transport*` convention is not appropriate.
 
-## Reference Images
+## Image Checklist
 
-These screenshots show the default transport setup and player workflow:
+Replace these placeholder image references after screenshots are captured:
 
-![Eden transport location one](images/eden/transport_loc_1.jpg)
+![Placeholder: Eden transport node object placement](images/eden/transport_node_obj.svg)
 
-![Eden transport location two](images/eden/transport_loc_2.jpg)
+![Placeholder: Eden transport node variable name field](images/eden/transport_node_var.svg)
 
-![Eden transport node object placement](images/eden/transport_obj_1.jpg)
+![Placeholder: Eden transport arrival marker placement](images/eden/transport_arrival_marker.svg)
 
-![Eden transport node variable name field](images/eden/transport_obj_1_var.jpg)
+![Placeholder: Eden transport vehicle exclusion object variable name](images/eden/transport_vehicle_var.svg)
 
-![Eden transport arrival marker placement](images/eden/transport_arrival_mrkr.jpg)
+![Placeholder: Player actor menu transport action](images/player/transport_menu_action.svg)
 
-![Eden transport arrival marker variable name](images/eden/transport_arrival_mrkr_var.jpg)
+![Placeholder: Player transport destination submenu](images/player/transport_destination_menu.svg)
 
-![Eden transport vehicle exclusion object placement](images/eden/transport_veh_obj.jpg)
+![Placeholder: Player transport completion notification](images/player/transport_complete.svg)
 
-![Eden transport vehicle exclusion object variable name](images/eden/transport_veh_obj_var.jpg)
+## Mission-Side Code Requirement
 
-![Player actor menu transport action](images/player/transport_menu_action.jpg)
-
-![Player transport destination submenu](images/player/transport_destination_menu.jpg)
-
-![Player transport completion notification](images/player/transport_complete.jpg)
+No mission-side transport service, addAction script, or server event bridge is
+required. The framework handles menu discovery, destination selection, pricing,
+billing, cargo movement, and EventBus notifications.

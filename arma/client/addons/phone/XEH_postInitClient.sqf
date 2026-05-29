@@ -6,7 +6,7 @@
     [QGVAR(initPhone), []] call CFUNC(localEvent);
 }] call CFUNC(waitUntilAndExecute);
 
-if (isNil QGVAR(PhoneRepository)) then { [] call FUNC(initRepository); true };
+if (isNil QGVAR(PhoneRepository)) then { [] call FUNC(initRepository); };
 
 [QGVAR(initPhone), {
     GVAR(PhoneRepository) call ["init", []];

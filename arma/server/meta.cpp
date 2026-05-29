@@ -1,4 +1,4 @@
 protocol = 1;
-publishedid = MOD_ID;
+publishedid = 0;
 name = "forge-server";
 timestamp = 5250140732737923549;

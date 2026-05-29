@@ -22,15 +22,13 @@
  */
 
 #pragma hemtt ignore_variables ["_self"]
-GVAR(GarageBaseStore) = compileFinal ([
-    EGVAR(common,BaseStore),
-    createHashMapFromArray [
+GVAR(GarageBaseStore) = compileFinal createHashMapFromArray [
+    ["#base", EGVAR(common,BaseStore)],
     ["#type", "GarageBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Garage Store Initialized!"] call EFUNC(common,log);
         _self set ["lastCallSucceeded", false];
         _self set ["lastError", ""];
-        true
     }],
     ["callHotGarage", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];
@@ -116,13 +114,7 @@ GVAR(GarageBaseStore) = compileFinal ([
         if (_uid isEqualTo "" || { _payloadJson isEqualTo "" }) exitWith { createHashMap };
         _self call ["callHotGarage", ["garage:hot:remove_vehicle", [_uid, _payloadJson]]]
     }]
-]] call {
-    params ["_base", "_child"];
+];
 
-    private _merged = +_base;
-    { _merged set [_x, _y]; } forEach _child;
-    _merged
-});
-
-GVAR(GarageStore) = createHashMapObject [GVAR(GarageBaseStore), []];
-true
+GVAR(GarageStore) = createHashMapObject [GVAR(GarageBaseStore)];
+GVAR(GarageStore)

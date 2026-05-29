@@ -24,9 +24,8 @@
 private _webUIDeclarations = call EFUNC(common,initWebUIBridge);
 private _webUIBridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
 
-GVAR(OrgUIBridgeBaseClass) = compileFinal ([
-    _webUIBridgeDeclaration,
-    createHashMapFromArray [
+GVAR(OrgUIBridgeBaseClass) = compileFinal createHashMapFromArray [
+    ["#base", _webUIBridgeDeclaration],
     ["#type", "OrgUIBridgeBaseClass"],
     ["setPendingBrowserControl", compileFinal {
         params [["_control", controlNull, [controlNull]]];
@@ -243,13 +242,7 @@ GVAR(OrgUIBridgeBaseClass) = compileFinal ([
     ["refreshPortal", compileFinal {
         _self call ["requestHydrate", ["org::sync"]]
     }]
-]] call {
-    params ["_base", "_child"];
+];
 
-    private _merged = +_base;
-    { _merged set [_x, _y]; } forEach _child;
-    _merged
-});
-
-GVAR(OrgUIBridge) = createHashMapObject [GVAR(OrgUIBridgeBaseClass), []];
-true
+GVAR(OrgUIBridge) = createHashMapObject [GVAR(OrgUIBridgeBaseClass)];
+GVAR(OrgUIBridge)

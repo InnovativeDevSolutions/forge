@@ -1,0 +1,18 @@
+#define MAINPREFIX forge
+#define PREFIX forge_mod
+#define MOD_NAME forge-mod
+#define AUTHOR "J.Schmidt"
+
+#define REQUIRED_VERSION 2.20
+
+#include "script_version.hpp"
+
+#define VERSION     MAJOR.MINOR
+#define VERSION_STR MAJOR.MINOR.PATCH.BUILD
+#define VERSION_AR  MAJOR,MINOR,PATCH,BUILD
+
+#ifndef COMPONENT_BEAUTIFIED
+    #define COMPONENT_BEAUTIFIED COMPONENT
+#endif
+
+#define COMPONENT_NAME QUOTE(MOD_NAME - COMPONENT_BEAUTIFIED)

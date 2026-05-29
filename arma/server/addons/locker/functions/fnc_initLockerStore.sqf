@@ -22,13 +22,11 @@
  */
 
 #pragma hemtt ignore_variables ["_self"]
-GVAR(LockerBaseStore) = compileFinal ([
-    EGVAR(common,BaseStore),
-    createHashMapFromArray [
+GVAR(LockerBaseStore) = compileFinal createHashMapFromArray [
+    ["#base", EGVAR(common,BaseStore)],
     ["#type", "LockerBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Locker Store Initialized!"] call EFUNC(common,log);
-        true
     }],
     ["callHotLocker", compileFinal {
         params [["_function", "", [""]], ["_arguments", [], [[]]]];
@@ -94,13 +92,7 @@ GVAR(LockerBaseStore) = compileFinal ([
         if (_uid isEqualTo "") exitWith { createHashMap };
         _self call ["callHotLocker", ["locker:hot:save", [_uid]]]
     }]
-]] call {
-    params ["_base", "_child"];
+];
 
-    private _merged = +_base;
-    { _merged set [_x, _y]; } forEach _child;
-    _merged
-});
-
-GVAR(LockerStore) = createHashMapObject [GVAR(LockerBaseStore), []];
-true
+GVAR(LockerStore) = createHashMapObject [GVAR(LockerBaseStore)];
+GVAR(LockerStore)

@@ -1,6 +1,6 @@
 #include "script_component.hpp"
 
-if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); true };
+if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
 if (isNil QGVAR(BankAccountCreatedEventTokens)) then {
     private _welcomeNewActor = {
         params ["_event"];

@@ -14,7 +14,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(attackModule);
+        function = SERVER_TASK_FUNC(attackModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -127,7 +127,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(explosivesModule);
+        function = SERVER_TASK_FUNC(explosivesModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 0;
@@ -164,7 +164,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(hostagesModule);
+        function = SERVER_TASK_FUNC(hostagesModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 0;
@@ -201,7 +201,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(shootersModule);
+        function = SERVER_TASK_FUNC(shootersModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 0;
@@ -238,7 +238,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(protectedModule);
+        function = SERVER_TASK_FUNC(protectedModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 0;
@@ -274,7 +274,7 @@ class CfgVehicles {
         displayName = "Defend Task";
         category = "FORGE_Modules";
 
-        function = QFUNC(defendModule);
+        function = SERVER_TASK_FUNC(defendModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -399,7 +399,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(defuseModule);
+        function = SERVER_TASK_FUNC(defuseModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -512,7 +512,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(destroyModule);
+        function = SERVER_TASK_FUNC(destroyModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -625,7 +625,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(hostageModule);
+        function = SERVER_TASK_FUNC(hostageModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -775,7 +775,7 @@ class CfgVehicles {
         displayName = "Delivery Task";
         category = "FORGE_Modules";
 
-        function = QFUNC(deliveryModule);
+        function = SERVER_TASK_FUNC(deliveryModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;
@@ -892,7 +892,7 @@ class CfgVehicles {
         displayName = "Cargo Entities";
         category = "FORGE_Modules";
 
-        function = QFUNC(cargoModule);
+        function = SERVER_TASK_FUNC(cargoModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 0;
@@ -928,7 +928,7 @@ class CfgVehicles {
         // icon = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\default_ca.paa";
         category = "FORGE_Modules";
 
-        function = QFUNC(hvtModule);
+        function = SERVER_TASK_FUNC(hvtModule);
         functionPriority = 1;
         isGlobal = 1;
         isTriggerActivated = 1;

@@ -20,20 +20,16 @@ const generatedPages = [
     target: '1.getting-started/3.development.md'
   },
   {
-    source: 'docs/GIT_WORKFLOW.md',
-    target: '1.getting-started/4.git-workflow.md'
-  },
-  {
     source: 'docs/MISSION_DESIGNER_GUIDE.md',
-    target: '1.getting-started/5.mission-designer.md'
+    target: '1.getting-started/4.mission-designer.md'
   },
   {
     source: 'docs/PLAYER_GUIDE.md',
-    target: '1.getting-started/6.player-guide.md'
+    target: '1.getting-started/5.player-guide.md'
   },
   {
     source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/7.surrealdb-setup.md'
+    target: '1.getting-started/6.surrealdb-setup.md'
   },
   {
     source: 'arma/server/docs/README.md',
@@ -177,8 +173,8 @@ Forge Framework Documentation
 
 #description
 Forge is a persistent Arma 3 framework that combines SQF addons, a Rust
-\`arma-rs\` extension, SurrealDB persistence, shared domain crates, and
-browser-backed player interfaces.
+\`arma-rs\` extension, SurrealDB persistence, shared domain crates, a shared
+mission config addon, and browser-backed player interfaces.
 
 Use these docs to understand the runtime architecture, extension API surface,
 server gameplay modules, and client addon integration patterns.
@@ -186,6 +182,10 @@ server gameplay modules, and client addon integration patterns.
 Server owners and developers must start SurrealDB and place a matching
 \`config.toml\` beside \`forge_server_x64.dll\` before launching a
 Forge-enabled server or local multiplayer test.
+
+Forge missions require \`@forge_mod\` for shared mission-facing config classes.
+Servers also load \`@forge_server\` as a server-only runtime mod, and players
+load \`@forge_client\` for client UI.
 
 #links
   :::u-button
@@ -382,6 +382,7 @@ description: Use this section as the main entry point for the Forge framework.
 
 Forge combines:
 
+- Arma 3 shared config addons for mission-facing classes
 - Arma 3 client addons for UX and browser-hosted interfaces
 - Arma 3 server addons for mission integration and authoritative flow control
 - a Rust server extension for command routing and persistence
@@ -394,10 +395,12 @@ Before starting a Forge-enabled dedicated server or local multiplayer test,
 server owners and developers must start SurrealDB and make sure
 \`config.toml\` is beside \`forge_server_x64.dll\`. The config values must match
 the running SurrealDB endpoint, namespace, database, username, and password.
+Servers must load \`@forge_mod\` as a normal mod and \`@forge_server\` as a
+server-only mod.
 
 Mission designers and players do not need their own SurrealDB instance unless
-they are hosting locally, but the server they join must have these prerequisites
-ready.
+they are hosting locally, but they do need \`@forge_mod\` for shared Forge
+mission classes. Players also load \`@forge_client\` for player-facing UI.
 
 ## Common Commands
 

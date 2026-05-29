@@ -1,7 +1,7 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(BankRepository)) then { call FUNC(initRepository); true };
-if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); true };
+if (isNil QGVAR(BankRepository)) then { call FUNC(initRepository); };
+if (isNil QGVAR(BankUIBridge)) then { call FUNC(initUIBridge); };
 
 GVAR(sendPhoneBankEvent) = {
     params [["_functionName", "", [""]], ["_arguments", [], [[]]]];

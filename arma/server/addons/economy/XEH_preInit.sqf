@@ -6,9 +6,9 @@ PREP_RECOMPILE_END;
 
 // private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 
-if (isNil QGVAR(MEconomyStore)) then { call FUNC(initMEconomyStore); true };
-if (isNil QGVAR(FEconomyStore)) then { call FUNC(initFEconomyStore); true };
-if (isNil QGVAR(SEconomyStore)) then { call FUNC(initSEconomyStore); true };
+if (isNil QGVAR(MEconomyStore)) then { call FUNC(initMEconomyStore); };
+if (isNil QGVAR(FEconomyStore)) then { call FUNC(initFEconomyStore); };
+if (isNil QGVAR(SEconomyStore)) then { call FUNC(initSEconomyStore); };
 
 [QGVAR(FuelStart), {
     params ["_source", "_target", "_unit"];

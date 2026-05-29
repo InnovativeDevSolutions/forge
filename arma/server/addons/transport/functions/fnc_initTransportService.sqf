@@ -188,8 +188,6 @@ GVAR(TransportServiceBase) = compileFinal createHashMapFromArray [
             _result
         };
 
-        private _personalSourceAttempted = false;
-        private _allowOrgFallback = false;
         if !(isNil QEGVAR(bank,BankStore)) then {
             private _account = EGVAR(bank,BankStore) call ["get", [_uid, ""]];
             if (_account isEqualTo createHashMap) then {
@@ -197,35 +195,28 @@ GVAR(TransportServiceBase) = compileFinal createHashMapFromArray [
             };
 
             if (_account isNotEqualTo createHashMap) then {
-                private _bankBalance = _account getOrDefault ["bank", 0];
-                private _cashBalance = _account getOrDefault ["cash", 0];
-                private _source = ["", "bank"] select (_bankBalance >= _amount);
-                if (_source isEqualTo "" && { _cashBalance >= _amount }) then {
-                    _source = "cash";
+                private _source = "";
+                if ((_account getOrDefault ["bank", 0]) >= _amount) then {
+                    _source = "bank";
+                } else {
+                    if ((_account getOrDefault ["cash", 0]) >= _amount) then {
+                        _source = "cash";
+                    };
                 };
 
                 if (_source isNotEqualTo "") then {
-                    _personalSourceAttempted = true;
                     private _charge = EGVAR(bank,BankStore) call ["chargeCheckout", [_uid, _source, _amount, true]];
-                    if (_charge getOrDefault ["success", false]) then {
+                    if (_charge getOrDefault ["success", false]) exitWith {
                         EGVAR(bank,BankStore) call ["save", [_uid]];
                         _result set ["success", true];
                         _result set ["source", _source];
                         _result set ["message", format ["%1 charged $%2 from your %3.", _label, [_amount] call EFUNC(common,formatNumber), _source]];
-                    } else {
-                        _result set ["message", _charge getOrDefault ["message", format ["Unable to charge %1 from your %2.", _label, _source]]];
                     };
-                } else {
-                    _allowOrgFallback = true;
                 };
-            } else {
-                _result set ["message", "Bank account could not be loaded for transport billing."];
             };
-        } else {
-            _result set ["message", "Bank service is unavailable for transport billing."];
         };
 
-        if (!(_result getOrDefault ["success", false]) && { !_personalSourceAttempted } && { _allowOrgFallback } && { !(isNil QEGVAR(economy,SEconomyStore)) }) then {
+        if !(isNil QEGVAR(economy,SEconomyStore)) then {
             private _orgCharge = EGVAR(economy,SEconomyStore) call ["chargeOrg", [_unit, _amount, _label, true]];
             if (_orgCharge getOrDefault ["success", false]) exitWith {
                 _result set ["success", true];

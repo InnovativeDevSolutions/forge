@@ -220,17 +220,17 @@ Transport points let players pay to travel between configured mission locations.
 They may represent ferries, terminals, air shuttles, or other mission-specific
 travel points.
 
-![Actor menu Transport action](images/player/transport_menu_action.jpg)
+![Placeholder: Actor menu Transport action](images/player/transport_menu_action.svg)
 
 Player workflow:
 
 1. Stand near a transport point.
 2. Open the actor interaction menu.
 3. Select Transport.
-4. Select a destination from the transport submenu, or select Back to return
+4. Select a destination from the transport submenu, or select Close to return
    to the default interaction menu.
 
-![Transport destination submenu](images/player/transport_destination_menu.jpg)
+![Placeholder: Transport destination submenu](images/player/transport_destination_menu.svg)
 
 The destination price is based on distance. The server charges player bank
 first, player cash second, then organization credit line fallback when
@@ -238,7 +238,7 @@ available. If payment succeeds, the player is moved to the selected arrival
 point. Nearby eligible vehicles or passengers may be moved with the player when
 the mission has configured the transport point for cargo movement.
 
-![Transport completion notification](images/player/transport_complete.jpg)
+![Placeholder: Transport completion notification](images/player/transport_complete.svg)
 
 ## Locker and Virtual Arsenal
 

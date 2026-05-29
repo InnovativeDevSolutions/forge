@@ -1,12 +1,12 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(GarageHelperService)) then { call FUNC(initHelperService); true };
-if (isNil QGVAR(GarageRepository)) then { call FUNC(initRepository); true };
-if (isNil QGVAR(GarageContextService)) then { call FUNC(initContextService); true };
-if (isNil QGVAR(GaragePayloadService)) then { call FUNC(initPayloadService); true };
-if (isNil QGVAR(GarageActionService)) then { call FUNC(initActionService); true };
-if (isNil QGVAR(GarageUIBridge)) then { call FUNC(initUIBridge); true };
-if (isNil QGVAR(VGRepository)) then { call FUNC(initVGRepository); true };
+if (isNil QGVAR(GarageHelperService)) then { call FUNC(initHelperService); };
+if (isNil QGVAR(GarageRepository)) then { call FUNC(initRepository); };
+if (isNil QGVAR(GarageContextService)) then { call FUNC(initContextService); };
+if (isNil QGVAR(GaragePayloadService)) then { call FUNC(initPayloadService); };
+if (isNil QGVAR(GarageActionService)) then { call FUNC(initActionService); };
+if (isNil QGVAR(GarageUIBridge)) then { call FUNC(initUIBridge); };
+if (isNil QGVAR(VGRepository)) then { call FUNC(initVGRepository); };
 
 [QGVAR(initGarage), {
     GVAR(GarageRepository) call ["init", []];

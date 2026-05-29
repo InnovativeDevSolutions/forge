@@ -1,8 +1,26 @@
 # Forge Documentation
 
-Forge is split into Arma client addons, Arma server addons, a Rust server
-extension, shared Rust domain crates, and web UI build tooling. This directory
-collects framework-level documentation for those pieces.
+Forge is split into a shared Arma addon, Arma client addons, Arma server
+addons, a Rust server extension, shared Rust domain crates, and web UI build
+tooling. This directory collects framework-level documentation for those
+pieces.
+
+## Arma Addon Layout
+
+Forge now ships three Arma addon packages:
+
+- `@forge_mod`: shared client/server config classes required by Forge
+  missions. It owns shared definitions such as Forge task Eden modules and the
+  custom body bag vehicle config.
+- `@forge_client`: client-side UX, browser UIs, keybinds, and local player
+  integrations. It depends on `@forge_mod`.
+- `@forge_server`: server-only runtime systems, extension bridge code, and
+  authoritative mission/task execution. It depends on `@forge_mod` but should
+  not be required by clients.
+
+Mission `requiredAddons` should reference shared mission-facing classes through
+`forge_mod_*` addons, not `forge_server_*`, so clients can load and edit
+missions without installing the server-only mod.
 
 ## Launch Prerequisites
 
@@ -13,10 +31,13 @@ server owners and developers must:
 2. Place `config.toml` beside `forge_server_x64.dll`.
 3. Keep the `config.toml` SurrealDB endpoint, namespace, database, username,
    and password aligned with the running database.
+4. Load `@forge_mod` with the server's normal mod list and `@forge_server` as
+   a server-only mod.
 
 Mission designers and players do not need to run SurrealDB unless they are
-hosting locally, but the server they join must have these prerequisites ready.
-See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
+hosting locally, but they do need `@forge_mod` for Forge mission config classes.
+Players also load `@forge_client` for player-facing UI. See
+[SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
 
 ## Start Here
 
@@ -27,8 +48,6 @@ See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
   crates.
 - [Development Guide](./DEVELOPMENT_GUIDE.md): how to add or change a module
   without breaking the framework boundaries.
-- [Git Workflow](./GIT_WORKFLOW.md): branch roles, mission branch usage, and
-  release tagging.
 - [Mission Designer Guide](./MISSION_DESIGNER_GUIDE.md): how to place Eden
   objects, garage markers, and CAD-compatible task modules for playable
   missions.

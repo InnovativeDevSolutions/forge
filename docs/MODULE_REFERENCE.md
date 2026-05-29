@@ -5,6 +5,7 @@ This reference lists the main Forge modules and where each layer lives.
 ## Directory Map
 
 ```text
+arma/mod/addons/         Shared config addon built as @forge_mod
 arma/client/addons/      Client-side Arma addons and browser UIs
 arma/server/addons/      Server-side Arma addons and extension bridge
 arma/server/extension/   Rust arma-rs extension and SurrealDB adapters
@@ -29,7 +30,7 @@ docs/                    Framework-level documentation
 | Organization | Player organizations, membership, treasury, credit lines, shared assets, and fleet data. | `arma/client/addons/org` | `arma/server/addons/org` | `lib/models/src/org.rs`, `lib/services/src/org.rs` | `org:*`, `org:hot:*` |
 | Phone | Contacts, messages, and email state. | `arma/client/addons/phone` | `arma/server/addons/phone` | `lib/models/src/phone.rs`, `lib/services/src/phone.rs` | `phone:*` |
 | Store | Storefront entity setup, catalog hydration, checkout workflows, and checkout charging integration. | `arma/client/addons/store` | `arma/server/addons/store` | `lib/models/src/store.rs`, `lib/services/src/store.rs` | `store:checkout` |
-| Task | Server-owned mission/task flows, catalog, ownership, status, participant tracking, rewards, and defuse counters. | none | `arma/server/addons/task` | `lib/models/src/task.rs`, `lib/services/src/task.rs` | `task:*` |
+| Task | Server-owned mission/task flows, catalog, ownership, status, participant tracking, rewards, and defuse counters. Mission-facing Eden module classes live in `@forge_mod`; runtime execution remains server-owned. | shared module config in `arma/mod/addons/task` | `arma/server/addons/task` | `lib/models/src/task.rs`, `lib/services/src/task.rs` | `task:*` |
 | Owned Garage | Organization or owner-scoped vehicle unlock storage. | via garage/org UI | server extension only | `lib/models/src/v_garage.rs`, `lib/services/src/v_garage.rs` | `owned:garage:*` |
 | Owned Locker | Organization or owner-scoped arsenal unlock storage. | via locker/org UI | server extension only | `lib/models/src/v_locker.rs`, `lib/services/src/v_locker.rs` | `owned:locker:*` |
 
@@ -64,6 +65,8 @@ Client guides:
 
 | Module | Purpose | Location |
 | --- | --- | --- |
+| `forge_mod_common` | Shared config classes required by both clients and servers, including the Forge body bag vehicle. | `arma/mod/addons/common` |
+| `forge_mod_task` | Shared Forge task Eden module classes used by missions. Functions still resolve to server-side task handlers at runtime. | `arma/mod/addons/task` |
 | `common` | Shared SQF helpers, base stores, utility functions, and shared UI bridge pieces. | `arma/client/addons/common`, `arma/server/addons/common` |
 | `extension` | Server SQF bridge around `forge_server` extension calls and chunked transport. | `arma/server/addons/extension` |
 | `main` | Mod-level configuration, pre-init wiring, and server/client startup glue. | `arma/client/addons/main`, `arma/server/addons/main` |

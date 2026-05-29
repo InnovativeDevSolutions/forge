@@ -301,13 +301,30 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         private _groupRepository = _self get "GroupRepository";
         private _generatedTaskTypes = [];
         if (missionNamespace getVariable [QEGVAR(task,enableGenerator), false]) then {
+            _generatedTaskTypes = [
+                createHashMapFromArray [["value", "attack"], ["label", "Attack"]],
+                createHashMapFromArray [["value", "defend"], ["label", "Defend"]],
+                createHashMapFromArray [["value", "defuse"], ["label", "Defuse"]],
+                createHashMapFromArray [["value", "delivery"], ["label", "Delivery"]],
+                createHashMapFromArray [["value", "destroy"], ["label", "Destroy"]],
+                createHashMapFromArray [["value", "hostage"], ["label", "Hostage"]],
+                createHashMapFromArray [["value", "hvtkill"], ["label", "Kill HVT"]],
+                createHashMapFromArray [["value", "hvtcapture"], ["label", "Capture HVT"]]
+            ];
+            ["INFO", "CAD hydrate using framework generator fallback type list while checking task mission manager."] call EFUNC(common,log);
+
             if (isNil QEGVAR(task,MissionManager) && { !(isNil QEFUNC(task,missionManager)) }) then {
                 call EFUNC(task,missionManager);
             };
 
             if !(isNil QEGVAR(task,MissionManager)) then {
                 _generatedTaskTypes = EGVAR(task,MissionManager) call ["getGeneratedTaskTypes", []];
+                ["INFO", format ["CAD hydrate using task mission manager generated types: %1", _generatedTaskTypes apply { _x getOrDefault ["value", ""] }]] call EFUNC(common,log);
+            } else {
+                ["INFO", "CAD hydrate task mission manager is not ready; sending fallback generated task types."] call EFUNC(common,log);
             };
+        } else {
+            ["INFO", "CAD hydrate generated task types disabled by forge_server_task_enableGenerator."] call EFUNC(common,log);
         };
 
         private _groupID = _groupRepository call ["getPlayerGroupId", [_uid]];

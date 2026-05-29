@@ -1,0 +1,169 @@
+2026-05-28T23:53:24.978659Z TRACE ThreadId(01) version: 1.19.1
+2026-05-28T23:53:24.978730Z TRACE ThreadId(01) platform: windows
+2026-05-28T23:53:24.978753Z TRACE ThreadId(01) args: [
+    "C:\\Users\\innov\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BrettMayson.HEMTT_Microsoft.Winget.Source_8wekyb3d8bbwe\\hemtt.exe",
+    "build",
+]
+2026-05-28T23:53:24.990984Z TRACE ThreadId(01) using temporary folder: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod"
+2026-05-28T23:53:24.991018Z TRACE ThreadId(01) using project folder: "F:\\IDSolutions\\forge\\arma\\mod"
+2026-05-28T23:53:24.991071Z TRACE ThreadId(01) using out folder: "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout"
+2026-05-28T23:53:24.991852Z TRACE ThreadId(01) using build folder: "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build"
+2026-05-28T23:53:25.004536Z TRACE ThreadId(01) config.cpp: VfsPath { path: "/addons/task/config.cpp", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.004672Z TRACE ThreadId(01) Prefix: VfsPath { path: "/addons/task/$PBOPREFIX$", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.010489Z TRACE ThreadId(01) Prefix: VfsPath { path: "/addons/main/$PBOPREFIX$", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.015636Z TRACE ThreadId(01) config.cpp: VfsPath { path: "/addons/main/config.cpp", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.016104Z TRACE ThreadId(01) config.cpp: VfsPath { path: "/addons/common/config.cpp", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.016215Z TRACE ThreadId(01) Prefix: VfsPath { path: "/addons/common/$PBOPREFIX$", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.021228Z TRACE ThreadId(01) checking for version macro in VfsPath { path: "/addons/main/script_version.hpp", fs: VFS { fs: OverlayFS { layers: [VfsPath { path: "", fs: VFS { fs: In Memory File System } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\hemtt_binarize_output" } } } } } }, VfsPath { path: "", fs: VFS { fs: AltrootFS { root: VfsPath { path: "", fs: VFS { fs: PhysicalFS { root: "F:\\IDSolutions\\forge\\arma\\mod" } } } } } }] } } }
+2026-05-28T23:53:25.021485Z  INFO ThreadId(01) Config loaded for forge-mod 1.0.0.0
+2026-05-28T23:53:25.021537Z TRACE ThreadId(01) Scanning F:\IDSolutions\forge\arma\mod\addons for addons
+2026-05-28T23:53:25.023542Z DEBUG ThreadId(01) using global config directory: "C:\\Users\\innov\\AppData\\Roaming\\hemtt"
+2026-05-28T23:53:25.023613Z  INFO ThreadId(01) Creating `build` version
+2026-05-28T23:53:25.023632Z TRACE ThreadId(01) phase: init (BOM Check) (start)
+2026-05-28T23:53:25.023642Z TRACE ThreadId(01) phase: init (BOM Check) (done)
+2026-05-28T23:53:25.023647Z TRACE ThreadId(01) phase: init (Final New Line Check) (start)
+2026-05-28T23:53:25.023653Z TRACE ThreadId(01) phase: init (Final New Line Check) (done)
+2026-05-28T23:53:25.023660Z TRACE ThreadId(01) phase: init (git) (start)
+2026-05-28T23:53:25.023667Z TRACE ThreadId(01) phase: init (git) (done)
+2026-05-28T23:53:25.023673Z TRACE ThreadId(01) phase: init (Hooks) (start)
+2026-05-28T23:53:25.023701Z TRACE ThreadId(01) no hooks folder
+2026-05-28T23:53:25.023710Z TRACE ThreadId(01) phase: init (Hooks) (done)
+2026-05-28T23:53:25.023715Z TRACE ThreadId(01) phase: init (pboprefix) (start)
+2026-05-28T23:53:25.023721Z TRACE ThreadId(01) phase: init (pboprefix) (done)
+2026-05-28T23:53:25.023726Z TRACE ThreadId(01) phase: init (Binarize) (start)
+2026-05-28T23:53:25.023743Z TRACE ThreadId(01) Using Binarize path from registry
+2026-05-28T23:53:25.025088Z TRACE ThreadId(01) junction link "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\forge\\forge_mod\\addons\\common" => "F:\\IDSolutions\\forge\\arma\\mod\\addons\\common"
+2026-05-28T23:53:25.042942Z TRACE ThreadId(01) junction link "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\forge\\forge_mod\\addons\\main" => "F:\\IDSolutions\\forge\\arma\\mod\\addons\\main"
+2026-05-28T23:53:25.060030Z TRACE ThreadId(01) junction link "C:\\Users\\innov\\AppData\\Local\\Temp\\hemtt\\IDSolutions_forge_arma_mod\\forge\\forge_mod\\addons\\task" => "F:\\IDSolutions\\forge\\arma\\mod\\addons\\task"
+2026-05-28T23:53:25.076729Z TRACE ThreadId(01) phase: init (Binarize) (done)
+2026-05-28T23:53:25.076749Z TRACE ThreadId(01) phase: init (tex_headers) (start)
+2026-05-28T23:53:25.076757Z TRACE ThreadId(01) phase: init (tex_headers) (done)
+2026-05-28T23:53:25.076762Z TRACE ThreadId(01) phase: init (Files) (start)
+2026-05-28T23:53:25.076768Z TRACE ThreadId(01) phase: init (Files) (done)
+2026-05-28T23:53:25.076776Z TRACE ThreadId(01) phase: init (Meta) (start)
+2026-05-28T23:53:25.076783Z TRACE ThreadId(01) phase: init (Meta) (done)
+2026-05-28T23:53:25.076788Z TRACE ThreadId(01) phase: init (summary) (start)
+2026-05-28T23:53:25.076794Z TRACE ThreadId(01) phase: init (summary) (done)
+2026-05-28T23:53:25.076799Z TRACE ThreadId(01) phase: init (Rapifier) (start)
+2026-05-28T23:53:25.076804Z TRACE ThreadId(01) phase: init (Rapifier) (done)
+2026-05-28T23:53:25.076810Z TRACE ThreadId(01) phase: init (SQF) (start)
+2026-05-28T23:53:25.575292Z TRACE ThreadId(01) phase: init (SQF) (done)
+2026-05-28T23:53:25.575317Z TRACE ThreadId(01) phase: init (Stringtables) (start)
+2026-05-28T23:53:25.575324Z TRACE ThreadId(01) phase: init (Stringtables) (done)
+2026-05-28T23:53:25.575330Z TRACE ThreadId(01) phase: check (BOM Check) (start)
+2026-05-28T23:53:25.576112Z TRACE ThreadId(01) phase: check (BOM Check) (done)
+2026-05-28T23:53:25.576150Z TRACE ThreadId(01) phase: check (Final New Line Check) (start)
+2026-05-28T23:53:25.576859Z TRACE ThreadId(01) phase: check (Final New Line Check) (done)
+2026-05-28T23:53:25.576870Z TRACE ThreadId(01) phase: check (git) (start)
+2026-05-28T23:53:25.584190Z TRACE ThreadId(01) phase: check (git) (done)
+2026-05-28T23:53:25.584205Z TRACE ThreadId(01) phase: check (Hooks) (start)
+2026-05-28T23:53:25.584211Z TRACE ThreadId(01) phase: check (Hooks) (done)
+2026-05-28T23:53:25.584217Z TRACE ThreadId(01) phase: check (pboprefix) (start)
+2026-05-28T23:53:25.584226Z TRACE ThreadId(01) Checking prefixes against expected project path: forge\forge_mod\
+2026-05-28T23:53:25.584634Z TRACE ThreadId(01) phase: check (pboprefix) (done)
+2026-05-28T23:53:25.584653Z TRACE ThreadId(01) phase: check (Binarize) (start)
+2026-05-28T23:53:25.587521Z  INFO ThreadId(01) Validated 0 files for binarization
+2026-05-28T23:53:25.587533Z TRACE ThreadId(01) phase: check (Binarize) (done)
+2026-05-28T23:53:25.587539Z TRACE ThreadId(01) phase: check (tex_headers) (start)
+2026-05-28T23:53:25.587545Z TRACE ThreadId(01) phase: check (tex_headers) (done)
+2026-05-28T23:53:25.587550Z TRACE ThreadId(01) phase: check (Files) (start)
+2026-05-28T23:53:25.587556Z TRACE ThreadId(01) phase: check (Files) (done)
+2026-05-28T23:53:25.587561Z TRACE ThreadId(01) phase: check (Meta) (start)
+2026-05-28T23:53:25.587567Z TRACE ThreadId(01) phase: check (Meta) (done)
+2026-05-28T23:53:25.587572Z TRACE ThreadId(01) phase: check (summary) (start)
+2026-05-28T23:53:25.587578Z TRACE ThreadId(01) phase: check (summary) (done)
+2026-05-28T23:53:25.587583Z TRACE ThreadId(01) phase: check (Rapifier) (start)
+2026-05-28T23:53:25.587675Z TRACE ThreadId(01) phase: check (Rapifier) (done)
+2026-05-28T23:53:25.587685Z TRACE ThreadId(01) phase: check (SQF) (start)
+2026-05-28T23:53:25.587741Z TRACE ThreadId(01) phase: check (SQF) (done)
+2026-05-28T23:53:25.587749Z TRACE ThreadId(01) phase: check (Stringtables) (start)
+2026-05-28T23:53:25.587778Z TRACE ThreadId(01) phase: check (Stringtables) (done)
+2026-05-28T23:53:25.587785Z TRACE ThreadId(01) phase: pre_build (BOM Check) (start)
+2026-05-28T23:53:25.587791Z TRACE ThreadId(01) phase: pre_build (BOM Check) (done)
+2026-05-28T23:53:25.587796Z TRACE ThreadId(01) phase: pre_build (Final New Line Check) (start)
+2026-05-28T23:53:25.587801Z TRACE ThreadId(01) phase: pre_build (Final New Line Check) (done)
+2026-05-28T23:53:25.587807Z TRACE ThreadId(01) phase: pre_build (git) (start)
+2026-05-28T23:53:25.587812Z TRACE ThreadId(01) phase: pre_build (git) (done)
+2026-05-28T23:53:25.587817Z TRACE ThreadId(01) phase: pre_build (Hooks) (start)
+2026-05-28T23:53:25.587826Z TRACE ThreadId(01) phase: pre_build (Hooks) (done)
+2026-05-28T23:53:25.587832Z TRACE ThreadId(01) phase: pre_build (pboprefix) (start)
+2026-05-28T23:53:25.587837Z TRACE ThreadId(01) phase: pre_build (pboprefix) (done)
+2026-05-28T23:53:25.587842Z TRACE ThreadId(01) phase: pre_build (Binarize) (start)
+2026-05-28T23:53:25.589060Z  INFO ThreadId(01) Binarized 0 files
+2026-05-28T23:53:25.589081Z TRACE ThreadId(01) phase: pre_build (Binarize) (done)
+2026-05-28T23:53:25.589089Z TRACE ThreadId(01) phase: pre_build (tex_headers) (start)
+2026-05-28T23:53:25.590324Z  INFO ThreadId(01) Generated 0 texture headers
+2026-05-28T23:53:25.590345Z TRACE ThreadId(01) phase: pre_build (tex_headers) (done)
+2026-05-28T23:53:25.590352Z TRACE ThreadId(01) phase: pre_build (Files) (start)
+2026-05-28T23:53:25.590358Z TRACE ThreadId(01) phase: pre_build (Files) (done)
+2026-05-28T23:53:25.590364Z TRACE ThreadId(01) phase: pre_build (Meta) (start)
+2026-05-28T23:53:25.590369Z TRACE ThreadId(01) phase: pre_build (Meta) (done)
+2026-05-28T23:53:25.590374Z TRACE ThreadId(01) phase: pre_build (summary) (start)
+2026-05-28T23:53:25.590380Z TRACE ThreadId(01) phase: pre_build (summary) (done)
+2026-05-28T23:53:25.590385Z TRACE ThreadId(01) phase: pre_build (Rapifier) (start)
+2026-05-28T23:53:25.647921Z  INFO ThreadId(01) Rapified 3 addon configs
+2026-05-28T23:53:25.647975Z TRACE ThreadId(01) phase: pre_build (Rapifier) (done)
+2026-05-28T23:53:25.647989Z TRACE ThreadId(01) phase: pre_build (SQF) (start)
+2026-05-28T23:53:25.651787Z  INFO ThreadId(01) Compiled 0 sqf files
+2026-05-28T23:53:25.651844Z TRACE ThreadId(01) phase: pre_build (SQF) (done)
+2026-05-28T23:53:25.651854Z TRACE ThreadId(01) phase: pre_build (Stringtables) (start)
+2026-05-28T23:53:25.653702Z  INFO ThreadId(01) Checked 0 stringtables
+2026-05-28T23:53:25.653717Z TRACE ThreadId(01) phase: pre_build (Stringtables) (done)
+2026-05-28T23:53:25.653724Z TRACE ThreadId(01) phase: build (start)
+2026-05-28T23:53:25.660541Z DEBUG ThreadId(01) creating "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons"
+2026-05-28T23:53:25.660974Z DEBUG ThreadId(01) building "addons/common" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons\\forge_mod_common.pbo"
+2026-05-28T23:53:25.661578Z TRACE ThreadId(01) adding file "CfgVehicles.hpp"
+2026-05-28T23:53:25.662034Z TRACE ThreadId(01) adding file "script_component.hpp"
+2026-05-28T23:53:25.662208Z TRACE ThreadId(01) adding file "config.bin"
+2026-05-28T23:53:25.663630Z DEBUG ThreadId(01) "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons" already exists
+2026-05-28T23:53:25.663646Z DEBUG ThreadId(01) building "addons/main" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons\\forge_mod_main.pbo"
+2026-05-28T23:53:25.664359Z TRACE ThreadId(01) adding file "script_mod.hpp"
+2026-05-28T23:53:25.664799Z TRACE ThreadId(01) adding file "script_version.hpp"
+2026-05-28T23:53:25.664893Z TRACE ThreadId(01) adding file "config.bin"
+2026-05-28T23:53:25.665065Z TRACE ThreadId(01) adding file "script_component.hpp"
+2026-05-28T23:53:25.665234Z TRACE ThreadId(01) adding file "script_macros.hpp"
+2026-05-28T23:53:25.666310Z DEBUG ThreadId(01) "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons" already exists
+2026-05-28T23:53:25.666328Z DEBUG ThreadId(01) building "addons/task" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\addons\\forge_mod_task.pbo"
+2026-05-28T23:53:25.666954Z TRACE ThreadId(01) adding file "CfgVehicles.hpp"
+2026-05-28T23:53:25.667051Z TRACE ThreadId(01) adding file "config.bin"
+2026-05-28T23:53:25.667147Z TRACE ThreadId(01) adding file "CfgFactionClasses.hpp"
+2026-05-28T23:53:25.667662Z TRACE ThreadId(01) adding file "script_component.hpp"
+2026-05-28T23:53:25.670491Z  INFO ThreadId(01) Built 3 PBOs
+2026-05-28T23:53:25.670517Z TRACE ThreadId(01) phase: build (done)
+2026-05-28T23:53:25.670525Z TRACE ThreadId(01) phase: post_build (BOM Check) (start)
+2026-05-28T23:53:25.670531Z TRACE ThreadId(01) phase: post_build (BOM Check) (done)
+2026-05-28T23:53:25.670537Z TRACE ThreadId(01) phase: post_build (Final New Line Check) (start)
+2026-05-28T23:53:25.670542Z TRACE ThreadId(01) phase: post_build (Final New Line Check) (done)
+2026-05-28T23:53:25.670548Z TRACE ThreadId(01) phase: post_build (git) (start)
+2026-05-28T23:53:25.670553Z TRACE ThreadId(01) phase: post_build (git) (done)
+2026-05-28T23:53:25.670559Z TRACE ThreadId(01) phase: post_build (Hooks) (start)
+2026-05-28T23:53:25.670564Z TRACE ThreadId(01) phase: post_build (Hooks) (done)
+2026-05-28T23:53:25.670570Z TRACE ThreadId(01) phase: post_build (pboprefix) (start)
+2026-05-28T23:53:25.670575Z TRACE ThreadId(01) phase: post_build (pboprefix) (done)
+2026-05-28T23:53:25.670581Z TRACE ThreadId(01) phase: post_build (Binarize) (start)
+2026-05-28T23:53:25.670586Z TRACE ThreadId(01) phase: post_build (Binarize) (done)
+2026-05-28T23:53:25.670592Z TRACE ThreadId(01) phase: post_build (tex_headers) (start)
+2026-05-28T23:53:25.670597Z TRACE ThreadId(01) phase: post_build (tex_headers) (done)
+2026-05-28T23:53:25.670603Z TRACE ThreadId(01) phase: post_build (Files) (start)
+2026-05-28T23:53:25.679228Z DEBUG ThreadId(01) copying "/icon_64_ca.paa" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\icon_64_ca.paa"
+2026-05-28T23:53:25.681171Z DEBUG ThreadId(01) copying "/icon_128_highlight_ca.paa" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\icon_128_highlight_ca.paa"
+2026-05-28T23:53:25.687315Z DEBUG ThreadId(01) copying "/icon_128_ca.paa" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\icon_128_ca.paa"
+2026-05-28T23:53:25.693242Z DEBUG ThreadId(01) copying "/LICENSE.md" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\LICENSE.md"
+2026-05-28T23:53:25.701924Z DEBUG ThreadId(01) copying "/mod.cpp" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\mod.cpp"
+2026-05-28T23:53:25.703205Z DEBUG ThreadId(01) copying "/README.md" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\README.md"
+2026-05-28T23:53:25.704560Z DEBUG ThreadId(01) copying "/title_ca.paa" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\title_ca.paa"
+2026-05-28T23:53:25.716243Z DEBUG ThreadId(01) copying "/meta.cpp" => "F:\\IDSolutions\\forge\\arma\\mod\\.hemttout\\build\\meta.cpp"
+2026-05-28T23:53:25.717507Z  INFO ThreadId(01) Copied 8 files
+2026-05-28T23:53:25.717530Z TRACE ThreadId(01) phase: post_build (Files) (done)
+2026-05-28T23:53:25.717538Z TRACE ThreadId(01) phase: post_build (Meta) (start)
+2026-05-28T23:53:25.717544Z TRACE ThreadId(01) phase: post_build (Meta) (done)
+2026-05-28T23:53:25.717550Z TRACE ThreadId(01) phase: post_build (summary) (start)
+2026-05-28T23:53:25.718962Z TRACE ThreadId(01) phase: post_build (summary) (done)
+2026-05-28T23:53:25.718985Z TRACE ThreadId(01) phase: post_build (Rapifier) (start)
+2026-05-28T23:53:25.718996Z TRACE ThreadId(01) phase: post_build (Rapifier) (done)
+2026-05-28T23:53:25.719005Z TRACE ThreadId(01) phase: post_build (SQF) (start)
+2026-05-28T23:53:25.719017Z TRACE ThreadId(01) phase: post_build (SQF) (done)
+2026-05-28T23:53:25.719025Z TRACE ThreadId(01) phase: post_build (Stringtables) (start)
+2026-05-28T23:53:25.719032Z TRACE ThreadId(01) phase: post_build (Stringtables) (done)
+2026-05-28T23:53:25.724090Z TRACE ThreadId(01) writing ci annotations to .hemttout/ci_annotations.txt
+2026-05-28T23:53:25.724167Z TRACE ThreadId(01) wrote 0 ci annotations to .hemttout/ci_annotations.txt

@@ -9,7 +9,8 @@ class CfgPatches {
         requiredVersion = REQUIRED_VERSION;
         requiredAddons[] = {
             "forge_server_main",
-            "forge_server_common"
+            "forge_server_common",
+            "forge_mod_task"
         };
         units[] = {};
         weapons[] = {};
@@ -18,6 +19,4 @@ class CfgPatches {
 };
 
 #include "CfgEventHandlers.hpp"
-#include "CfgFactionClasses.hpp"
-#include "CfgVehicles.hpp"
 #include "CfgMissions.hpp"

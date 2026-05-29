@@ -2,7 +2,7 @@
 
 call FUNC(initGarage);
 
-if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); true };
+if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
 if (isNil QGVAR(SyncEventTokens)) then {
     private _sendVGarageSync = {
         params ["_event"];

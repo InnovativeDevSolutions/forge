@@ -1,6 +1,6 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(StoreUIBridge)) then { call FUNC(initUIBridge); true };
+if (isNil QGVAR(StoreUIBridge)) then { call FUNC(initUIBridge); };
 
 [QGVAR(responseCategory), {
     params [["_payload", createHashMap, [createHashMap]]];
