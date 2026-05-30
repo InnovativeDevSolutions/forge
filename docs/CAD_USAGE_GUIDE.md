@@ -89,6 +89,11 @@ The framework-owned request entry point is
 falls back to a mission-local `forge_pmc_fnc_requestMissionTask` when the
 framework entry point is unavailable.
 
+Custom mission generators can still create CAD-visible tasks directly by
+registering task catalog entries and task statuses. See
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md) for the supported
+integration path and the current generated-task provider limitation.
+
 ## Submit a Support Request
 
 ```sqf

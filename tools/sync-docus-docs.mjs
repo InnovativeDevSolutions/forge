@@ -32,6 +32,10 @@ const generatedPages = [
     target: '1.getting-started/6.surrealdb-setup.md'
   },
   {
+    source: 'docs/CUSTOM_MISSION_GENERATORS.md',
+    target: '1.getting-started/7.custom-mission-generators.md'
+  },
+  {
     source: 'arma/server/docs/README.md',
     target: '2.server-extension/0.index.md'
   },
@@ -448,6 +452,16 @@ npm run build:webui
   ---
   Place Eden interaction objects, garage markers, and Forge task modules for
   playable missions.
+  :::
+
+  :::u-page-card
+  ---
+  icon: i-lucide-waypoints
+  title: Custom Mission Generators
+  to: /getting-started/custom-mission-generators
+  ---
+  Create CAD-visible custom generated missions and understand the current
+  provider extension point.
   :::
 
   :::u-page-card

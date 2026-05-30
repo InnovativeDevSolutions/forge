@@ -107,6 +107,11 @@ older payload compatibility, but any hydrate payload that includes
 request control, which is how `forge_server_task_enableGenerator = false` is surfaced
 client-side.
 
+Custom mission generators can still publish tasks into CAD by using the server
+task catalog. The generated-task dropdown itself currently needs a framework
+provider extension point before custom providers can replace the built-in list
+cleanly. See [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md).
+
 ## Authorization Notes
 
 Only dispatcher sessions can enter dispatch mode. If the hydrated session is
@@ -116,4 +121,5 @@ not a dispatcher, the bridge forces the UI back to operations mode.
 
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
 - [Task Usage Guide](./TASK_USAGE_GUIDE.md)
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md)
 - [Client Common Usage Guide](./CLIENT_COMMON_USAGE_GUIDE.md)

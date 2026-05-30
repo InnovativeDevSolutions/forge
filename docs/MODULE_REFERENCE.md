@@ -38,6 +38,7 @@ Server and extension guides:
 [Actor](./ACTOR_USAGE_GUIDE.md),
 [Bank](./BANK_USAGE_GUIDE.md),
 [CAD](./CAD_USAGE_GUIDE.md),
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md),
 [Economy](./ECONOMY_USAGE_GUIDE.md),
 [Garage](./GARAGE_USAGE_GUIDE.md),
 [Locker](./LOCKER_USAGE_GUIDE.md),
