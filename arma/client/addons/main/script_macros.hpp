@@ -67,6 +67,7 @@
 #define SETVAR(var1,var2,var3) var1 SETVAR_SYS(var2,var3)
 #define SETPVAR(var1,var2,var3) var1 SETPVAR_SYS(var2,var3)
 #define SETMVAR(var1,var2) missionNamespace SETVAR_SYS(var1,var2)
+#define SETMPVAR(var1,var2) missionNamespace SETPVAR_SYS(var1,var2)
 #define SETUVAR(var1,var2) uiNamespace SETVAR_SYS(var1,var2)
 #define SETPRVAR(var1,var2) profileNamespace SETVAR_SYS(var1,var2)
 #define SETPAVAR(var1,var2) parsingNamespace SETVAR_SYS(var1,var2)

@@ -35,7 +35,7 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMissionInterval", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _interval = getNumber (_missionConfig >> "missionInterval");
         if (_settings isEqualType createHashMap) then {
             _interval = _settings getOrDefault ["missionInterval", _interval];
@@ -45,7 +45,7 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMaxConcurrentMissions", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _maxConcurrent = getNumber (_missionConfig >> "maxConcurrentMissions");
         if (_settings isEqualType createHashMap) then {
             _maxConcurrent = _settings getOrDefault ["maxConcurrentMissions", _maxConcurrent];
@@ -187,8 +187,8 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         params [['_position', [0, 0, 0], [[]]], ["_buildingPositions", [], [[]]]];
 
         private _hvtConfig = _self getOrDefault ["hvtConfig", configNull];
-        private _side = missionNamespace getVariable ["ENEMY_SIDE", east];
-        private _enemyFaction = missionNamespace getVariable ["ENEMY_FACTION_STR", missionNamespace getVariable ["enemyFaction", "IND_G_F"]];
+        private _side = GETMVAR(ENEMY_SIDE,east);
+        private _enemyFaction = GETMVAR(ENEMY_FACTION_STR,GETMVAR(enemyFaction,"IND_G_F"));
         private _unitPool = [_enemyFaction, _side] call FUNC(getEnemyFactionUnitPool);
         if (_unitPool isEqualTo []) exitWith { [] };
 
@@ -215,7 +215,7 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         _leader setRank "LIEUTENANT";
 
         [] call FUNC(updateEnemyCountFromActivePlayers);
-        private _enemyMult = missionNamespace getVariable ["forge_pmc_enemyCountMultiplier", 1];
+        private _enemyMult = GETGVAR(enemyCountMultiplier,1);
         private _escortCount = getNumber (_hvtConfig >> "escorts");
         if (_escortCount < 0) then { _escortCount = 0; };
         _escortCount = floor (_escortCount * _enemyMult);
@@ -315,12 +315,13 @@ GVAR(KillHvtMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
             "hvt",
             _taskID,
             _position,
-            format ["HVT: Grid %1", _grid],
+            format ["Kill HVT: Grid %1", _grid],
             format ["Eliminate a high-value target near grid %1.", _grid],
             createHashMapFromArray [["hvts", [_hvtTarget]]],
             createHashMapFromArray [
                 ["limitFail", 0],
                 ["limitSuccess", 1],
+                ["displayType", "hvtkill"],
                 ["captureHvt", false],
                 ["funds", _fundsReward],
                 ["ratingFail", _reputationPenalty],

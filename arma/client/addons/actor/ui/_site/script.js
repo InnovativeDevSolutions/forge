@@ -151,6 +151,12 @@ const actionDefinitions = {
         description: "View and manage your organization data",
         action: "actor::open::org",
     },
+    missionSetup: {
+        id: "missionSetup",
+        title: "Mission Setup",
+        description: "Open framework mission setup",
+        action: "actor::open::missionSetup",
+    },
     store: {
         id: "store",
         title: "Store",

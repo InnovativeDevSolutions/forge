@@ -1,0 +1,143 @@
+# Actor Usage Guide
+
+The actor module stores persistent player character data: identity, loadout,
+position, direction, stance, contact fields, state, holster status, rank, and
+organization.
+
+## Storage Model
+
+Actor data is persisted through SurrealDB by the server extension.
+
+```json
+{
+  "uid": "76561198000000000",
+  "name": "Player Name",
+  "loadout": {},
+  "position": [1234.5, 6789.0, 0.0],
+  "direction": 90.0,
+  "stance": "STAND",
+  "email": "0160000000@spearnet.mil",
+  "phone_number": "0160000000",
+  "state": "HEALTHY",
+  "holster": true,
+  "rank": null,
+  "organization": "default"
+}
+```
+
+Rules validated by the Rust service:
+
+- `uid` is authoritative from the command argument and must be a 17-digit Steam
+  UID.
+- `name` is optional, but cannot be empty when set and cannot exceed 50
+  characters.
+- `position` must be three finite numbers when set.
+- `direction` must be in the `0.0 <= direction < 360.0` range.
+- `email` must contain `@` and end with `.mil` when set.
+- `phone_number` must start with `0160` and be 10 digits when set.
+- Empty `phone_number`, `email`, or `organization` fields are filled on create.
+
+## Commands
+
+All commands are called on the `actor` group.
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `actor:get` | `uid` | Actor JSON. If no actor exists, returns a default actor but does not persist it. |
+| `actor:create` | `uid`, `actor_json` | Persisted actor JSON. |
+| `actor:update` | `uid`, `patch_json` | Updated actor JSON. |
+| `actor:exists` | `uid` | `true` or `false`. |
+| `actor:delete` | `uid` | `OK`. |
+
+## Create an Actor
+
+The `uid` field in the JSON is overwritten with the command UID.
+
+```sqf
+private _actor = createHashMapFromArray [
+    ["uid", getPlayerUID player],
+    ["name", name player],
+    ["loadout", getUnitLoadout player],
+    ["position", getPosATL player],
+    ["direction", getDir player],
+    ["stance", stance player],
+    ["email", ""],
+    ["phone_number", ""],
+    ["state", "HEALTHY"],
+    ["holster", true],
+    ["organization", "default"]
+];
+
+private _result = "forge_server" callExtension ["actor:create", [
+    getPlayerUID player,
+    toJSON _actor
+]];
+```
+
+## New Player Bootstrap
+
+The server actor store treats a player with no persisted actor as a new player.
+After `actor:create` succeeds, the actor store runs onboarding once for that UID:
+
+- Initializes the player's phone state.
+- Sends a Field Commander email from `field_commander` with the `Job Orientation`
+  subject and the generated phone number and email address.
+- Sends two Field Commander text messages with the first-day instructions.
+- Initializes the player's bank account if needed and adds `$2,000` to the bank
+  balance.
+
+This bootstrap is tied to persistent actor creation, not hot-state hydration, so
+returning players and repaired partial actor records do not receive the welcome
+messages or starting money again.
+
+## Update an Actor
+
+`actor:update` accepts a JSON object containing only fields to change.
+
+```sqf
+private _patch = createHashMapFromArray [
+    ["position", getPosATL player],
+    ["direction", getDir player],
+    ["stance", stance player],
+    ["loadout", getUnitLoadout player]
+];
+
+private _result = "forge_server" callExtension ["actor:update", [
+    getPlayerUID player,
+    toJSON _patch
+]];
+```
+
+Supported patch fields are `name`, `position`, `direction`, `stance`, `email`,
+`phone_number`, `state`, `holster`, `rank`, `organization`, and `loadout`.
+`uid` is ignored.
+
+## Hot State
+
+The `actor:hot:*` commands keep a runtime copy of actor data and write it back
+only when `actor:hot:save` runs.
+
+| Command | Arguments | Returns |
+| --- | --- | --- |
+| `actor:hot:init` | `uid` | Actor JSON from durable storage. |
+| `actor:hot:get` | `uid` | Actor JSON. |
+| `actor:hot:keys` | none | JSON array of hot actor UIDs. |
+| `actor:hot:override` | `uid`, `actor_json` | Actor JSON. |
+| `actor:hot:save` | `uid` | Current hot actor JSON and async durable save. |
+| `actor:hot:remove` | `uid` | `OK`. |
+
+Use hot state for frequently updated session data such as position and loadout.
+Use durable commands for account creation and administrative changes.
+
+## Error Handling
+
+```sqf
+private _result = "forge_server" callExtension ["actor:get", [getPlayerUID player]];
+private _payload = _result select 0;
+
+if (_payload find "Error:" == 0) exitWith {
+    systemChat format ["Actor error: %1", _payload];
+};
+
+private _actor = fromJSON _payload;
+```

@@ -48,13 +48,18 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _display = [
+    _taskID,
+    format ["HVT: %1", _taskID],
+    "Locate and capture or eliminate the high-value target."
+] call FUNC(resolveTaskDisplay);
 
 [
     "hvt",
     _taskID,
     _taskPos,
-    format ["HVT: %1", _taskID],
-    "Locate and capture or eliminate the high-value target.",
+    _display select 0,
+    _display select 1,
     createHashMapFromArray [
         ["hvts", _syncedEntities]
     ],

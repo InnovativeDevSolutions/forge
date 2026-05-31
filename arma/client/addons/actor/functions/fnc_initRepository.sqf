@@ -107,6 +107,10 @@ GVAR(ActorRepositoryBaseClass) = compileFinal createHashMapFromArray [
     ["getNearbyActions", compileFinal {
         params [["_control", controlNull, [controlNull]]];
         private _nearbyActions = [];
+        if !(GETMVAR(forge_server_task_missionSetup_settingsApplied,false)) then {
+            _nearbyActions pushBack ["missionSetup", true];
+        };
+
         {
             private _isAtm = _x getVariable ["isAtm", false];
             private _isBank = _x getVariable ["isBank", false];

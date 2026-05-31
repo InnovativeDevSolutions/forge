@@ -18,8 +18,8 @@
  */
 
 params [
-    ["_faction", missionNamespace getVariable ["ENEMY_FACTION_STR", "IND_G_F"], [""]],
-    ["_fallbackSide", missionNamespace getVariable ["ENEMY_SIDE", east], [east]],
+    ["_faction", GETMVAR(ENEMY_FACTION_STR,"IND_G_F"), [""]],
+    ["_fallbackSide", GETMVAR(ENEMY_SIDE,east), [east]],
     ["_allowSideFallback", true, [false]]
 ];
 

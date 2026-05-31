@@ -16,5 +16,11 @@
         <Key ID="STR_forge_server_task_enableGeneratorTooltip">
             <English>Enable Task Generator</English>
         </Key>
+        <Key ID="STR_forge_server_task_enableMissionSetup">
+            <English>Enable Mission Setup UI</English>
+        </Key>
+        <Key ID="STR_forge_server_task_enableMissionSetupTooltip">
+            <English>Open the framework mission setup UI for the configured setup operator before generated missions start.</English>
+        </Key>
     </Package>
 </Project>

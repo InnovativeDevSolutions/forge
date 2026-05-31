@@ -131,11 +131,13 @@ private _prerequisiteTaskIds = _taskParams getOrDefault [
         _taskParams getOrDefault ["requiresTaskIds", []]
     ]
 ];
+private _displayType = _taskParams getOrDefault ["displayType", _taskType];
 
 GVAR(TaskStore) call ["registerTaskCatalogEntry", [_taskID, createHashMapFromArray [
     ["taskID", _taskID],
     ["taskId", _taskID],
-    ["type", _taskType],
+    ["type", _displayType],
+    ["taskType", _taskType],
     ["title", _title],
     ["description", _description],
     ["position", _position],

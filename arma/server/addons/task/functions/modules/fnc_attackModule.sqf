@@ -42,13 +42,18 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _display = [
+    _taskID,
+    format ["Attack: %1", _taskID],
+    "Eliminate all hostile forces in the area."
+] call FUNC(resolveTaskDisplay);
 
 [
     "attack",
     _taskID,
     _taskPos,
-    format ["Attack: %1", _taskID],
-    "Eliminate all hostile forces in the area.",
+    _display select 0,
+    _display select 1,
     createHashMapFromArray [
         ["targets", _syncedEntities]
     ],

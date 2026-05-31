@@ -85,13 +85,18 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _display = [
+    _taskID,
+    format ["Defend: %1", _taskID],
+    "Hold the defense zone against incoming enemy forces."
+] call FUNC(resolveTaskDisplay);
 
 [
     "defend",
     _taskID,
     getMarkerPos _defenseZone,
-    format ["Defend: %1", _taskID],
-    "Hold the defense zone against incoming enemy forces.",
+    _display select 0,
+    _display select 1,
     createHashMap,
     createHashMapFromArray ([
         ["funds", _logic getVariable ["CompanyFunds", 0]],

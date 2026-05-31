@@ -59,13 +59,18 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _display = [
+    _taskID,
+    format ["Defuse: %1", _taskID],
+    "Locate and defuse all explosive devices before they detonate."
+] call FUNC(resolveTaskDisplay);
 
 [
     "defuse",
     _taskID,
     _taskPos,
-    format ["Defuse: %1", _taskID],
-    "Locate and defuse all explosive devices before they detonate.",
+    _display select 0,
+    _display select 1,
     createHashMapFromArray [
         ["ieds", _iedEntities],
         ["protected", _protectedEntities]

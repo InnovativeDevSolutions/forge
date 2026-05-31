@@ -35,7 +35,7 @@ GVAR(DefendMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMissionInterval", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _interval = getNumber (_missionConfig >> "missionInterval");
         if (_settings isEqualType createHashMap) then {
             _interval = _settings getOrDefault ["missionInterval", _interval];
@@ -45,7 +45,7 @@ GVAR(DefendMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMaxConcurrentMissions", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _maxConcurrent = getNumber (_missionConfig >> "maxConcurrentMissions");
         if (_settings isEqualType createHashMap) then {
             _maxConcurrent = _settings getOrDefault ["maxConcurrentMissions", _maxConcurrent];
@@ -184,10 +184,10 @@ GVAR(DefendMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
             } forEach ("true" configClasses _aiGroupsConfig);
         };
 
-        private _side = missionNamespace getVariable ["ENEMY_SIDE", east];
+        private _side = GETMVAR(ENEMY_SIDE,east);
         private _sideText = str _side;
         [] call FUNC(updateEnemyCountFromActivePlayers);
-        private _enemyMult = missionNamespace getVariable ["forge_pmc_enemyCountMultiplier", 1];
+        private _enemyMult = GETGVAR(enemyCountMultiplier,1);
         private _unitCountConfig = getArray (_defendConfig >> "unitsPerWave");
         private _minUnits = _unitCountConfig select 0;
         private _maxUnits = _unitCountConfig select 1;
@@ -199,7 +199,7 @@ GVAR(DefendMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
         if (_maxUnits < _minUnits) then { _maxUnits = _minUnits; };
         private _targetUnitCount = _minUnits + floor random ((_maxUnits - _minUnits) + 1);
 
-        private _enemyFaction = missionNamespace getVariable ["ENEMY_FACTION_STR", missionNamespace getVariable ["enemyFaction", "IND_G_F"]];
+        private _enemyFaction = GETMVAR(ENEMY_FACTION_STR,GETMVAR(enemyFaction,"IND_G_F"));
         private _unitPool = [_enemyFaction, _side] call FUNC(getEnemyFactionUnitPool);
 
         if (_unitPool isEqualTo [] && { _groups isNotEqualTo [] }) then {
