@@ -28,9 +28,7 @@ params [
 ];
 
 private _rangeConfig = _config;
-{
-    _rangeConfig = _rangeConfig >> _x;
-} forEach _path;
+{ _rangeConfig = _rangeConfig >> _x; } forEach _path;
 
 private _range = getArray _rangeConfig;
 private _fallbackMin = _fallback param [0, 0, [0]];
@@ -39,7 +37,7 @@ private _fallbackMax = _fallback param [1, _fallbackMin, [0]];
 private _min = _range param [0, _fallbackMin, [0]];
 private _max = _range param [1, _fallbackMax, [0]];
 
-private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+private _settings = GETGVAR(missionSetup_settings,createHashMap);
 if (_settings isEqualType createHashMap) then {
     _min = _settings getOrDefault [_minKey, _min];
     _max = _settings getOrDefault [_maxKey, _max];

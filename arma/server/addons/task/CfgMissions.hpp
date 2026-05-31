@@ -11,9 +11,9 @@
  *
  * Generator behavior:
  * - maxConcurrentMissions and missionInterval are copied into
- *   forge_pmc_missionSettings by forge_pmc_fnc_setupMenu_applySettings.
+ *   forge_server_task_missionSetup_settings by the framework mission setup service.
  * - Reward, reputation, penalty, and timeLimit ranges are read through
- *   forge_pmc_fnc_getMissionSettingRange so UI overrides and config fallbacks
+ *   forge_server_task_fnc_getMissionSettingRange so UI overrides and config fallbacks
  *   use the same path.
  */
 class CfgMissions {

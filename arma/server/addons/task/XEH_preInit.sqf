@@ -33,4 +33,5 @@ private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 [] call FUNC(DefendTaskBaseClass);
 
 call FUNC(initTaskStore);
+call FUNC(initMissionSetupService);
 if !(isNil QGVAR(TaskStore)) then { GVAR(TaskStore) call ["resetMissionState", []]; };

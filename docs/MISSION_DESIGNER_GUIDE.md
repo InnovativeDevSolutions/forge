@@ -310,6 +310,11 @@ interaction that calls:
 Tasks show in CAD only when they are created through a CAD-compatible task
 creation path.
 
+Mission or community-owned generators can also create CAD-visible tasks by
+using the task catalog/status contract. See
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md) before replacing
+the built-in generated mission flow.
+
 ## CEO and Dispatch Slots
 
 Forge grants dispatch-board permissions from the player's Eden unit variable
@@ -746,6 +751,23 @@ The generated mission system supports `attack`, `defend`, `defuse`,
 `delivery`, `destroy`, `hostage`, `hvtkill`, and `hvtcapture`. The
 `forge_server_task_enableGenerator` CBA setting gates both timer-based generation and
 CAD dispatcher-requested generation.
+
+The optional framework mission setup UI lets the setup operator choose runtime
+tuning such as opposing faction, mission cap, interval, location cooldown,
+reward ranges, reputation ranges, penalty ranges, and time limits. It does not
+enable or disable generated missions; use the CBA setting for that policy.
+
+If mission setup is enabled, the mission manager waits until the setup operator
+applies settings. Cancel, X, and Escape apply default values from CBA, mission
+parameters, and `CfgMissions`. There is no timeout that auto-applies defaults.
+After settings are applied, the setup UI cannot be reopened.
+
+Future custom-generator support should add an explicit provider option so
+mission designers or developers can select or toggle a mission/community-owned
+generator without relying on mission-local fallback functions. Until then,
+custom generators should create CAD-visible tasks directly through the task
+catalog/status contract described in
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md).
 
 The dynamic mission generator avoids rectangle and ellipse area markers whose
 marker name or marker text starts with `blklist`.

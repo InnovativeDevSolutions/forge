@@ -35,7 +35,7 @@ GVAR(DeliveryMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMissionInterval", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _interval = getNumber (_missionConfig >> "missionInterval");
         if (_settings isEqualType createHashMap) then {
             _interval = _settings getOrDefault ["missionInterval", _interval];
@@ -45,7 +45,7 @@ GVAR(DeliveryMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
     }],
     ["getMaxConcurrentMissions", compileFinal {
         private _missionConfig = _self getOrDefault ["missionConfig", configNull];
-        private _settings = missionNamespace getVariable ["forge_pmc_missionSettings", createHashMap];
+        private _settings = GETGVAR(missionSetup_settings,createHashMap);
         private _maxConcurrent = getNumber (_missionConfig >> "maxConcurrentMissions");
         if (_settings isEqualType createHashMap) then {
             _maxConcurrent = _settings getOrDefault ["maxConcurrentMissions", _maxConcurrent];
@@ -201,13 +201,13 @@ GVAR(DeliveryMissionGeneratorBaseClass) = compileFinal createHashMapFromArray [
 
         if ("CargoSpawn" in allMapMarkers) exitWith { getMarkerPos "CargoSpawn" };
 
-        private _cargoSpawn = missionNamespace getVariable ["CargoSpawn", objNull];
+        private _cargoSpawn = GETMVAR(CargoSpawn,objNull);
         if (_cargoSpawn isEqualType "" && { _cargoSpawn in allMapMarkers }) exitWith { getMarkerPos _cargoSpawn };
         if (_cargoSpawn isEqualType objNull && { !(isNull _cargoSpawn) }) exitWith { getPosATL _cargoSpawn };
 
         if ("ExtZone" in allMapMarkers) exitWith { getMarkerPos "ExtZone" };
 
-        private _extZone = missionNamespace getVariable ["ExtZone", objNull];
+        private _extZone = GETMVAR(ExtZone,objNull);
         if (_extZone isEqualType "" && { _extZone in allMapMarkers }) exitWith { getMarkerPos _extZone };
         if (_extZone isEqualType objNull && { !(isNull _extZone) }) exitWith { getPosATL _extZone };
 

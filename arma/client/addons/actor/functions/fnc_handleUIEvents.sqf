@@ -37,6 +37,10 @@ switch (_event) do {
     case "actor::open::bank": { [] spawn EFUNC(bank,openUI); };
     case "actor::open::cad": { [] spawn EFUNC(cad,openUI); };
     case "actor::open::device": { hint "Device interaction is not yet implemented."; };
+    case "actor::open::missionSetup": {
+        diag_log "[FORGE:Client:Actor] Requesting framework mission setup UI.";
+        [SRPC(task,requestOpenMissionSetup), [player]] call CFUNC(serverEvent);
+    };
     case "actor::open::garage": {
         private _garageObject = objNull;
         if (_data isEqualType createHashMap) then {

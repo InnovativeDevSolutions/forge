@@ -51,6 +51,9 @@ Players also load `@forge_client` for player-facing UI. See
 - [Mission Designer Guide](./MISSION_DESIGNER_GUIDE.md): how to place Eden
   objects, garage markers, and CAD-compatible task modules for playable
   missions.
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md): how communities
+  and mission developers can create CAD-visible custom generated missions on
+  top of Forge.
 - [Player Guide](./PLAYER_GUIDE.md): how players use CAD, phone, bank, store,
   locker, garage, and economy services during missions.
 - [SurrealDB Setup](./surrealdb-setup.md): where to get SurrealDB or
@@ -61,6 +64,7 @@ Players also load `@forge_client` for player-facing UI. See
 - [Actor Usage Guide](./ACTOR_USAGE_GUIDE.md)
 - [Bank Usage Guide](./BANK_USAGE_GUIDE.md)
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md)
 - [Economy Usage Guide](./ECONOMY_USAGE_GUIDE.md)
 - [Garage Usage Guide](./GARAGE_USAGE_GUIDE.md)
 - [ICOM Usage Guide](./ICOM_USAGE_GUIDE.md)

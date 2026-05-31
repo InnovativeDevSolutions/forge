@@ -6,6 +6,7 @@ PREP(destroy);
 PREP(handler);
 PREP(hostage);
 PREP(hvt);
+PREP(initMissionSetupService);
 PREP(makeCargo);
 PREP(makeHostage);
 PREP(makeHVT);

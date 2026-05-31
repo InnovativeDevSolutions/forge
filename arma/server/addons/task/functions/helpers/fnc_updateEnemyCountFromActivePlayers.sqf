@@ -16,18 +16,16 @@
 
 if !(isServer) exitWith { 1 };
 
-private _table = missionNamespace getVariable [
-    "forge_pmc_enemyCountMultiplierTable",
-    [
-        [1, 2, 0.75],
-        [3, 6, 1.0],
-        [7, 10, 1.25],
-        [11, 19, 1.5]
-    ]
+private _defaultTable = [
+    [1, 2, 0.75],
+    [3, 6, 1.0],
+    [7, 10, 1.25],
+    [11, 19, 1.5]
 ];
+private _table = GETGVAR(enemyCountMultiplierTable,_defaultTable);
 
-private _minMultiplier = missionNamespace getVariable ["forge_pmc_enemyCountMultiplierMin", 0.5];
-private _maxMultiplier = missionNamespace getVariable ["forge_pmc_enemyCountMultiplierMax", 2.0];
+private _minMultiplier = GETGVAR(enemyCountMultiplierMin,0.5);
+private _maxMultiplier = GETGVAR(enemyCountMultiplierMax,2.0);
 
 private _activeCount = {
     (isPlayer _x) && { alive _x }
@@ -45,8 +43,8 @@ private _multiplier = 1;
 
 _multiplier = (_multiplier max _minMultiplier) min _maxMultiplier;
 
-missionNamespace setVariable ["forge_pmc_activePlayerCount", _activeCountSafe, true];
-missionNamespace setVariable ["forge_pmc_enemyCountMultiplier", _multiplier, true];
+SETMPVAR(GVAR(activePlayerCount),_activeCountSafe);
+SETMPVAR(GVAR(enemyCountMultiplier),_multiplier);
 
 ["INFO", format [
     "Mission enemy scaling updated. ActivePlayers=%1, Multiplier=%2",

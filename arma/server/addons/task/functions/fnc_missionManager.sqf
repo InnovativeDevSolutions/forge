@@ -20,25 +20,20 @@ if !(isServer) exitWith { false };
 if !(isNil QGVAR(MissionManagerPFH)) exitWith { false };
 
 if (
-    !(missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) &&
-    { !(isNil "forge_pmc_fnc_setupMenu_applySettings") }
+    (GETGVAR(enableMissionSetup,false)) &&
+    { !(GETGVAR(missionSetup_settingsApplied,false)) }
 ) exitWith {
-    if !(missionNamespace getVariable [QGVAR(MissionManagerStartupPending), false]) then {
-        missionNamespace setVariable [QGVAR(MissionManagerStartupPending), true, true];
-        ["INFO", "Mission manager startup deferred until mission setup settings are applied."] call EFUNC(common,log);
+    if !(GETGVAR(MissionManagerSetupPending,false)) then {
+        SETMPVAR(GVAR(MissionManagerSetupPending),true);
+        ["INFO", "Mission manager startup deferred until framework mission setup settings are applied."] call EFUNC(common,log);
 
         [] spawn {
             waitUntil {
                 sleep 1;
-                (missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) || { time > 180 }
+                GETGVAR(missionSetup_settingsApplied,false)
             };
 
-            if !(missionNamespace getVariable ["forge_pmc_missionSettingsApplied", false]) then {
-                ["INFO", "Mission manager startup applying mission setup fallback settings after timeout."] call EFUNC(common,log);
-                [] call forge_pmc_fnc_setupMenu_applySettings;
-            };
-
-            missionNamespace setVariable [QGVAR(MissionManagerStartupPending), false, true];
+            SETMPVAR(GVAR(MissionManagerSetupPending),false);
             call FUNC(missionManager);
         };
     };

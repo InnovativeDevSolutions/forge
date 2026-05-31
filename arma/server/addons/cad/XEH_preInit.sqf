@@ -91,16 +91,12 @@ call FUNC(registerEventListeners);
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
 
-    if !(isNil QEFUNC(task,requestMissionTask)) then {
-        _result = [_taskType, _metadata, _uid] call EFUNC(task,requestMissionTask);
-    } else {
-        if (isNil "forge_pmc_fnc_requestMissionTask") exitWith {
-            _result set ["message", "This mission does not expose dispatcher-generated tasks."];
-            [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
-        };
-
-        _result = [_taskType, _metadata, _uid] call forge_pmc_fnc_requestMissionTask;
+    if (isNil QEFUNC(task,requestMissionTask)) exitWith {
+        _result set ["message", "Framework generated mission requests are unavailable."];
+        [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
+
+    _result = [_taskType, _metadata, _uid] call EFUNC(task,requestMissionTask);
 
     if !(_result getOrDefault ["success", false]) exitWith {
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
