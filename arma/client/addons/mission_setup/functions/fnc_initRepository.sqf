@@ -159,7 +159,8 @@ GVAR(MissionSetupRepositoryBaseClass) = compileFinal createHashMapFromArray [
         private _serviceDefault = {
             params ["_varName", "_default"];
 
-            private _serviceConfig = _missionConfig >> "ServicePricing";
+            private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+            if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
             if (isNumber (_serviceConfig >> _varName)) exitWith {
                 getNumber (_serviceConfig >> _varName)
             };

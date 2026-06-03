@@ -12,9 +12,6 @@
  * Generator behavior:
  * - maxConcurrentMissions and missionInterval are copied into
  *   forge_server_task_missionSetup_settings by the framework mission setup service.
- * - ServicePricing values are copied to missionNamespace by the framework
- *   mission setup service so economy and transport stores can read UI or
- *   mission-param overrides at runtime.
  * - Reward, reputation, penalty, and timeLimit ranges are read through
  *   forge_server_task_fnc_getMissionSettingRange so UI overrides and config fallbacks
  *   use the same path.
@@ -28,18 +25,6 @@ class CfgMissions {
 
     // Seconds before a generated mission location can be reused.
     locationReuseCooldown = 900;
-
-    // Economy and service defaults. Mission Params with matching names override
-    // these values before the setup UI opens; submitted UI values override both.
-    class ServicePricing {
-        medicalSpawnCost = 100;
-        medicalHealCost = 100;
-        serviceRepairCost = 500;
-        serviceRearmCost = 500;
-        fuelCost = 5;
-        transportBaseFare = 100;
-        transportPricePerKm = 50;
-    };
 
     // Enemy faction selection is ultimately exported to ENEMY_FACTION_STR and
     // ENEMY_SIDE for server-side generators.

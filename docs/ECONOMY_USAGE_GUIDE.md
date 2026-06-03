@@ -31,7 +31,7 @@ succeeds.
 
 The refuel price per liter is controlled by `fuelCost`. The mission setup UI
 can override it at startup; otherwise a mission `Params` entry named
-`fuelCost` or `CfgMissions >> ServicePricing >> fuelCost` is used.
+`fuelCost` or `CfgServicePricing >> fuelCost` is used.
 
 ## Repair
 
@@ -96,7 +96,7 @@ Medical pricing uses:
   best-effort so a failed charge does not block the respawn flow.
 
 Both values can be set in the mission setup UI, mission `Params`, or
-`CfgMissions >> ServicePricing`.
+`CfgServicePricing`.
 
 ## Medical Debt Repayment
 

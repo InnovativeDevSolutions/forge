@@ -93,7 +93,7 @@ dressing object that should not be moved as cargo.
 
 Default transport pricing comes from the mission setup UI or matching mission
 `Params` entries named `transportBaseFare` and `transportPricePerKm`. If neither
-is set, `CfgMissions >> ServicePricing` provides the fallback.
+is set, `CfgServicePricing` provides the fallback.
 
 ## Optional Per-Node Overrides
 

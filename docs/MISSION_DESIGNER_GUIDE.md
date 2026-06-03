@@ -764,7 +764,7 @@ applies settings. Cancel, X, and Escape apply default values from CBA, mission
 parameters, and `CfgMissions`. There is no timeout that auto-applies defaults.
 After settings are applied, the setup UI cannot be reopened.
 
-Service pricing fallback values live under `CfgMissions >> ServicePricing`.
+Service pricing fallback values live in mission-local `CfgServicePricing.hpp`.
 Mission `Params` with matching names, such as `medicalHealCost`,
 `serviceRepairCost`, `serviceRearmCost`, `fuelCost`, `transportBaseFare`, and
 `transportPricePerKm`, are read before the setup UI hydrates so mission makers

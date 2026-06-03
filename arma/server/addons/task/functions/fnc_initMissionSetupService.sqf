@@ -23,6 +23,13 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         };
         _missionConfig
     }],
+    ["getServicePricingConfig", compileFinal {
+        private _pricingConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _pricingConfig) then {
+            _pricingConfig = configFile >> "CfgServicePricing";
+        };
+        _pricingConfig
+    }],
     ["numberOrDefault", compileFinal {
         params ["_value", "_default"];
 
@@ -86,7 +93,7 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         private _serviceDefault = {
             params ["_varName", "_default"];
 
-            private _serviceConfig = _missionConfig >> "ServicePricing";
+            private _serviceConfig = _self call ["getServicePricingConfig", []];
             if (isNumber (_serviceConfig >> _varName)) exitWith {
                 getNumber (_serviceConfig >> _varName)
             };

@@ -13,7 +13,7 @@ charges such as repairs and rearming.
 Service prices are read dynamically from mission namespace values so the
 framework mission setup UI can override them at startup. If the UI is cancelled
 or unavailable, mission `Params` with matching names are used as the backup;
-if no param is defined, `CfgMissions >> ServicePricing` provides the fallback.
+if no param is defined, `CfgServicePricing` provides the fallback.
 
 Supported setting names:
 - `medicalSpawnCost` - best-effort medical respawn charge; default `100`

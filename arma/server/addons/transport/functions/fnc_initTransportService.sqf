@@ -43,9 +43,8 @@ GVAR(TransportServiceBase) = compileFinal createHashMapFromArray [
         params [["_name", "", [""]], ["_default", 0, [0]]];
 
         private _configDefault = _default;
-        private _missionConfig = missionConfigFile >> "CfgMissions";
-        if !(isClass _missionConfig) then { _missionConfig = configFile >> "CfgMissions"; };
-        private _serviceConfig = _missionConfig >> "ServicePricing";
+        private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
         if (isNumber (_serviceConfig >> _name)) then {
             _configDefault = getNumber (_serviceConfig >> _name);
         };

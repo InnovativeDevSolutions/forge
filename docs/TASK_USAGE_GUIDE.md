@@ -196,7 +196,7 @@ waits for setup settings before starting. There is no timeout auto-apply.
 Pressing Cancel, X, or Escape applies default values from CBA, mission
 parameters, and `CfgMissions`.
 
-Service price defaults are stored in `CfgMissions >> ServicePricing`. Mission
+Service price defaults are stored in `CfgServicePricing`. Mission
 `Params` with matching names override those defaults before the UI opens, and
 submitted UI values override both. The supported names are
 `medicalSpawnCost`, `medicalHealCost`, `serviceRepairCost`,
