@@ -196,7 +196,8 @@ GVAR(MissionSetupRepositoryBaseClass) = compileFinal createHashMapFromArray [
                 ["penaltyMin", ["penaltyMin", -5] call _paramOrDefault],
                 ["penaltyMax", ["penaltyMax", -25] call _paramOrDefault],
                 ["timeLimitMin", ["timeLimitMin", 600] call _paramOrDefault],
-                ["timeLimitMax", ["timeLimitMax", 900] call _paramOrDefault]
+                ["timeLimitMax", ["timeLimitMax", 900] call _paramOrDefault],
+                ["generatorProvider", GETMVAR(forge_server_task_generatorProvider,"builtin")]
             ]]
         ]
     }]

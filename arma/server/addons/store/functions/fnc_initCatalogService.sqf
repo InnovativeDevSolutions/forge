@@ -17,6 +17,99 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         _self set ["catalogCache", createHashMap];
         ["INFO", "Store catalog service initialized!"] call EFUNC(common,log);
     }],
+    ["getMissionStoreConfig", compileFinal {
+        missionConfigFile >> "CfgStore"
+    }],
+    ["getMissionStoreMode", compileFinal {
+        private _storeConfig = _self call ["getMissionStoreConfig", []];
+        private _mode = toLowerANSI getText (_storeConfig >> "mode");
+
+        if !(_mode in ["allowlist", "denylist", "dynamic"]) then { _mode = "dynamic"; };
+
+        _mode
+    }],
+    ["getMissionStoreCategoryList", compileFinal {
+        params [["_category", "", [""]]];
+
+        private _storeConfig = _self call ["getMissionStoreConfig", []];
+        private _categoryKey = _self call ["normalizeCategoryKey", [_category]];
+        private _categoryConfig = _storeConfig >> "Categories" >> _categoryKey;
+        private _classNames = [];
+
+        if (isArray _categoryConfig) then {
+            _classNames = getArray _categoryConfig;
+        };
+
+        _classNames apply {
+            private _className = "";
+            if (_x isEqualType "") then {
+                _className = _x;
+            } else {
+                _className = str _x;
+            };
+
+            toLowerANSI _className
+        }
+    }],
+    ["applyMissionStoreOverrides", compileFinal {
+        params [["_item", createHashMap, [createHashMap]]];
+
+        if (_item isEqualTo createHashMap) exitWith { _item };
+
+        private _className = _item getOrDefault ["className", ""];
+        if (_className isEqualTo "") exitWith { _item };
+
+        private _override = (_self call ["getMissionStoreConfig", []]) >> "Overrides" >> _className;
+        if !(isClass _override) exitWith { _item };
+
+        if (isText (_override >> "displayName")) then {
+            private _displayName = getText (_override >> "displayName");
+            if (_displayName isNotEqualTo "") then { _item set ["name", _displayName]; };
+        };
+
+        if (isText (_override >> "description")) then {
+            _item set ["description", getText (_override >> "description")];
+        };
+
+        if (isText (_override >> "image")) then {
+            _item set ["image", getText (_override >> "image")];
+        };
+
+        if (isText (_override >> "type")) then {
+            private _typeLabel = getText (_override >> "type");
+            if (_typeLabel isNotEqualTo "") then { _item set ["type", _typeLabel]; };
+        };
+
+        if (isNumber (_override >> "price")) then {
+            private _priceValue = floor (getNumber (_override >> "price") max 0);
+            _item set ["priceValue", _priceValue];
+            _item set ["price", _self call ["formatCurrency", [_priceValue]]];
+        };
+
+        _item
+    }],
+    ["applyMissionStoreFilter", compileFinal {
+        params [["_category", "", [""]], ["_items", [], [[]]]];
+
+        private _mode = _self call ["getMissionStoreMode", []];
+        private _classNames = _self call ["getMissionStoreCategoryList", [_category]];
+        private _filteredItems = +_items;
+
+        switch (_mode) do {
+            case "allowlist": {
+                _filteredItems = _items select {
+                    (toLowerANSI (_x getOrDefault ["className", ""])) in _classNames
+                };
+            };
+            case "denylist": {
+                _filteredItems = _items select {
+                    !((toLowerANSI (_x getOrDefault ["className", ""])) in _classNames)
+                };
+            };
+        };
+
+        _filteredItems apply { _self call ["applyMissionStoreOverrides", [_x]] }
+    }],
     ["formatCurrency", compileFinal {
         params [["_amount", 0, [0]]];
 
@@ -196,6 +289,22 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         _items
     }],
+    ["appendCfgUnits", compileFinal {
+        params [["_items", [], [[]]], ["_typeLabel", "Unit", [""]], ["_fallbackDescription", "", [""]]];
+
+        {
+            private _cfg = _x;
+            private _className = configName _cfg;
+            if (
+                _self call ["isVisibleConfig", [_cfg]]
+                && { _className isKindOf ["CAManBase", configFile >> "CfgVehicles"] }
+            ) then {
+                _items pushBack (_self call ["buildCatalogItem", [_cfg, _typeLabel, _fallbackDescription, "editorPreview", true]]);
+            };
+        } forEach ("true" configClasses (configFile >> "CfgVehicles"));
+
+        _items
+    }],
     ["isBackpackConfig", compileFinal {
         params [["_cfg", configNull, [configNull]]];
 
@@ -270,6 +379,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             case "helis": { _items = _self call ["appendCfgVehiclesByKind", [_items, "Helicopter", "Aircraft", "Live helicopter entry generated from the game inventory."]]; };
             case "planes": { _items = _self call ["appendCfgVehiclesByKind", [_items, "Plane", "Aircraft", "Live fixed-wing entry generated from the game inventory."]]; };
             case "naval": { _items = _self call ["appendCfgVehiclesByKind", [_items, "Ship", "Naval", "Live naval vehicle entry generated from the game inventory."]]; };
+            case "units": { _items = _self call ["appendCfgUnits", [_items, "Unit", "Live unit entry generated from the game inventory."]]; };
             case "other": {
                 {
                     private _cfg = _x;
@@ -305,10 +415,16 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         (toLowerANSI _category) in ["cars", "armor", "helis", "planes", "naval", "other"]
     }],
+    ["isUnitCategory", compileFinal {
+        params [["_category", "", [""]]];
+
+        (toLowerANSI _category) isEqualTo "units"
+    }],
     ["buildPayloadCategory", compileFinal {
         params [["_category", "", [""]]];
 
         switch (toLowerANSI _category) do {
+            case "units": { "units" };
             case "backpacks": { "backpack" };
             case "attachments": { "attachment" };
             case "ammo": { "magazine" };
@@ -327,7 +443,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
     ["isSupportedCategory", compileFinal {
         params [["_category", "", [""]]];
 
-        (_self call ["normalizeCategoryKey", [_category]]) in ["uniforms", "headgear", "vests", "backpacks", "attachments", "facewear", "ammo", "misc", "primary", "handgun", "secondary", "cars", "armor", "helis", "planes", "naval", "other"]
+        (_self call ["normalizeCategoryKey", [_category]]) in ["uniforms", "headgear", "vests", "backpacks", "attachments", "facewear", "ammo", "misc", "primary", "handgun", "secondary", "cars", "armor", "helis", "planes", "naval", "other", "units"]
     }],
     ["buildCategoryItems", compileFinal {
         params [["_category", "", [""]]];
@@ -340,12 +456,16 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         private _items = _self call ["scanCategoryItems", [_categoryKey]];
         private _payloadCategory = _self call ["buildPayloadCategory", [_categoryKey]];
-        private _entryKind = ["item", "vehicle"] select (_self call ["isVehicleCategory", [_categoryKey]]);
+        private _entryKind = "item";
+        if (_self call ["isVehicleCategory", [_categoryKey]]) then { _entryKind = "vehicle"; };
+        if (_self call ["isUnitCategory", [_categoryKey]]) then { _entryKind = "unit"; };
 
         {
             _x set ["category", _payloadCategory];
             _x set ["entryKind", _entryKind];
         } forEach _items;
+
+        _items = _self call ["applyMissionStoreFilter", [_categoryKey, _items]];
 
         _catalogCache set [_categoryKey, _items];
         _self set ["catalogCache", _catalogCache];
@@ -376,6 +496,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _category = toLowerANSI (_entry getOrDefault ["category", ""]);
 
         if (_entryKind isEqualTo "vehicle") exitWith { ["cars", "armor", "helis", "planes", "naval", "other"] };
+        if (_entryKind isEqualTo "unit" || { _category isEqualTo "units" }) exitWith { ["units"] };
         if (_category isEqualTo "weapon") exitWith { ["primary", "handgun", "secondary"] };
         if (_category isEqualTo "backpack") exitWith { ["backpacks"] };
         if (_category isEqualTo "attachment") exitWith { ["attachments"] };
@@ -400,19 +521,21 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         _resolved
     }],
     ["buildCheckoutRequest", compileFinal {
-        params [["_items", [], [[]]], ["_vehicles", [], [[]]]];
+        params [["_items", [], [[]]], ["_vehicles", [], [[]]], ["_units", [], [[]]]];
 
         private _result = createHashMapFromArray [
             ["success", false],
             ["total", 0],
             ["message", "Checkout total must be greater than zero."],
             ["items", []],
-            ["vehicles", []]
+            ["vehicles", []],
+            ["units", []]
         ];
         private _total = 0;
         private _message = "";
         private _resolvedItems = [];
         private _resolvedVehicles = [];
+        private _resolvedUnits = [];
 
         {
             if (_message isEqualTo "") then {
@@ -463,6 +586,29 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             };
         } forEach _vehicles;
 
+        {
+            if (_message isEqualTo "") then {
+                private _className = _x getOrDefault ["classname", ""];
+                if (_className isEqualTo "") then {
+                    _message = "Checkout contains an invalid unit entry.";
+                } else {
+                    private _catalogEntry = _self call ["resolveCheckoutCatalogEntry", [createHashMapFromArray [["classname", _className], ["category", "units"], ["entryKind", "unit"]]]];
+
+                    if (_catalogEntry isEqualTo createHashMap) then {
+                        _message = format ["Unsupported store unit: %1", _className];
+                    } else {
+                        private _priceValue = _catalogEntry getOrDefault ["priceValue", 0];
+                        _total = _total + _priceValue;
+                        _resolvedUnits pushBack (createHashMapFromArray [
+                            ["classname", _className],
+                            ["category", "units"],
+                            ["priceValue", _priceValue]
+                        ]);
+                    };
+                };
+            };
+        } forEach _units;
+
         if (_message isNotEqualTo "") exitWith {
             _result set ["message", _message];
             _result
@@ -475,12 +621,13 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         _result set ["message", ""];
         _result set ["items", _resolvedItems];
         _result set ["vehicles", _resolvedVehicles];
+        _result set ["units", _resolvedUnits];
         _result
     }],
     ["calculateCheckoutTotal", compileFinal {
-        params [["_items", [], [[]]], ["_vehicles", [], [[]]]];
+        params [["_items", [], [[]]], ["_vehicles", [], [[]]], ["_units", [], [[]]]];
 
-        private _checkout = _self call ["buildCheckoutRequest", [_items, _vehicles]];
+        private _checkout = _self call ["buildCheckoutRequest", [_items, _vehicles, _units]];
         createHashMapFromArray [
             ["success", _checkout getOrDefault ["success", false]],
             ["total", _checkout getOrDefault ["total", 0]],

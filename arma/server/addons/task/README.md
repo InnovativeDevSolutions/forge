@@ -226,10 +226,10 @@ If you want the accepting player's org to own the task rewards, use `fnc_handler
   - compiles functions
   - initializes `TaskStore`
   - initializes task instance and entity controller classes
+  - initializes generated mission provider objects and registers the built-in provider
+  - registers task lifecycle log and notification listeners with the event bus
 - `XEH_postInit.sqf`
-  - registers task lifecycle event listeners with the event bus
-  - handles task reward, notification, and rating events
-  - syncs org and bank state through event bus listeners
+  - registers CBA server events for provider registration and mission setup requests
   - registers the ACE defuse event hook
 
 ## Events Emitted
@@ -246,7 +246,8 @@ Task module emits the following events to the event bus:
 
 ## Notes
 - the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; timer-based mission generation only runs when the `forge_server_task_enableGenerator` CBA setting is enabled
-- CAD can request a specific generated mission type through `fnc_requestMissionTask.sqf`
+- CAD hydrates generated mission types and requests generated missions through `MissionGeneratorProviderRegistry`
+- custom generated mission providers register through the `forge_server_task_registerMissionGeneratorProvider` CBA server event
 - it starts server-owned tasks through `fnc_handler.sqf` and binds them to the `default` org
 - task lifecycle for the mission manager is tracked through `TaskStore` status entries
 - task backend state is intentionally transient and resets with the active server/mission lifecycle

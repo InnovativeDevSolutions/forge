@@ -36,6 +36,7 @@
         const payload = {
             items: [],
             vehicles: [],
+            units: [],
             totalPrice,
             paymentMethod,
         };
@@ -52,6 +53,20 @@
                     payload.vehicles.push({
                         classname: normalizedItem.classname,
                         category: normalizedItem.category,
+                    });
+                }
+                return;
+            }
+
+            if (normalizedItem.entryKind === "unit") {
+                for (
+                    let index = 0;
+                    index < normalizedItem.quantity;
+                    index += 1
+                ) {
+                    payload.units.push({
+                        classname: normalizedItem.classname,
+                        category: "units",
                     });
                 }
                 return;

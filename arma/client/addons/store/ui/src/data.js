@@ -81,6 +81,7 @@
             { id: "ammo", label: "Ammo" },
             { id: "misc", label: "Misc" },
             { id: "vehicles", label: "Vehicles" },
+            { id: "units", label: "Units" },
         ],
         vehicleCards: [
             { id: "cars", label: "Cars" },
@@ -113,6 +114,7 @@
             planes: [],
             naval: [],
             other: [],
+            units: [],
         },
     };
 

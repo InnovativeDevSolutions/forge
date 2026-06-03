@@ -44,6 +44,30 @@ cd arma/server/surrealdb
 .\RunMe.bat
 ```
 
+On Windows, `UpdateMe.bat` is a wrapper around `UpdateSurrealDB.ps1`. By
+default it installs or updates to the newest compatible SurrealDB 3.x release
+reported by SurrealDB's official version endpoint. You can also pin an exact
+release:
+
+```powershell
+.\UpdateMe.bat v3.1.2
+.\UpdateSurrealDB.ps1 -Version v3.1.2
+```
+
+To intentionally install the latest stable SurrealDB release regardless of
+major version, run:
+
+```powershell
+.\UpdateMe.bat latest
+```
+
+The `latest` option prompts for confirmation because a newer SurrealDB major
+version can require rebuilding the Forge server extension from source with a
+compatible `surrealdb` Rust crate.
+
+`RunMe.bat` is a wrapper around `RunSurrealDB.ps1`, which starts the local
+Forge database with the same defaults shown below.
+
 On Linux or macOS:
 
 ```bash

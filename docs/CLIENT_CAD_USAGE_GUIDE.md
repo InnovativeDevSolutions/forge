@@ -104,13 +104,13 @@ The dispatcher-generated task dropdown is hydrated from the server
 `generatedTaskTypes` payload. The UI has a built-in fallback list for loading or
 older payload compatibility, but any hydrate payload that includes
 `generatedTaskTypes` replaces that fallback. An empty hydrated list disables the
-request control, which is how `forge_server_task_enableGenerator = false` is surfaced
-client-side.
+request control. For the built-in provider, this is how
+`forge_server_task_enableGenerator = false` is surfaced client-side.
 
-Custom mission generators can still publish tasks into CAD by using the server
-task catalog. The generated-task dropdown itself currently needs a framework
-provider extension point before custom providers can replace the built-in list
-cleanly. See [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md).
+Custom mission generators can publish tasks into CAD by using the server task
+catalog or by registering a task provider that supplies `generatedTaskTypes` and
+handles generated task requests. See
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md).
 
 ## Authorization Notes
 

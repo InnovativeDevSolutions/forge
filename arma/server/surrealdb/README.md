@@ -10,10 +10,34 @@ firewall, TLS, backup, and upgrade policy before exposing the database.
 
 ## Windows
 
-Install or update SurrealDB:
+Install or update SurrealDB to the newest compatible SurrealDB 3.x release:
 
 ```bat
 UpdateMe.bat
+```
+
+Install a specific SurrealDB release:
+
+```bat
+UpdateMe.bat v3.1.2
+```
+
+Install the latest stable SurrealDB release, including newer major versions:
+
+```bat
+UpdateMe.bat latest
+```
+
+`latest` requires confirmation because a newer SurrealDB major version can
+require rebuilding the Forge server extension from source with a compatible
+`surrealdb` Rust crate.
+
+The PowerShell entry point exposes the same behavior:
+
+```powershell
+.\UpdateSurrealDB.ps1
+.\UpdateSurrealDB.ps1 -Version v3.1.2
+.\UpdateSurrealDB.ps1 -Version latest
 ```
 
 If this is the first install and the terminal cannot find `surreal` after the
@@ -25,11 +49,20 @@ Start Forge's local database:
 RunMe.bat
 ```
 
+Or start it directly with PowerShell:
+
+```powershell
+.\RunSurrealDB.ps1
+```
+
 Install and start in one step:
 
 ```bat
 AllInOne.bat
 ```
+
+`AllInOne.bat` also defaults to the newest compatible SurrealDB 3.x release.
+Pass the same version argument as `UpdateMe.bat` to override it.
 
 ## Linux or macOS
 

@@ -105,9 +105,9 @@ GVAR(EntityControllerBaseClass) = createHashMapFromArray [
         private _registryKey = _self call ["getRegistryKey", []];
         if (_registryKey isEqualTo "") exitWith { false };
 
-        private _registry = missionNamespace getVariable [QGVAR(ObjectControllerInstances), createHashMap];
+        private _registry = GETMVAR(GVAR(ObjectControllerInstances),createHashMap);
         _registry set [_registryKey, _self];
-        missionNamespace setVariable [QGVAR(ObjectControllerInstances), _registry];
+        SETMVAR(GVAR(ObjectControllerInstances),_registry);
         missionNamespace setVariable [_registryKey, _self];
         true
     }],
@@ -115,7 +115,7 @@ GVAR(EntityControllerBaseClass) = createHashMapFromArray [
         private _registryKey = _self call ["getRegistryKey", []];
         if (_registryKey isEqualTo "") exitWith { false };
 
-        private _registry = missionNamespace getVariable [QGVAR(ObjectControllerInstances), createHashMap];
+        private _registry = GETMVAR(GVAR(ObjectControllerInstances),createHashMap);
         _registry deleteAt _registryKey;
         missionNamespace setVariable [_registryKey, nil];
         true

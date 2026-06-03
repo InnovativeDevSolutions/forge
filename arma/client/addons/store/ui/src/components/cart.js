@@ -300,15 +300,13 @@ ${scopeSelector} .cart-empty {
             getters.getPaymentSourceById(
                 storeConfig,
                 state.selectedPaymentSource,
-            ) ||
-            paymentSources[0] ||
-            null;
+            ) || null;
         const availablePaymentSourceCount = paymentSources.filter(
             (source) => source.enabled !== false,
         ).length;
         const selectedPaymentLabel = selectedPaymentSource
             ? selectedPaymentSource.label
-            : "Unavailable";
+            : "Select Payment";
         const selectedPaymentBalance = selectedPaymentSource
             ? Number(selectedPaymentSource.balance || 0)
             : 0;
@@ -392,12 +390,20 @@ ${scopeSelector} .cart-empty {
                                 "select",
                                 {
                                     className: "payment-source-select",
-                                    value: state.selectedPaymentSource,
+                                    value: state.selectedPaymentSource || "",
                                     onChange: (event) =>
                                         actions.selectPaymentSource(
                                             event.target.value,
                                         ),
                                 },
+                                h(
+                                    "option",
+                                    {
+                                        value: "",
+                                        disabled: true,
+                                    },
+                                    "Select Payment",
+                                ),
                                 paymentSources.map((source) =>
                                     h(
                                         "option",
@@ -467,7 +473,28 @@ ${scopeSelector} .cart-empty {
                                               : "Unavailable",
                                       ),
                                   )
-                                : null,
+                                : h(
+                                      "div",
+                                      {
+                                          className: "payment-source-meta",
+                                      },
+                                      h(
+                                          "span",
+                                          {
+                                              className: "payment-source-label",
+                                          },
+                                          "Select Payment",
+                                      ),
+                                      h(
+                                          "span",
+                                          {
+                                              className: "payment-source-state",
+                                          },
+                                          availablePaymentSourceCount > 0
+                                              ? "Required"
+                                              : "Unavailable",
+                                      ),
+                                  ),
                         ),
                     ),
                     h(
@@ -630,6 +657,7 @@ ${scopeSelector} .cart-empty {
                                 className: "store-btn store-btn-primary",
                                 disabled:
                                     summary.lineCount === 0 ||
+                                    !selectedPaymentSource ||
                                     state.isCheckingOut,
                                 onClick: () => actions.requestCheckout(),
                             },

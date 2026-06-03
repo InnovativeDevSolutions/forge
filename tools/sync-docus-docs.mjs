@@ -460,8 +460,8 @@ npm run build:webui
   title: Custom Mission Generators
   to: /getting-started/custom-mission-generators
   ---
-  Create CAD-visible custom generated missions and understand the current
-  provider extension point.
+  Create CAD-visible custom generated missions and register custom generator
+  providers.
   :::
 
   :::u-page-card

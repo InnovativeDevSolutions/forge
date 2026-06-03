@@ -2,7 +2,8 @@
 
 The store module processes checkout requests. It charges a payment source and
 grants purchased items to the player locker, virtual arsenal locker, and
-virtual garage unlocks.
+virtual garage unlocks. Unit purchases are fulfilled as immediate server-side
+spawn grants at discovered `unit_spawn` markers.
 
 ## Server SQF Module
 
@@ -19,6 +20,55 @@ Editor-placed store entities are initialized by `fnc_initStore` during store
 post-init. The initializer matches non-null mission namespace objects whose
 variable names contain `store` and sets `isStore = true`, following the same
 pattern used by garage entities.
+
+## Mission Catalog Filter
+
+The store catalog is generated from loaded Arma config classes, then an
+optional mission `CfgStore` filter can allow or deny classnames per category.
+Include `CfgStore.hpp` from `description.ext`:
+
+```cpp
+#include "CfgStore.hpp"
+```
+
+```cpp
+class CfgStore {
+    mode = "allowlist"; // dynamic, allowlist, or denylist
+
+    class Categories {
+        primary[] = {"arifle_MX_F", "arifle_MXC_F"};
+        cars[] = {"B_MRAP_01_F"};
+        units[] = {"B_Soldier_F"};
+    };
+
+    class Overrides {
+        class arifle_MX_F {
+            price = 2500;
+            displayName = "MX Rifle";
+            description = "Approved PMC service rifle.";
+        };
+    };
+};
+```
+
+`dynamic` keeps the full generated catalog. `allowlist` only shows classnames
+listed for each category. `denylist` removes listed classnames. Overrides are
+server-side and are used by both the UI payload and checkout validation.
+`units[]` uses the same filter behavior as every other category.
+
+The current filter is global for the mission. Revisit per-store profile support
+if individual vendors need different inventories.
+
+## Unit Spawn Markers
+
+Purchased units spawn at mission markers named `unit_spawn`, `unit_spawn_1`,
+`unit_spawn_2`, and so on. The store resolves the closest initialized store
+object to the requesting player, scans `allMapMarkers` when checkout fulfillment
+runs, and uses the closest matching marker within 25 meters of that store.
+
+If no matching marker exists within 25 meters, the store falls back to spawning
+units around the store object. If no store object can be resolved, it falls back
+to the requesting player.
 
 ## Checkout Model
 
@@ -45,6 +95,13 @@ pattern used by garage entities.
       "category": "cars",
       "priceValue": 1500
     }
+  ],
+  "units": [
+    {
+      "classname": "B_Soldier_F",
+      "category": "units",
+      "priceValue": 2500
+    }
   ]
 }
 ```
@@ -52,12 +109,13 @@ pattern used by garage entities.
 Rules validated by the Rust service:
 
 - `requesterUid` is required.
-- At least one item or vehicle is required.
+- At least one item, vehicle, or unit is required.
 - The checkout total must be greater than zero.
 - Item categories must be `item`, `attachment`, `weapon`, `magazine`, or
   `backpack`.
 - Vehicle categories must be `cars`, `armor`, `helis`, `planes`, `naval`, or
   `other`.
+- Unit categories must be `units` or `unit`.
 - Payment method must be `cash`, `bank`, `org_funds`, or `credit_line`.
 - Player locker capacity cannot exceed 25 unique items after checkout.
 - Organization funds can only be charged by the org owner or the default org
@@ -73,11 +131,12 @@ Rules validated by the Rust service:
 
 ```json
 {
-  "chargedTotal": 2000.0,
+  "chargedTotal": 4500.0,
   "paymentMethod": "bank",
-  "message": "Checkout completed. $2,000 charged, 1 locker grant(s), 1 vehicle unlock(s).",
+  "message": "Checkout completed. $4,500 charged, 1 locker grant(s), 1 vehicle unlock(s), 1 unit grant(s).",
   "lockerGranted": [],
   "vehicleGranted": [],
+  "unitGranted": [],
   "lockerPatch": {},
   "vaPatch": {},
   "vgaragePatch": {},
@@ -108,7 +167,8 @@ private _checkout = createHashMapFromArray [
     ["requesterIsDefaultOrgCeo", false],
     ["paymentMethod", "bank"],
     ["items", [_item]],
-    ["vehicles", []]
+    ["vehicles", []],
+    ["units", []]
 ];
 
 private _result = "forge_server" callExtension ["store:checkout", [toJSON _checkout]];
@@ -133,7 +193,8 @@ private _checkout = createHashMapFromArray [
     ["requesterIsDefaultOrgCeo", false],
     ["paymentMethod", "org_funds"],
     ["items", []],
-    ["vehicles", [_vehicle]]
+    ["vehicles", [_vehicle]],
+    ["units", []]
 ];
 
 private _result = "forge_server" callExtension ["store:checkout", [toJSON _checkout]];

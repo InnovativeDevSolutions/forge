@@ -14,6 +14,7 @@
             penaltyMax: -25,
             timeLimitMin: 600,
             timeLimitMax: 900,
+            generatorProvider: "builtin",
         },
         error: "",
     };
@@ -46,6 +47,7 @@
             penaltyMax: fieldNumber("penaltyMax"),
             timeLimitMin: fieldNumber("timeLimitMin"),
             timeLimitMax: fieldNumber("timeLimitMax"),
+            generatorProvider: document.getElementById("generatorProviderCustom")?.checked ? "custom" : "builtin",
         };
     }
 
@@ -101,6 +103,8 @@
         const settings = state.settings;
         const faction = state.factions.find((item) => item.faction === settings.enemyFaction);
         const factionLabel = faction ? faction.display : settings.enemyFaction;
+        const generatorProviderLabel = settings.generatorProvider === "custom" ? "Custom" : "Built-in";
+        const generatorProviderChecked = settings.generatorProvider === "custom" ? " checked" : "";
 
         document.getElementById("app").innerHTML = `
             <div class="shell">
@@ -120,13 +124,24 @@
                                 <h1>Operation Settings</h1>
                             </div>
                             <div class="form">
-                                <div class="field">
+                                <div class="field wide">
                                     <label for="enemyFaction">Opposing Faction</label>
                                     <select id="enemyFaction">${state.factions.map(option).join("")}</select>
                                 </div>
                                 <div class="field">
                                     <label for="locationReuseCooldown">Location Cooldown</label>
                                     <input id="locationReuseCooldown" type="number" min="0" step="60" value="${settings.locationReuseCooldown}" />
+                                </div>
+                                <div class="field">
+                                    <label for="generatorProviderCustom">Mission Generator</label>
+                                    <label class="provider-toggle" for="generatorProviderCustom">
+                                        <input id="generatorProviderCustom" type="checkbox"${generatorProviderChecked} />
+                                        <span class="switch" aria-hidden="true"></span>
+                                        <span class="provider-copy">
+                                            <strong>${generatorProviderLabel}</strong>
+                                            <small>Mission Generators</small>
+                                        </span>
+                                    </label>
                                 </div>
                                 <div class="field">
                                     <label for="maxConcurrentMissions">Concurrent Missions</label>
@@ -178,6 +193,7 @@
                             </div>
                             <div class="summary">
                                 <div class="summary-row"><span>Faction</span><strong>${escapeHtml(factionLabel)}</strong></div>
+                                <div class="summary-row"><span>Generator</span><strong>${generatorProviderLabel}</strong></div>
                                 <div class="summary-row"><span>Mission Cap</span><strong>${settings.maxConcurrentMissions}</strong></div>
                                 <div class="summary-row"><span>Interval</span><strong>${settings.missionInterval}s</strong></div>
                                 <div class="summary-row"><span>Location Cooldown</span><strong>${settings.locationReuseCooldown}s</strong></div>
