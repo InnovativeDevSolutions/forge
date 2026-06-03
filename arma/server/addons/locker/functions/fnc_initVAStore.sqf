@@ -24,13 +24,26 @@
 #pragma hemtt ignore_variables ["_self"]
 GVAR(VArsenalModel) = compileFinal createHashMapObject [[
     ["#type", "VArsenalModel"],
+    ["getStartingUnlocksConfig", compileFinal {
+        missionConfigFile >> "CfgStartingEquipment" >> "Unlocks" >> "Locker"
+    }],
+    ["getStartingUnlocks", compileFinal {
+        params [["_category", "", [""]], ["_fallback", [], [[]]]];
+
+        private _config = _self call ["getStartingUnlocksConfig", []];
+        private _categoryConfig = _config >> _category;
+
+        if (isArray _categoryConfig) exitWith { getArray _categoryConfig };
+
+        +_fallback
+    }],
     ["defaults", compileFinal {
         private _vArsenal = createHashMap;
 
-        _vArsenal set ["backpacks", ["B_AssaultPack_rgr"]];
-        _vArsenal set ["items", ["FirstAidKit", "G_Combat", "H_Cap_blk_ION", "H_HelmetB", "ItemCompass", "ItemGPS", "ItemMap", "ItemRadio", "ItemWatch", "U_BG_Guerrilla_6_1", "V_TacVest_oli", "ACE_EarPlugs"]];
-        _vArsenal set ["magazines", ["16Rnd_9x21_Mag", "30Rnd_65x39_caseless_black_mag", "Chemlight_blue", "Chemlight_green", "Chemlight_red", "Chemlight_yellow", "HandGrenade", "SmokeShell", "SmokeShellBlue", "SmokeShellGreen", "SmokeShellOrange", "SmokeShellPurple", "SmokeShellRed", "SmokeShellYellow"]];
-        _vArsenal set ["weapons", ["arifle_MX_F", "hgun_P07_F"]];
+        _vArsenal set ["backpacks", _self call ["getStartingUnlocks", ["backpacks", ["B_AssaultPack_rgr"]]]];
+        _vArsenal set ["items", _self call ["getStartingUnlocks", ["items", ["FirstAidKit", "G_Combat", "H_Cap_blk_ION", "H_HelmetB", "ItemCompass", "ItemGPS", "ItemMap", "ItemRadio", "ItemWatch", "U_BG_Guerrilla_6_1", "V_TacVest_oli", "ACE_EarPlugs"]]]];
+        _vArsenal set ["magazines", _self call ["getStartingUnlocks", ["magazines", ["16Rnd_9x21_Mag", "30Rnd_65x39_caseless_black_mag", "Chemlight_blue", "Chemlight_green", "Chemlight_red", "Chemlight_yellow", "HandGrenade", "SmokeShell", "SmokeShellBlue", "SmokeShellGreen", "SmokeShellOrange", "SmokeShellPurple", "SmokeShellRed", "SmokeShellYellow"]]]];
+        _vArsenal set ["weapons", _self call ["getStartingUnlocks", ["weapons", ["arifle_MX_F", "hgun_P07_F"]]]];
 
         _vArsenal
     }]
@@ -67,16 +80,45 @@ GVAR(VABaseStore) = compileFinal createHashMapFromArray [
         private _command = ["owned:locker:hot:fetch", "owned:locker:hot:init"] select _initialize;
         _self call ["callHotVArsenal", [_command, [_uid]]]
     }],
+    ["isPersistentVArsenalInitialized", compileFinal {
+        params [["_uid", "", [""]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+
+        ["owned:locker:exists", [_uid]] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
+        _isSuccess && { _result isEqualTo "true" }
+    }],
+    ["seedStartingUnlocks", compileFinal {
+        params [["_uid", "", [""]], ["_arsenal", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "" || { _arsenal isEqualTo createHashMap }) exitWith { _arsenal };
+
+        private _defaults = GVAR(VArsenalModel) call ["defaults", []];
+        private _seeded = +_arsenal;
+        {
+            _seeded set [_x, +_y];
+        } forEach _defaults;
+
+        private _updated = _self call ["callHotVArsenal", ["owned:locker:hot:override", [_uid, toJSON _seeded]]];
+        if (_updated isEqualTo createHashMap) exitWith { _seeded };
+
+        _self call ["callHotVArsenal", ["owned:locker:hot:save", [_uid]]];
+        _updated
+    }],
     ["init", compileFinal {
         params [["_uid", "", [""]]];
 
         private _player = [_uid] call EFUNC(common,getPlayer);
         if (isNull _player) exitWith { createHashMap };
 
+        private _hasPersistentArsenal = _self call ["isPersistentVArsenalInitialized", [_uid]];
         private _arsenal = _self call ["loadHotVArsenal", [_uid, true]];
         if (_arsenal isEqualTo createHashMap) then {
             _arsenal = GVAR(VArsenalModel) call ["defaults", []];
             ["ERROR", format ["Failed to initialize virtual arsenal for %1! Using fallback virtual arsenal.", _uid]] call EFUNC(common,log);
+        };
+        if !(_hasPersistentArsenal) then {
+            _arsenal = _self call ["seedStartingUnlocks", [_uid, _arsenal]];
         };
 
         [CRPC(locker,responseInitVA), [_arsenal], _player] call CFUNC(targetEvent);

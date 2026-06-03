@@ -30,6 +30,22 @@ GVAR(SEconomyStore) = createHashMapObject [[
         GVAR(ServiceRearmCost) = 500;
         ["INFO", "Service Store Initialized!", nil, nil] call EFUNC(common,log);
     }],
+    ["numberSetting", {
+        params [["_name", "", [""]], ["_default", 0, [0]]];
+
+        private _configDefault = _default;
+        private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+        if (isNumber (_serviceConfig >> _name)) then {
+            _configDefault = getNumber (_serviceConfig >> _name);
+        };
+
+        private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+        private _value = missionNamespace getVariable [_name, _paramValue];
+        if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+        if (_value isEqualType 0) exitWith { _value max 0 };
+        _configDefault
+    }],
     ["notify", {
         params [["_unit", objNull, [objNull]], ["_type", "info", [""]], ["_title", "Service", [""]], ["_message", "", [""]]];
 
@@ -148,7 +164,7 @@ GVAR(SEconomyStore) = createHashMapObject [[
 
         if (isNull _target || { isNull _unit }) exitWith { false };
 
-        private _repairCost = [_cost, GVAR(ServiceRepairCost)] select (_cost < 0);
+        private _repairCost = [_cost, _self call ["numberSetting", ["serviceRepairCost", GVAR(ServiceRepairCost)]]] select (_cost < 0);
         private _charge = _self call ["chargeOrg", [_unit, _repairCost, "Repair"]];
         if !(_charge getOrDefault ["success", false]) exitWith {
             _self call ["notify", [_unit, "danger", "Repair", _charge getOrDefault ["message", "Organization funds cannot cover this repair."]]];
@@ -164,7 +180,7 @@ GVAR(SEconomyStore) = createHashMapObject [[
 
         if (isNull _target || { isNull _unit }) exitWith { false };
 
-        private _rearmCost = [_cost, GVAR(ServiceRearmCost)] select (_cost < 0);
+        private _rearmCost = [_cost, _self call ["numberSetting", ["serviceRearmCost", GVAR(ServiceRearmCost)]]] select (_cost < 0);
         private _charge = _self call ["chargeOrg", [_unit, _rearmCost, "Rearm"]];
         if !(_charge getOrDefault ["success", false]) exitWith {
             _self call ["notify", [_unit, "danger", "Rearm", _charge getOrDefault ["message", "Organization funds cannot cover this rearm."]]];

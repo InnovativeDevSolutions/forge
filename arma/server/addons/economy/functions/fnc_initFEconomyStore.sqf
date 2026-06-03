@@ -32,6 +32,22 @@ GVAR(FEconomyStore) = createHashMapObject [[
 
         ["INFO", "Fuel Store Initialized!", nil, nil] call EFUNC(common,log);
     }],
+    ["numberSetting", {
+        params [["_name", "", [""]], ["_default", 0, [0]]];
+
+        private _configDefault = _default;
+        private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+        if (isNumber (_serviceConfig >> _name)) then {
+            _configDefault = getNumber (_serviceConfig >> _name);
+        };
+
+        private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+        private _value = missionNamespace getVariable [_name, _paramValue];
+        if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+        if (_value isEqualType 0) exitWith { _value max 0 };
+        _configDefault
+    }],
     ["start", {
         params ["_source", "_target", "_unit"];
 
@@ -100,7 +116,7 @@ GVAR(FEconomyStore) = createHashMapObject [[
         if (_fuelCapacity <= 0) then { _fuelCapacity = 100; };
 
         private _totalLiters = _missingFuel * _fuelCapacity;
-        private _totalCost = _totalLiters * GVAR(FuelCost);
+        private _totalCost = _totalLiters * (_self call ["numberSetting", ["fuelCost", GVAR(FuelCost)]]);
         private _chargeResult = GVAR(SEconomyStore) call ["chargeOrg", [_unit, _totalCost, "Refueling"]];
         if !(_chargeResult getOrDefault ["success", false]) exitWith {
             _self call ["notify", [_unit, "danger", "Refueling", _chargeResult getOrDefault ["message", "Organization funds cannot cover this refuel. Refueling was not completed."]]];
@@ -130,7 +146,7 @@ GVAR(FEconomyStore) = createHashMapObject [[
         private _player = [_uid] call EFUNC(common,getPlayer);
 
         private _totalLiters = GETVAR(_target,liters,0);
-        private _totalCost = _totalLiters * GVAR(FuelCost);
+        private _totalCost = _totalLiters * (_self call ["numberSetting", ["fuelCost", GVAR(FuelCost)]]);
         private _formattedTotalCost = [_totalCost] call EFUNC(common,formatNumber);
         private _formattedTotalLiters = _totalLiters toFixed 2;
 

@@ -103,10 +103,17 @@ GVAR(HostageEntityController) merge [createHashMapFromArray [
         waitUntil {
             sleep 1;
 
+            if !(_self call ["isAssignedTaskOpen", []]) exitWith { true };
             if (isNull _entity || { !alive _entity }) exitWith { true };
 
             _rescuer = _self call ["findNearbyRescuer", []];
             !isNull _rescuer
+        };
+
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
         };
 
         if (isNull _entity || { !alive _entity }) exitWith {

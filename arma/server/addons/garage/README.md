@@ -34,3 +34,26 @@ Garage listens for sync events through the event bus:
 - `notification.requested` - storage and vehicle modification alerts
 
 The store module emits these events when granting vehicles; garage applies the changes to player state.
+
+## Starting Unlocks
+Missions can include `CfgStartingEquipment.hpp` from `description.ext` to
+configure initial virtual garage unlocks for new players.
+
+```cpp
+class CfgStartingEquipment {
+    class Unlocks {
+        class Garage {
+            cars[] = {"B_Quadbike_01_F"};
+            armor[] = {};
+            helis[] = {};
+            planes[] = {};
+            naval[] = {};
+            other[] = {};
+        };
+    };
+};
+```
+
+The extension virtual garage default is intentionally empty. The server addon
+seeds `CfgStartingEquipment` unlocks only when a player does not already have a
+persistent owner-scoped garage record.

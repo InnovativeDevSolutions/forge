@@ -39,6 +39,22 @@ GVAR(TransportServiceBase) = compileFinal createHashMapFromArray [
         ["INFO", "Transport Service Initialized!"] call EFUNC(common,log);
         true
     }],
+    ["numberSetting", compileFinal {
+        params [["_name", "", [""]], ["_default", 0, [0]]];
+
+        private _configDefault = _default;
+        private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+        if (isNumber (_serviceConfig >> _name)) then {
+            _configDefault = getNumber (_serviceConfig >> _name);
+        };
+
+        private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+        private _value = missionNamespace getVariable [_name, _paramValue];
+        if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+        if (_value isEqualType 0) exitWith { _value max 0 };
+        _configDefault
+    }],
     ["notify", compileFinal {
         params [["_unit", objNull, [objNull]], ["_type", "info", [""]], ["_title", "Transport", [""]], ["_message", "", [""]]];
 
@@ -120,8 +136,10 @@ GVAR(TransportServiceBase) = compileFinal createHashMapFromArray [
     ["getCost", compileFinal {
         params [["_fromNode", objNull, [objNull]], ["_toNode", objNull, [objNull]], ["_options", createHashMap, [createHashMap]]];
 
-        private _baseFare = _options getOrDefault ["baseFare", _self getOrDefault ["baseFare", 100]];
-        private _pricePerKm = _options getOrDefault ["pricePerKm", _self getOrDefault ["pricePerKm", 50]];
+        private _baseFareDefault = _self call ["numberSetting", ["transportBaseFare", _self getOrDefault ["baseFare", 100]]];
+        private _pricePerKmDefault = _self call ["numberSetting", ["transportPricePerKm", _self getOrDefault ["pricePerKm", 50]]];
+        private _baseFare = _options getOrDefault ["baseFare", _baseFareDefault];
+        private _pricePerKm = _options getOrDefault ["pricePerKm", _pricePerKmDefault];
         private _distanceMeters = _fromNode distance2D _toNode;
 
         round (_baseFare + ((_distanceMeters / 1000) * _pricePerKm))

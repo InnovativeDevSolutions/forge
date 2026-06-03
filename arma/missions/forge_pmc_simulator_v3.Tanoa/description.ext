@@ -1,0 +1,42 @@
+author = "IDSolutions";
+onLoadName = "FORGE - Dev Environment v3.0";
+onLoadMission = "A dev environment for the FORGE Framework";
+loadScreen = "";
+
+class Header {
+	gameType = "Sandbox";
+	minPlayers =  1;
+	maxPlayers = 22;
+};
+
+respawn = 3;
+respawnButton = 1;
+respawnDelay = 5;
+respawnDialog = 0;
+
+disabledAI = 1;
+enableDebugConsole = 1;
+enableTargetDebug = 1;
+
+allowProfileGlasses = 0;
+cba_settings_hasSettingsFile = 1;
+corpseManagerMode = 0;
+
+#include "CfgParams.hpp"
+#include "CfgEnemyFactions.hpp"
+#include "CfgFactionUnitMap.hpp"
+#include "CfgMissions.hpp"
+#include "CfgServicePricing.hpp"
+#include "CfgStore.hpp"
+#include "CfgStartingEquipment.hpp"
+#include "CfgFunctions.hpp"
+
+class CfgSounds
+{
+    class FerryDepart
+    {
+        name = "FerryDepart";
+        sound[] = {"\A3\Sounds_F\sfx\ext_siren.wss", 1, 1, 100};
+        titles[] = {};
+    };
+};

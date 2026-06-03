@@ -12,8 +12,16 @@
             reputationMax: 100,
             penaltyMin: -5,
             penaltyMax: -25,
+            timeLimitEnabled: true,
             timeLimitMin: 600,
             timeLimitMax: 900,
+            medicalSpawnCost: 100,
+            medicalHealCost: 100,
+            serviceRepairCost: 500,
+            serviceRearmCost: 500,
+            fuelCost: 5,
+            transportBaseFare: 100,
+            transportPricePerKm: 50,
             generatorProvider: "builtin",
         },
         error: "",
@@ -34,6 +42,8 @@
     }
 
     function readSettings() {
+        const timeLimitEnabled = document.getElementById("timeLimitEnabled")?.checked !== false;
+
         return {
             enemyFaction: String(document.getElementById("enemyFaction")?.value || "IND_G_F"),
             maxConcurrentMissions: fieldNumber("maxConcurrentMissions"),
@@ -45,8 +55,16 @@
             reputationMax: fieldNumber("reputationMax"),
             penaltyMin: fieldNumber("penaltyMin"),
             penaltyMax: fieldNumber("penaltyMax"),
-            timeLimitMin: fieldNumber("timeLimitMin"),
-            timeLimitMax: fieldNumber("timeLimitMax"),
+            timeLimitEnabled,
+            timeLimitMin: timeLimitEnabled ? fieldNumber("timeLimitMin") : 0,
+            timeLimitMax: timeLimitEnabled ? fieldNumber("timeLimitMax") : 0,
+            medicalSpawnCost: fieldNumber("medicalSpawnCost"),
+            medicalHealCost: fieldNumber("medicalHealCost"),
+            serviceRepairCost: fieldNumber("serviceRepairCost"),
+            serviceRearmCost: fieldNumber("serviceRearmCost"),
+            fuelCost: fieldNumber("fuelCost"),
+            transportBaseFare: fieldNumber("transportBaseFare"),
+            transportPricePerKm: fieldNumber("transportPricePerKm"),
             generatorProvider: document.getElementById("generatorProviderCustom")?.checked ? "custom" : "builtin",
         };
     }
@@ -58,6 +76,16 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
+    }
+
+    function normalizeSettings(settings) {
+        const next = Object.assign({}, settings);
+        next.timeLimitMin = Number(next.timeLimitMin || 0);
+        next.timeLimitMax = Number(next.timeLimitMax || 0);
+        if (typeof next.timeLimitEnabled !== "boolean") {
+            next.timeLimitEnabled = next.timeLimitMax > 0;
+        }
+        return next;
     }
 
     function apply() {
@@ -80,8 +108,31 @@
             return;
         }
 
-        if (settings.timeLimitMax < settings.timeLimitMin) {
-            state.error = "Time limit max must be greater than or equal to time limit min.";
+        if (settings.timeLimitEnabled) {
+            if (settings.timeLimitMin < 1 || settings.timeLimitMax < 1) {
+                state.error = "Time limits must be positive seconds when task timers are enabled.";
+                render();
+                return;
+            }
+
+            if (settings.timeLimitMax < settings.timeLimitMin) {
+                state.error = "Time limit max must be greater than or equal to time limit min.";
+                render();
+                return;
+            }
+        }
+
+        const costFields = [
+            settings.medicalSpawnCost,
+            settings.medicalHealCost,
+            settings.serviceRepairCost,
+            settings.serviceRearmCost,
+            settings.fuelCost,
+            settings.transportBaseFare,
+            settings.transportPricePerKm,
+        ];
+        if (costFields.some((value) => value < 0)) {
+            state.error = "Service pricing cannot use negative values.";
             render();
             return;
         }
@@ -105,6 +156,15 @@
         const factionLabel = faction ? faction.display : settings.enemyFaction;
         const generatorProviderLabel = settings.generatorProvider === "custom" ? "Custom" : "Built-in";
         const generatorProviderChecked = settings.generatorProvider === "custom" ? " checked" : "";
+        const timeLimitEnabled = settings.timeLimitEnabled !== false;
+        const timeLimitChecked = timeLimitEnabled ? " checked" : "";
+        const timeLimitDisabled = timeLimitEnabled ? "" : " disabled";
+        const timeLimitLabel = timeLimitEnabled ? "Enabled" : "No Limit";
+        const timeLimitMinValue = timeLimitEnabled ? settings.timeLimitMin : 600;
+        const timeLimitMaxValue = timeLimitEnabled ? settings.timeLimitMax : 900;
+        const timeLimitSummary = timeLimitEnabled
+            ? `${settings.timeLimitMin}s - ${settings.timeLimitMax}s`
+            : "No limit";
 
         document.getElementById("app").innerHTML = `
             <div class="shell">
@@ -175,16 +235,66 @@
                                     <label for="penaltyMax">Max Rep Hit</label>
                                     <input id="penaltyMax" type="number" max="0" step="1" value="${settings.penaltyMax}" />
                                 </div>
-                                <div class="field">
-                                    <label for="timeLimitMin">Min Time</label>
-                                    <input id="timeLimitMin" type="number" min="1" step="60" value="${settings.timeLimitMin}" />
-                                </div>
-                                <div class="field">
-                                    <label for="timeLimitMax">Max Time</label>
-                                    <input id="timeLimitMax" type="number" min="1" step="60" value="${settings.timeLimitMax}" />
+                                <div class="timer-row wide">
+                                    <div class="field">
+                                        <label for="timeLimitEnabled">Task Timer</label>
+                                        <label class="provider-toggle" for="timeLimitEnabled">
+                                            <input id="timeLimitEnabled" type="checkbox"${timeLimitChecked} />
+                                            <span class="switch" aria-hidden="true"></span>
+                                            <span class="provider-copy">
+                                                <strong>${timeLimitLabel}</strong>
+                                                <small>Time Limits</small>
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="field">
+                                        <label for="timeLimitMin">Min Time</label>
+                                        <input id="timeLimitMin" type="number" min="1" step="60" value="${timeLimitMinValue}"${timeLimitDisabled} />
+                                    </div>
+                                    <div class="field">
+                                        <label for="timeLimitMax">Max Time</label>
+                                        <input id="timeLimitMax" type="number" min="1" step="60" value="${timeLimitMaxValue}"${timeLimitDisabled} />
+                                    </div>
                                 </div>
                             </div>
                         </section>
+
+                        <aside class="panel">
+                            <div class="panel-head">
+                                <span class="kicker">Service Pricing</span>
+                                <h2>Economy Settings</h2>
+                            </div>
+                            <div class="form compact">
+                                <div class="field">
+                                    <label for="medicalSpawnCost">Medical Respawn</label>
+                                    <input id="medicalSpawnCost" type="number" min="0" step="50" value="${settings.medicalSpawnCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="medicalHealCost">Medical Heal</label>
+                                    <input id="medicalHealCost" type="number" min="0" step="50" value="${settings.medicalHealCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="serviceRepairCost">Repair</label>
+                                    <input id="serviceRepairCost" type="number" min="0" step="50" value="${settings.serviceRepairCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="serviceRearmCost">Rearm</label>
+                                    <input id="serviceRearmCost" type="number" min="0" step="50" value="${settings.serviceRearmCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="fuelCost">Fuel / Liter</label>
+                                    <input id="fuelCost" type="number" min="0" step="1" value="${settings.fuelCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="transportBaseFare">Transport Base</label>
+                                    <input id="transportBaseFare" type="number" min="0" step="25" value="${settings.transportBaseFare}" />
+                                </div>
+                                <div class="field wide">
+                                    <label for="transportPricePerKm">Transport / KM</label>
+                                    <input id="transportPricePerKm" type="number" min="0" step="25" value="${settings.transportPricePerKm}" />
+                                </div>
+                            </div>
+                        </aside>
 
                         <aside class="panel">
                             <div class="panel-head">
@@ -200,7 +310,10 @@
                                 <div class="summary-row"><span>Reward Range</span><strong>$${Number(settings.moneyMin).toLocaleString()} - $${Number(settings.moneyMax).toLocaleString()}</strong></div>
                                 <div class="summary-row"><span>Reputation</span><strong>${settings.reputationMin} - ${settings.reputationMax}</strong></div>
                                 <div class="summary-row"><span>Reputation Hit</span><strong>${settings.penaltyMin} to ${settings.penaltyMax}</strong></div>
-                                <div class="summary-row"><span>Time Limit</span><strong>${settings.timeLimitMin}s - ${settings.timeLimitMax}s</strong></div>
+                                <div class="summary-row"><span>Time Limit</span><strong>${timeLimitSummary}</strong></div>
+                                <div class="summary-row"><span>Repair / Rearm</span><strong>$${Number(settings.serviceRepairCost).toLocaleString()} / $${Number(settings.serviceRearmCost).toLocaleString()}</strong></div>
+                                <div class="summary-row"><span>Fuel</span><strong>$${Number(settings.fuelCost).toLocaleString()} / L</strong></div>
+                                <div class="summary-row"><span>Medical Billing</span><strong>$${Number(settings.medicalSpawnCost).toLocaleString()} respawn / $${Number(settings.medicalHealCost).toLocaleString()} heal</strong></div>
                                 ${state.error ? `<div class="notice">${state.error}</div>` : ""}
                             </div>
                         </aside>
@@ -246,7 +359,7 @@
                     return true;
                 });
                 state.factions = factions;
-                state.settings = Object.assign({}, state.settings, payload.data?.settings || {});
+                state.settings = normalizeSettings(Object.assign({}, state.settings, payload.data?.settings || {}));
                 render();
                 return true;
             }

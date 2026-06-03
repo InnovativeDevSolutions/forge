@@ -151,9 +151,21 @@ GVAR(MissionSetupRepositoryBaseClass) = compileFinal createHashMapFromArray [
         private _paramOrDefault = {
             params ["_varName", "_default"];
 
-            private _value = missionNamespace getVariable [_varName, _default];
+            private _paramValue = [_varName, _default] call BIS_fnc_getParamValue;
+            private _value = missionNamespace getVariable [_varName, _paramValue];
             if (_value isEqualType "") exitWith { parseNumber _value };
             _value
+        };
+        private _serviceDefault = {
+            params ["_varName", "_default"];
+
+            private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+            if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+            if (isNumber (_serviceConfig >> _varName)) exitWith {
+                getNumber (_serviceConfig >> _varName)
+            };
+
+            _default
         };
 
         private _factions = [];
@@ -197,6 +209,13 @@ GVAR(MissionSetupRepositoryBaseClass) = compileFinal createHashMapFromArray [
                 ["penaltyMax", ["penaltyMax", -25] call _paramOrDefault],
                 ["timeLimitMin", ["timeLimitMin", 600] call _paramOrDefault],
                 ["timeLimitMax", ["timeLimitMax", 900] call _paramOrDefault],
+                ["medicalSpawnCost", ["medicalSpawnCost", ["medicalSpawnCost", 100] call _serviceDefault] call _paramOrDefault],
+                ["medicalHealCost", ["medicalHealCost", ["medicalHealCost", 100] call _serviceDefault] call _paramOrDefault],
+                ["serviceRepairCost", ["serviceRepairCost", ["serviceRepairCost", 500] call _serviceDefault] call _paramOrDefault],
+                ["serviceRearmCost", ["serviceRearmCost", ["serviceRearmCost", 500] call _serviceDefault] call _paramOrDefault],
+                ["fuelCost", ["fuelCost", ["fuelCost", 5] call _serviceDefault] call _paramOrDefault],
+                ["transportBaseFare", ["transportBaseFare", ["transportBaseFare", 100] call _serviceDefault] call _paramOrDefault],
+                ["transportPricePerKm", ["transportPricePerKm", ["transportPricePerKm", 50] call _serviceDefault] call _paramOrDefault],
                 ["generatorProvider", GETMVAR(forge_server_task_generatorProvider,"builtin")]
             ]]
         ]

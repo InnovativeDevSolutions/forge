@@ -24,15 +24,28 @@
 #pragma hemtt ignore_variables ["_self"]
 GVAR(VGarageModel) = compileFinal createHashMapObject [[
     ["#type", "VGarageModel"],
+    ["getStartingUnlocksConfig", compileFinal {
+        missionConfigFile >> "CfgStartingEquipment" >> "Unlocks" >> "Garage"
+    }],
+    ["getStartingUnlocks", compileFinal {
+        params [["_category", "", [""]], ["_fallback", [], [[]]]];
+
+        private _config = _self call ["getStartingUnlocksConfig", []];
+        private _categoryConfig = _config >> _category;
+
+        if (isArray _categoryConfig) exitWith { getArray _categoryConfig };
+
+        +_fallback
+    }],
     ["defaults", compileFinal {
         private _vGarage = createHashMap;
 
-        _vGarage set ["armor", []];
-        _vGarage set ["cars", ["B_Quadbike_01_F"]];
-        _vGarage set ["helis", []];
-        _vGarage set ["naval", []];
-        _vGarage set ["other", []];
-        _vGarage set ["planes", []];
+        _vGarage set ["armor", _self call ["getStartingUnlocks", ["armor", []]]];
+        _vGarage set ["cars", _self call ["getStartingUnlocks", ["cars", ["B_Quadbike_01_F"]]]];
+        _vGarage set ["helis", _self call ["getStartingUnlocks", ["helis", []]]];
+        _vGarage set ["naval", _self call ["getStartingUnlocks", ["naval", []]]];
+        _vGarage set ["other", _self call ["getStartingUnlocks", ["other", []]]];
+        _vGarage set ["planes", _self call ["getStartingUnlocks", ["planes", []]]];
 
         _vGarage
     }]
@@ -69,16 +82,45 @@ GVAR(VGBaseStore) = compileFinal createHashMapFromArray [
         private _command = ["owned:garage:hot:fetch", "owned:garage:hot:init"] select _initialize;
         _self call ["callHotVGarage", [_command, [_uid]]]
     }],
+    ["isPersistentVGarageInitialized", compileFinal {
+        params [["_uid", "", [""]]];
+
+        if (_uid isEqualTo "") exitWith { false };
+
+        ["owned:garage:exists", [_uid]] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
+        _isSuccess && { _result isEqualTo "true" }
+    }],
+    ["seedStartingUnlocks", compileFinal {
+        params [["_uid", "", [""]], ["_garage", createHashMap, [createHashMap]]];
+
+        if (_uid isEqualTo "" || { _garage isEqualTo createHashMap }) exitWith { _garage };
+
+        private _defaults = GVAR(VGarageModel) call ["defaults", []];
+        private _seeded = +_garage;
+        {
+            _seeded set [_x, +_y];
+        } forEach _defaults;
+
+        private _updated = _self call ["callHotVGarage", ["owned:garage:hot:override", [_uid, toJSON _seeded]]];
+        if (_updated isEqualTo createHashMap) exitWith { _seeded };
+
+        _self call ["callHotVGarage", ["owned:garage:hot:save", [_uid]]];
+        _updated
+    }],
     ["init", compileFinal {
         params [["_uid", "", [""]]];
 
         private _player = [_uid] call EFUNC(common,getPlayer);
         if (isNull _player) exitWith { createHashMap };
 
+        private _hasPersistentGarage = _self call ["isPersistentVGarageInitialized", [_uid]];
         private _garage = _self call ["loadHotVGarage", [_uid, true]];
         if (_garage isEqualTo createHashMap) then {
             _garage = GVAR(VGarageModel) call ["defaults", []];
             ["ERROR", format ["Failed to initialize virtual garage for %1! Using fallback virtual garage.", _uid]] call EFUNC(common,log);
+        };
+        if !(_hasPersistentGarage) then {
+            _garage = _self call ["seedStartingUnlocks", [_uid, _garage]];
         };
 
         [CRPC(garage,responseInitVG), [_garage], _player] call CFUNC(targetEvent);

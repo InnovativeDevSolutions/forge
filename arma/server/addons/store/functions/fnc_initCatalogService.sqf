@@ -28,6 +28,132 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         _mode
     }],
+    ["getMissionStoreModMode", compileFinal {
+        private _storeConfig = _self call ["getMissionStoreConfig", []];
+        private _mode = toLowerANSI getText (_storeConfig >> "modMode");
+
+        if !(_mode in ["allowlist", "denylist", "dynamic"]) then { _mode = "dynamic"; };
+
+        _mode
+    }],
+    ["getMissionStoreModList", compileFinal {
+        private _storeConfig = _self call ["getMissionStoreConfig", []];
+        private _mods = [];
+
+        if (isArray (_storeConfig >> "mods")) then {
+            _mods = getArray (_storeConfig >> "mods");
+        };
+
+        _mods apply {
+            private _modID = "";
+            if (_x isEqualType "") then {
+                _modID = _x;
+            } else {
+                _modID = str _x;
+            };
+
+            toLowerANSI _modID
+        }
+    }],
+    ["getMissionStoreModSourceValues", compileFinal {
+        params [["_modID", "", [""]], ["_key", "", [""]]];
+
+        private _storeConfig = _self call ["getMissionStoreConfig", []];
+        private _sourceConfig = _storeConfig >> "ModSources" >> _modID;
+        private _values = [];
+
+        if (isArray (_sourceConfig >> _key)) then {
+            _values = getArray (_sourceConfig >> _key);
+        };
+
+        _values apply {
+            if (_x isEqualType "") then {
+                _x
+            } else {
+                str _x
+            }
+        }
+    }],
+    ["isMissionStoreModLoaded", compileFinal {
+        params [["_modID", "", [""]]];
+
+        private _patches = _self call ["getMissionStoreModSourceValues", [_modID, "patches"]];
+        if (_patches isEqualTo []) exitWith { true };
+
+        private _loaded = false;
+        {
+            if (isClass (configFile >> "CfgPatches" >> _x)) exitWith { _loaded = true; };
+        } forEach _patches;
+
+        _loaded
+    }],
+    ["doesValueMatchAnyPrefix", compileFinal {
+        params [["_value", "", [""]], ["_prefixes", [], [[]]]];
+
+        private _normalizedValue = toLowerANSI _value;
+        private _matches = false;
+        {
+            private _prefix = toLowerANSI _x;
+            if (_prefix isEqualTo "") then { continue; };
+            if ((_normalizedValue select [0, count _prefix]) isEqualTo _prefix) exitWith { _matches = true; };
+        } forEach _prefixes;
+
+        _matches
+    }],
+    ["doesItemMatchMissionStoreMod", compileFinal {
+        params [["_item", createHashMap, [createHashMap]], ["_modID", "", [""]]];
+
+        if (_item isEqualTo createHashMap || { _modID isEqualTo "" }) exitWith { false };
+        if !(_self call ["isMissionStoreModLoaded", [_modID]]) exitWith { false };
+
+        private _className = _item getOrDefault ["className", ""];
+        private _sourceAddons = (_item getOrDefault ["sourceAddons", []]) apply { toLowerANSI _x };
+        private _sourceMod = _item getOrDefault ["sourceMod", ""];
+        private _addons = (_self call ["getMissionStoreModSourceValues", [_modID, "addons"]]) apply { toLowerANSI _x };
+        private _prefixes = (_self call ["getMissionStoreModSourceValues", [_modID, "prefixes"]]) apply { toLowerANSI _x };
+        private _sourceModLower = toLowerANSI _sourceMod;
+
+        if (_sourceModLower in _addons) exitWith { true };
+        private _sourceAddonMatched = false;
+        {
+            if (_x in _addons) exitWith { _sourceAddonMatched = true; };
+            if (_self call ["doesValueMatchAnyPrefix", [_x, _addons]]) exitWith { _sourceAddonMatched = true; };
+        } forEach _sourceAddons;
+        if (_sourceAddonMatched) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_className, _addons + _prefixes]]) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_sourceMod, _addons]]) exitWith { true };
+
+        false
+    }],
+    ["doesItemMatchMissionStoreMods", compileFinal {
+        params [["_item", createHashMap, [createHashMap]], ["_mods", [], [[]]]];
+
+        private _matches = false;
+        {
+            if (_self call ["doesItemMatchMissionStoreMod", [_item, _x]]) exitWith { _matches = true; };
+        } forEach _mods;
+
+        _matches
+    }],
+    ["applyMissionStoreModFilter", compileFinal {
+        params [["_items", [], [[]]]];
+
+        private _mode = _self call ["getMissionStoreModMode", []];
+        private _mods = _self call ["getMissionStoreModList", []];
+        if (_mode isEqualTo "dynamic" || { _mods isEqualTo [] }) exitWith { +_items };
+
+        switch (_mode) do {
+            case "allowlist": {
+                _items select { _self call ["doesItemMatchMissionStoreMods", [_x, _mods]] }
+            };
+            case "denylist": {
+                _items select { !(_self call ["doesItemMatchMissionStoreMods", [_x, _mods]]) }
+            };
+            default {
+                +_items
+            };
+        }
+    }],
     ["getMissionStoreCategoryList", compileFinal {
         params [["_category", "", [""]]];
 
@@ -93,16 +219,16 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         private _mode = _self call ["getMissionStoreMode", []];
         private _classNames = _self call ["getMissionStoreCategoryList", [_category]];
-        private _filteredItems = +_items;
+        private _filteredItems = _self call ["applyMissionStoreModFilter", [_items]];
 
         switch (_mode) do {
             case "allowlist": {
-                _filteredItems = _items select {
+                _filteredItems = _filteredItems select {
                     (toLowerANSI (_x getOrDefault ["className", ""])) in _classNames
                 };
             };
             case "denylist": {
-                _filteredItems = _items select {
+                _filteredItems = _filteredItems select {
                     !((toLowerANSI (_x getOrDefault ["className", ""])) in _classNames)
                 };
             };
@@ -175,6 +301,8 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         private _className = configName _cfg;
         private _displayName = getText (_cfg >> "displayName");
+        private _sourceAddons = configSourceAddonList _cfg;
+        private _sourceMod = configSourceMod _cfg;
         private _picture = getText (_cfg >> _imageField);
         if (_picture isEqualTo "" && { _imageField isNotEqualTo "picture" }) then {
             _picture = getText (_cfg >> "picture");
@@ -190,7 +318,9 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             ["price", _self call ["formatCurrency", [_priceValue]]],
             ["priceValue", _priceValue],
             ["image", _picture],
-            ["type", _typeLabel]
+            ["type", _typeLabel],
+            ["sourceAddons", _sourceAddons],
+            ["sourceMod", _sourceMod]
         ]
     }],
     ["appendCfgWeaponsByItemInfoType", compileFinal {

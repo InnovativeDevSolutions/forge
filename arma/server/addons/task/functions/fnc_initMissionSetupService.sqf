@@ -23,6 +23,13 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         };
         _missionConfig
     }],
+    ["getServicePricingConfig", compileFinal {
+        private _pricingConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _pricingConfig) then {
+            _pricingConfig = configFile >> "CfgServicePricing";
+        };
+        _pricingConfig
+    }],
     ["numberOrDefault", compileFinal {
         params ["_value", "_default"];
 
@@ -80,7 +87,18 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
                 _overrides getOrDefault [_varName, _default]
             };
 
-            missionNamespace getVariable [_varName, _default]
+            private _paramValue = [_varName, _default] call BIS_fnc_getParamValue;
+            missionNamespace getVariable [_varName, _paramValue]
+        };
+        private _serviceDefault = {
+            params ["_varName", "_default"];
+
+            private _serviceConfig = _self call ["getServicePricingConfig", []];
+            if (isNumber (_serviceConfig >> _varName)) exitWith {
+                getNumber (_serviceConfig >> _varName)
+            };
+
+            _default
         };
 
         private _maxConcurrent = [
@@ -104,6 +122,13 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         private _penMax = [["penaltyMax", -25, _overrides] call _paramOrDefault, -25] call (_self get "numberOrDefault");
         private _timeMin = [["timeLimitMin", 600, _overrides] call _paramOrDefault, 600] call (_self get "numberOrDefault");
         private _timeMax = [["timeLimitMax", 900, _overrides] call _paramOrDefault, 900] call (_self get "numberOrDefault");
+        private _medicalSpawnCost = [["medicalSpawnCost", ["medicalSpawnCost", 100] call _serviceDefault, _overrides] call _paramOrDefault, 100] call (_self get "numberOrDefault");
+        private _medicalHealCost = [["medicalHealCost", ["medicalHealCost", 100] call _serviceDefault, _overrides] call _paramOrDefault, 100] call (_self get "numberOrDefault");
+        private _serviceRepairCost = [["serviceRepairCost", ["serviceRepairCost", 500] call _serviceDefault, _overrides] call _paramOrDefault, 500] call (_self get "numberOrDefault");
+        private _serviceRearmCost = [["serviceRearmCost", ["serviceRearmCost", 500] call _serviceDefault, _overrides] call _paramOrDefault, 500] call (_self get "numberOrDefault");
+        private _fuelCost = [["fuelCost", ["fuelCost", 5] call _serviceDefault, _overrides] call _paramOrDefault, 5] call (_self get "numberOrDefault");
+        private _transportBaseFare = [["transportBaseFare", ["transportBaseFare", 100] call _serviceDefault, _overrides] call _paramOrDefault, 100] call (_self get "numberOrDefault");
+        private _transportPricePerKm = [["transportPricePerKm", ["transportPricePerKm", 50] call _serviceDefault, _overrides] call _paramOrDefault, 50] call (_self get "numberOrDefault");
         private _generatorProvider = _overrides getOrDefault ["generatorProvider", GETGVAR(generatorProvider,"builtin")];
         if !(_generatorProvider isEqualType "") then { _generatorProvider = str _generatorProvider; };
         _generatorProvider = toLowerANSI _generatorProvider;
@@ -129,8 +154,15 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         _penMin = _penMin min 0;
         _penMax = _penMax min 0;
 
-        _timeMin = _timeMin max 1;
+        _timeMin = _timeMin max 0;
         _timeMax = _timeMax max _timeMin;
+        _medicalSpawnCost = _medicalSpawnCost max 0;
+        _medicalHealCost = _medicalHealCost max 0;
+        _serviceRepairCost = _serviceRepairCost max 0;
+        _serviceRearmCost = _serviceRearmCost max 0;
+        _fuelCost = _fuelCost max 0;
+        _transportBaseFare = _transportBaseFare max 0;
+        _transportPricePerKm = _transportPricePerKm max 0;
 
         private _settings = createHashMapFromArray [
             ["useMenuSettings", true],
@@ -145,6 +177,13 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
             ["penaltyMax", _penMax],
             ["timeLimitMin", _timeMin],
             ["timeLimitMax", _timeMax],
+            ["medicalSpawnCost", _medicalSpawnCost],
+            ["medicalHealCost", _medicalHealCost],
+            ["serviceRepairCost", _serviceRepairCost],
+            ["serviceRearmCost", _serviceRearmCost],
+            ["fuelCost", _fuelCost],
+            ["transportBaseFare", _transportBaseFare],
+            ["transportPricePerKm", _transportPricePerKm],
             ["enemyFaction", _enemyFaction],
             ["generatorProvider", _generatorProvider]
         ];
@@ -152,6 +191,17 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         SETMPVAR(GVAR(missionSetup_settings),_settings);
         SETMPVAR(GVAR(missionSetup_settingsApplied),true);
         SETMPVAR(GVAR(generatorProvider),_generatorProvider);
+        {
+            missionNamespace setVariable [_x, _settings getOrDefault [_x, 0], true];
+        } forEach [
+            "medicalSpawnCost",
+            "medicalHealCost",
+            "serviceRepairCost",
+            "serviceRearmCost",
+            "fuelCost",
+            "transportBaseFare",
+            "transportPricePerKm"
+        ];
 
         private _side = _self call ["resolveFactionSide", [_enemyFaction, east]];
         ENEMY_SIDE = _side;

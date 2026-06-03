@@ -83,6 +83,50 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
     ["getStatus", compileFinal {
         _self getOrDefault ["status", "created"]
     }],
+    ["isTerminalStatus", compileFinal {
+        params [["_status", "", [""]]];
+
+        (toLowerANSI _status) in ["failed", "succeeded"]
+    }],
+    ["getStoreStatus", compileFinal {
+        private _taskID = _self getOrDefault ["taskID", ""];
+        if (_taskID isEqualTo "" || { !(_self getOrDefault ["useTaskStore", false]) } || { isNil QGVAR(TaskStore) }) exitWith { "" };
+
+        GVAR(TaskStore) call ["getTaskStatus", [_taskID]]
+    }],
+    ["canTransitionToTerminal", compileFinal {
+        params [["_nextStatus", "", [""]]];
+
+        private _normalizedNext = toLowerANSI _nextStatus;
+        if !(_self call ["isTerminalStatus", [_normalizedNext]]) exitWith { true };
+
+        private _currentStatus = toLowerANSI (_self getOrDefault ["status", "created"]);
+        if ((_self call ["isTerminalStatus", [_currentStatus]]) && { _currentStatus isNotEqualTo _normalizedNext }) exitWith { false };
+
+        private _storeStatus = toLowerANSI (_self call ["getStoreStatus", []]);
+        if ((_self call ["isTerminalStatus", [_storeStatus]]) && { _storeStatus isNotEqualTo _normalizedNext }) exitWith { false };
+
+        true
+    }],
+    ["isTaskLoopActive", compileFinal {
+        if ((_self call ["getStatus", []]) isNotEqualTo "active") exitWith { false };
+
+        private _storeStatus = toLowerANSI (_self call ["getStoreStatus", []]);
+        if (_storeStatus isEqualTo "") exitWith { true };
+
+        if (_self call ["isTerminalStatus", [_storeStatus]]) exitWith {
+            _self call ["markAborted", [format ["Task store reached terminal status '%1'.", _storeStatus]]];
+            false
+        };
+
+        true
+    }],
+    ["isTaskStoreOpen", compileFinal {
+        private _storeStatus = toLowerANSI (_self call ["getStoreStatus", []]);
+        if (_storeStatus isEqualTo "") exitWith { true };
+
+        !(_self call ["isTerminalStatus", [_storeStatus]])
+    }],
     ["getRewardData", compileFinal {
         _self getOrDefault ["rewardData", createHashMap]
     }],
@@ -162,6 +206,8 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
     ["markSucceeded", compileFinal {
         params [["_resultSnapshot", createHashMap, [createHashMap]]];
 
+        if !(_self call ["canTransitionToTerminal", ["succeeded"]]) exitWith { false };
+
         _self set ["status", "succeeded"];
         _self set ["finishedAt", serverTime];
         _self set ["resultSnapshot", _resultSnapshot];
@@ -173,6 +219,8 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
     ["markFailed", compileFinal {
         params [["_reason", "", [""]], ["_resultSnapshot", createHashMap, [createHashMap]]];
 
+        if !(_self call ["canTransitionToTerminal", ["failed"]]) exitWith { false };
+
         _self set ["status", "failed"];
         _self set ["finishedAt", serverTime];
         _self set ["failureReason", _reason];
@@ -180,6 +228,14 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
         if !(_self getOrDefault ["useTaskStore", false]) then {
             _self call ["emitLifecycleEvent", ["task.failed"]];
         };
+        true
+    }],
+    ["markAborted", compileFinal {
+        params [["_reason", "", [""]]];
+
+        _self set ["status", "aborted"];
+        _self set ["finishedAt", serverTime];
+        _self set ["failureReason", _reason];
         true
     }],
     ["cleanup", compileFinal {

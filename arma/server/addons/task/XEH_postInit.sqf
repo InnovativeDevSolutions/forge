@@ -9,6 +9,15 @@
     GVAR(MissionGeneratorProviderRegistry) call ["registerProvider", [_providerId, _provider]];
 }] call CFUNC(addEventHandler);
 
+[SRPC(task,registerMissionGeneratorProvider), {
+    params [
+        ["_providerId", "", [""]],
+        ["_provider", createHashMap, [createHashMap]]
+    ];
+
+    GVAR(MissionGeneratorProviderRegistry) call ["registerProvider", [_providerId, _provider]];
+}] call CFUNC(addEventHandler);
+
 [SRPC(task,requestOpenMissionSetup), {
     params [
         ["_requester", objNull, [objNull]]

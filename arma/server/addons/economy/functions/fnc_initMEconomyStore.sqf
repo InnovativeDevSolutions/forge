@@ -4,7 +4,7 @@
  * File: fnc_initMEconomyStore.sqf
  * Author: IDSolutions
  * Date: 2025-12-20
- * Last Update: 2026-05-15
+ * Last Update: 2026-06-03
  * Public: No
  *
  * Description:
@@ -30,7 +30,24 @@ GVAR(MEconomyStore) = createHashMapObject [[
         _self set ["mSpawns", createHashMap];
 
         GVAR(occupancyTriggers) = [];
+        GVAR(SpawnCost) = 100;
         ["INFO", "Medical Store Initialized!", nil, nil] call EFUNC(common,log);
+    }],
+    ["numberSetting", {
+        params [["_name", "", [""]], ["_default", 0, [0]]];
+
+        private _configDefault = _default;
+        private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+        if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+        if (isNumber (_serviceConfig >> _name)) then {
+            _configDefault = getNumber (_serviceConfig >> _name);
+        };
+
+        private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+        private _value = missionNamespace getVariable [_name, _paramValue];
+        if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+        if (_value isEqualType 0) exitWith { _value max 0 };
+        _configDefault
     }],
     ["init", {
         private _mSpawns = (_self get "mSpawns");
@@ -166,40 +183,61 @@ GVAR(MEconomyStore) = createHashMapObject [[
         _result set ["message", ""];
         _result
     }],
-    ["onHealed", {
-        params [["_unit", objNull, [objNull]]];
+    ["chargeMedicalService", {
+        params [
+            ["_unit", objNull, [objNull]],
+            ["_amount", 0, [0]],
+            ["_serviceLabel", "Medical service", [""]],
+            ["_requirePayment", true, [true]]
+        ];
 
-        if (isNull _unit) exitWith { ["WARNING", format ["Invalid unit provided: %1", (name _unit)], nil, nil] call EFUNC(common,log); };
-
+        if (isNull _unit) exitWith {
+            ["WARNING", format ["Invalid unit provided: %1", (name _unit)], nil, nil] call EFUNC(common,log);
+            false
+        };
         private _uid = getPlayerUID _unit;
-        if (_uid isEqualTo "") exitWith { ["WARNING", "Unable to charge medical service for unit without UID.", nil, nil] call EFUNC(common,log); };
+        if (_uid isEqualTo "") exitWith {
+            ["WARNING", "Unable to charge medical service for unit without UID.", nil, nil] call EFUNC(common,log);
+            !_requirePayment
+        };
 
-        private _healCost = 100;
+        if (_amount <= 0) exitWith { true };
 
-        private _personalCharge = _self call ["chargePlayer", [_uid, _healCost]];
+        private _personalCharge = _self call ["chargePlayer", [_uid, _amount]];
         if (_personalCharge getOrDefault ["success", false]) exitWith {
             private _sourceLabel = ["cash", "bank"] select ((_personalCharge getOrDefault ["source", "bank"]) isEqualTo "bank");
-            _self call ["notify", [_unit, "info", "Medical Billing", format ["Medical service charged $%1 from your %2.", [_healCost] call EFUNC(common,formatNumber), _sourceLabel]]];
-            [CRPC(actor,onActorHealed), [], _unit] call CFUNC(targetEvent);
+            _self call ["notify", [_unit, "info", "Medical Billing", format ["%1 charged $%2 from your %3.", _serviceLabel, [_amount] call EFUNC(common,formatNumber), _sourceLabel]]];
+            true
         };
 
         if !(_personalCharge getOrDefault ["fallbackEligible", false]) exitWith {
             private _message = _personalCharge getOrDefault ["message", "Personal funds could not be charged for medical service."];
             _self call ["notify", [_unit, "danger", "Medical Billing", _message]];
+            !_requirePayment
         };
 
         if (isNil QGVAR(SEconomyStore)) exitWith {
             ["ERROR", "Service economy store unavailable for medical organization fallback charge.", nil, nil] call EFUNC(common,log);
             _self call ["notify", [_unit, "danger", "Medical Billing", "Organization billing is unavailable. Medical service cannot complete."]];
+            !_requirePayment
         };
 
-        private _chargeResult = GVAR(SEconomyStore) call ["chargeOrg", [_unit, _healCost, "Medical", true]];
+        private _chargeResult = GVAR(SEconomyStore) call ["chargeOrg", [_unit, _amount, "Medical", true]];
         if !(_chargeResult getOrDefault ["success", false]) exitWith {
             private _message = _chargeResult getOrDefault ["message", "Organization funds cannot cover this medical service."];
             _self call ["notify", [_unit, "danger", "Medical Billing", _message]];
+            !_requirePayment
         };
 
-        _self call ["notify", [_unit, "info", "Medical Billing", format ["Personal funds could not cover medical service. Organization charged $%1; repay it through your organization credit line.", [_healCost] call EFUNC(common,formatNumber)]]];
+        _self call ["notify", [_unit, "info", "Medical Billing", format ["Personal funds could not cover %1. Organization charged $%2; repay it through your organization credit line.", _serviceLabel, [_amount] call EFUNC(common,formatNumber)]]];
+        true
+    }],
+    ["onHealed", {
+        params [["_unit", objNull, [objNull]]];
+
+        private _healCost = _self call ["numberSetting", ["medicalHealCost", 100]];
+        if !(_self call ["chargeMedicalService", [_unit, _healCost, "Medical service", true]]) exitWith {};
+
         [CRPC(actor,onActorHealed), [], _unit] call CFUNC(targetEvent);
     }],
     ["onRespawn", {
@@ -214,6 +252,8 @@ GVAR(MEconomyStore) = createHashMapObject [[
         deleteVehicle _corpse;
 
         private _player = [_uid] call EFUNC(common,getPlayer);
+        private _spawnCost = _self call ["numberSetting", ["medicalSpawnCost", GVAR(SpawnCost)]];
+        _self call ["chargeMedicalService", [_player, _spawnCost, "Medical spawn", false]];
         [CRPC(actor,onActorRespawn), [_loadout, _medSpawnPos, _medSpawnDir], _player] call CFUNC(targetEvent);
     }],
     ["onKilled", {

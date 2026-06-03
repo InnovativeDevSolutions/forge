@@ -23,12 +23,8 @@ pub struct VGarage {
 
 impl VGarage {
     pub fn new() -> Self {
-        Self::default_unlocks()
-    }
-
-    fn default_unlocks() -> Self {
         Self {
-            cars: vec!["B_Quadbike_01_F".to_string()],
+            cars: Vec::new(),
             armor: Vec::new(),
             helis: Vec::new(),
             planes: Vec::new(),

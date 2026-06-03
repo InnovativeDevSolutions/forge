@@ -35,3 +35,24 @@ Locker listens for sync events through the event bus:
 - `notification.requested` - storage and item modification alerts
 
 The store module emits these events when granting items; locker applies the changes to player state.
+
+## Starting Unlocks
+Missions can include `CfgStartingEquipment.hpp` from `description.ext` to
+configure initial virtual arsenal unlocks for new players.
+
+```cpp
+class CfgStartingEquipment {
+    class Unlocks {
+        class Locker {
+            items[] = {"FirstAidKit", "ItemMap", "ItemCompass"};
+            weapons[] = {"hgun_P07_F"};
+            magazines[] = {"16Rnd_9x21_Mag"};
+            backpacks[] = {};
+        };
+    };
+};
+```
+
+The extension virtual locker default is intentionally empty. The server addon
+seeds `CfgStartingEquipment` unlocks only when a player does not already have a
+persistent owner-scoped locker record.

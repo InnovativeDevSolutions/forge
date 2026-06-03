@@ -4,7 +4,7 @@
  * File: fnc_initActorStore.sqf
  * Author: IDSolutions
  * Date: 2025-12-17
- * Last Update: 2026-05-16
+ * Last Update: 2026-06-03
  * Public: Yes
  *
  * Description:
@@ -25,12 +25,23 @@
 #pragma hemtt ignore_variables ["_self"]
 GVAR(ActorModel) = compileFinal createHashMapObject [[
     ["#type", "ActorModel"],
+    ["getStartingConfig", compileFinal {
+        missionConfigFile >> "CfgStartingEquipment"
+    }],
+    ["getDefaultLoadout", compileFinal {
+        private _config = _self call ["getStartingConfig", []];
+        private _loadoutConfig = _config >> "loadout";
+
+        if (isArray _loadoutConfig) exitWith { getArray _loadoutConfig };
+
+        [[],[],["hgun_P07_F","","","",["16Rnd_9x21_Mag",17],[],""],["U_BG_Guerrilla_6_1",[["FirstAidKit", 2],["ACE_EarPlugs",1]]],["V_Rangemaster_belt",[["16Rnd_9x21_Mag",4]]],[],"H_Cap_blk_ION","",["Binocular","","","",[],[],""],["ItemMap","ItemGPS","ItemRadio","ItemCompass","ItemWatch",""]]
+    }],
     ["defaults", compileFinal {
         private _actor = createHashMap;
 
         _actor set ["uid", ""];
         _actor set ["name", ""];
-        _actor set ["loadout", [[],[],[],["U_BG_Guerrilla_6_1",[["FirstAidKit", 2]]],[],[],"H_Cap_blk_ION","",[],["ItemMap","ItemGPS","ItemRadio","ItemCompass","ItemWatch",""]]];
+        _actor set ["loadout", _self call ["getDefaultLoadout", []]];
         _actor set ["position", [0,0,0]];
         _actor set ["direction", 0];
         _actor set ["stance", "STAND"];

@@ -29,10 +29,10 @@ GVAR(IEDEntityController) merge [createHashMapFromArray [
 
         waitUntil {
             sleep 1;
-            GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
+            !(_self call ["isAssignedTaskOpen", []]) || { GVAR(TaskStore) call ["isTaskAccepted", [_taskID]] }
         };
 
-        true
+        _self call ["isAssignedTaskOpen", []]
     }],
     ["playCountdownSound", compileFinal {
         params [["_timeRemaining", 0, [0]]];
@@ -67,18 +67,33 @@ GVAR(IEDEntityController) merge [createHashMapFromArray [
             false
         };
 
-        _self call ["waitForAssignment", []];
+        if !(_self call ["waitForAssignment", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
+        };
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
+        };
         _self call ["markActive", []];
 
-        while { (_self call ["isEntityUsable", []]) && { _countdown > 0 } } do {
+        while { (_self call ["isAssignedTaskOpen", []]) && { (_self call ["isEntityUsable", []]) && { _countdown > 0 } } } do {
             _self call ["playCountdownSound", [_countdown]];
             _countdown = _countdown - 1;
             _self set ["countdown", _countdown];
             sleep 1;
         };
 
-        if ((_self call ["isEntityUsable", []]) && { _countdown <= 0 }) then {
+        if ((_self call ["isAssignedTaskOpen", []]) && { (_self call ["isEntityUsable", []]) && { _countdown <= 0 } }) then {
             _self call ["detonate", []];
+        };
+
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
         };
 
         _self call ["markFinished", []];

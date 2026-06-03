@@ -123,6 +123,11 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
 
         (_self call ["getTaskStatus", [_taskID]]) isEqualTo "succeeded"
     }],
+    ["isTerminalStatus", compileFinal {
+        params [["_status", "", [""]]];
+
+        (toLowerANSI _status) in ["failed", "succeeded"]
+    }],
     ["areTaskPrerequisitesSatisfied", compileFinal {
         params [["_taskID", "", [""]], ["_entry", createHashMap, [createHashMap]]];
 
@@ -359,6 +364,28 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         if (_taskID isEqualTo "" || { _status isEqualTo "" }) exitWith { false };
 
         private _normalizedStatus = toLowerANSI _status;
+        private _currentStatus = toLowerANSI (_self call ["getTaskStatus", [_taskID]]);
+        private _currentIsTerminal = _self call ["isTerminalStatus", [_currentStatus]];
+        private _nextIsTerminal = _self call ["isTerminalStatus", [_normalizedStatus]];
+
+        if (_currentIsTerminal && { _currentStatus isNotEqualTo _normalizedStatus }) exitWith {
+            ["WARNING", format [
+                "Task status transition blocked for %1: terminal status %2 cannot be changed to %3 without clearing task state first.",
+                _taskID,
+                _currentStatus,
+                _normalizedStatus
+            ]] call EFUNC(common,log);
+            false
+        };
+
+        if (_currentIsTerminal && { _nextIsTerminal }) exitWith {
+            if (_normalizedStatus isEqualTo "succeeded") then {
+                _self call ["markTaskCompleted", [_taskID]];
+                _self call ["unlockDependentTasks", [_taskID]];
+            };
+            true
+        };
+
         private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
         private _runtimeEntry = +(_runtimeCatalogRegistry getOrDefault [_taskID, createHashMap]);
         if (_runtimeEntry isNotEqualTo createHashMap) then {

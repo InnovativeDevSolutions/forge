@@ -31,7 +31,13 @@ GVAR(ShooterEntityController) merge [createHashMapFromArray [
         _self call ["markActive", []];
         waitUntil {
             sleep 1;
-            !(_self call ["isEntityUsable", []])
+            !(_self call ["isAssignedTaskOpen", []]) || { !(_self call ["isEntityUsable", []]) }
+        };
+
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
         };
 
         _self call ["markFinished", []];

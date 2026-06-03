@@ -19,43 +19,11 @@ pub struct VLocker {
 
 impl VLocker {
     pub fn new() -> Self {
-        Self::default_unlocks()
-    }
-
-    fn default_unlocks() -> Self {
         Self {
-            items: vec![
-                "FirstAidKit".to_string(),
-                "G_Combat".to_string(),
-                "H_Cap_blk_ION".to_string(),
-                "H_HelmetB".to_string(),
-                "ACE_EarPlugs".to_string(),
-                "ItemCompass".to_string(),
-                "ItemGPS".to_string(),
-                "ItemMap".to_string(),
-                "ItemRadio".to_string(),
-                "ItemWatch".to_string(),
-                "U_BG_Guerrilla_6_1".to_string(),
-                "V_TacVest_oli".to_string(),
-            ],
-            weapons: vec!["arifle_MX_F".to_string(), "hgun_P07_F".to_string()],
-            magazines: vec![
-                "16Rnd_9x21_Mag".to_string(),
-                "30Rnd_65x39_caseless_black_mag".to_string(),
-                "Chemlight_blue".to_string(),
-                "Chemlight_green".to_string(),
-                "Chemlight_red".to_string(),
-                "Chemlight_yellow".to_string(),
-                "HandGrenade".to_string(),
-                "SmokeShell".to_string(),
-                "SmokeShellBlue".to_string(),
-                "SmokeShellGreen".to_string(),
-                "SmokeShellOrange".to_string(),
-                "SmokeShellPurple".to_string(),
-                "SmokeShellRed".to_string(),
-                "SmokeShellYellow".to_string(),
-            ],
-            backpacks: vec!["B_AssaultPack_rgr".to_string()],
+            items: Vec::new(),
+            weapons: Vec::new(),
+            magazines: Vec::new(),
+            backpacks: Vec::new(),
         }
     }
 

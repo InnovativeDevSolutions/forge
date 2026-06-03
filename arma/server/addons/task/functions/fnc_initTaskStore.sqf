@@ -56,6 +56,9 @@ GVAR(TaskStore) = createHashMapObject [[
     ["isTaskCompleted", compileFinal {
         GVAR(TaskCatalogStore) call ["isTaskCompleted", _this]
     }],
+    ["isTerminalStatus", compileFinal {
+        GVAR(TaskCatalogStore) call ["isTerminalStatus", _this]
+    }],
     ["areTaskPrerequisitesSatisfied", compileFinal {
         GVAR(TaskCatalogStore) call ["areTaskPrerequisitesSatisfied", _this]
     }],

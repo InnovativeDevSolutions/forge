@@ -1,7 +1,4 @@
-use arma_rs::{
-    FromArma, IntoArma,
-    loadout::{AssignedItems, InventoryItem, Loadout as ArmaLoadout},
-};
+use arma_rs::{FromArma, IntoArma, loadout::Loadout as ArmaLoadout};
 use forge_shared::{
     ActorValidationError, arma_value_to_json, generate_email, generate_phone_number,
 };
@@ -128,26 +125,7 @@ impl Actor {
     }
 
     fn default_loadout_json() -> serde_json::Value {
-        let mut loadout = ArmaLoadout::default();
-
-        let uniform = loadout.uniform_mut();
-        uniform.set_class("U_BG_Guerrilla_6_1".to_string());
-
-        let uniform_items = uniform.items_mut().unwrap();
-        uniform_items.push(InventoryItem::new_item("FirstAidKit".to_string(), 1));
-
-        loadout.set_headgear("H_Cap_blk_ION".to_string());
-
-        let mut items = AssignedItems::default();
-        items.set_map("ItemMap".to_string());
-        items.set_terminal("ItemGPS".to_string());
-        items.set_radio("ItemRadio".to_string());
-        items.set_compass("ItemCompass".to_string());
-        items.set_watch("ItemWatch".to_string());
-        loadout.set_assigned_items(items);
-
-        let arma_value = loadout.to_arma();
-        arma_value_to_json(&arma_value)
+        serde_json::Value::Array(Vec::new())
     }
 
     pub fn get_loadout(&self) -> Result<ArmaLoadout, String> {

@@ -142,8 +142,24 @@ GVAR(ActorRepositoryBaseClass) = compileFinal createHashMapFromArray [
             if (_isTransport) then {
                 private _fromTransportNode = _x;
                 private _maxIndexedNodes = _x getVariable ["transportMaxIndexedNodes", 10];
-                private _baseFare = _x getVariable ["transportBaseFare", 100];
-                private _pricePerKm = _x getVariable ["transportPricePerKm", 50];
+                private _transportSetting = {
+                    params [["_name", "", [""]], ["_default", 0, [0]]];
+
+                    private _configDefault = _default;
+                    private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+                    if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+                    if (isNumber (_serviceConfig >> _name)) then {
+                        _configDefault = getNumber (_serviceConfig >> _name);
+                    };
+
+                    private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+                    private _value = missionNamespace getVariable [_name, _paramValue];
+                    if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+                    if (_value isEqualType 0) exitWith { _value max 0 };
+                    _configDefault
+                };
+                private _baseFare = _x getVariable ["transportBaseFare", ["transportBaseFare", 100] call _transportSetting];
+                private _pricePerKm = _x getVariable ["transportPricePerKm", ["transportPricePerKm", 50] call _transportSetting];
                 private _vehiclePrefix = _x getVariable ["transportVehiclePrefix", format ["%1_vehicle", _transportPrefix]];
                 private _arrivalPrefix = _x getVariable ["transportArrivalPrefix", format ["%1_arrival", _transportPrefix]];
                 private _nodeNames = [_transportPrefix];

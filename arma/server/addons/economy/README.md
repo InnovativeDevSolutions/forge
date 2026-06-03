@@ -9,6 +9,21 @@ inventory handling.
 Current stores cover fuel tracking, medical service behavior, and service
 charges such as repairs and rearming.
 
+## Configurable Prices
+Service prices are read dynamically from mission namespace values so the
+framework mission setup UI can override them at startup. If the UI is cancelled
+or unavailable, mission `Params` with matching names are used as the backup;
+if no param is defined, `CfgServicePricing` provides the fallback.
+
+Supported setting names:
+- `medicalSpawnCost` - best-effort medical respawn charge; default `100`
+- `medicalHealCost` - heal charge; default `100`
+- `serviceRepairCost` - default repair service charge; default `500`
+- `serviceRearmCost` - default rearm service charge; default `500`
+- `fuelCost` - refuel price per liter; default `5`
+- `transportBaseFare` - transport fare base price; default `100`
+- `transportPricePerKm` - transport distance price; default `50`
+
 ## Dependencies
 - `forge_server_main`
 - `forge_server_common` for logging, formatting, and player lookup
@@ -23,7 +38,8 @@ Note: Bank and Org are runtime-only dependencies (not compile-time requiredAddon
   totals, charges the player's organization through `OrgStore`, syncs the org
   patch, and rolls fuel back to the starting level when organization funds
   cannot cover the refuel.
-- `fnc_initMEconomyStore.sqf` manages medical spawn occupancy, healing charges,
+- `fnc_initMEconomyStore.sqf` manages medical spawn occupancy, medical spawn
+  billing, healing charges,
   respawn placement, death inventory handling, and body-bag transfer. Medical
   charges use player bank/cash first, then organization funds with repayable
   member debt only when the player cannot cover the service.

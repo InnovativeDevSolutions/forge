@@ -79,14 +79,31 @@ switch (_event) do {
             hint "Transport destination is no longer available.";
         };
 
+        private _transportSetting = {
+            params [["_name", "", [""]], ["_default", 0, [0]]];
+
+            private _configDefault = _default;
+            private _serviceConfig = missionConfigFile >> "CfgServicePricing";
+            if !(isClass _serviceConfig) then { _serviceConfig = configFile >> "CfgServicePricing"; };
+            if (isNumber (_serviceConfig >> _name)) then {
+                _configDefault = getNumber (_serviceConfig >> _name);
+            };
+
+            private _paramValue = [_name, _configDefault] call BIS_fnc_getParamValue;
+            private _value = missionNamespace getVariable [_name, _paramValue];
+            if (_value isEqualType "") exitWith { (parseNumber _value) max 0 };
+            if (_value isEqualType 0) exitWith { _value max 0 };
+            _configDefault
+        };
+
         private _options = createHashMapFromArray [
             ["label", _data getOrDefault ["label", "Transport"]],
             ["nodePrefix", _data getOrDefault ["nodePrefix", "transport"]],
             ["vehiclePrefix", _data getOrDefault ["vehiclePrefix", "transport_vehicle"]],
             ["arrivalPrefix", _data getOrDefault ["arrivalPrefix", "transport_arrival"]],
             ["maxIndexedNodes", _data getOrDefault ["maxIndexedNodes", 10]],
-            ["baseFare", _data getOrDefault ["baseFare", 100]],
-            ["pricePerKm", _data getOrDefault ["pricePerKm", 50]],
+            ["baseFare", _data getOrDefault ["baseFare", ["transportBaseFare", 100] call _transportSetting]],
+            ["pricePerKm", _data getOrDefault ["pricePerKm", ["transportPricePerKm", 50] call _transportSetting]],
             ["cargoRadius", _data getOrDefault ["cargoRadius", 25]],
             ["includeCargo", _data getOrDefault ["includeCargo", true]]
         ];
