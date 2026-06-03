@@ -76,6 +76,20 @@ GVAR(EntityControllerBaseClass) = createHashMapFromArray [
         private _entity = _self getOrDefault ["entity", objNull];
         !isNull _entity && { alive _entity }
     }],
+    ["isTerminalStatus", compileFinal {
+        params [["_status", "", [""]]];
+
+        (toLowerANSI _status) in ["failed", "succeeded"]
+    }],
+    ["isAssignedTaskOpen", compileFinal {
+        private _taskID = _self getOrDefault ["taskID", ""];
+        if (_taskID isEqualTo "" || { isNil QGVAR(TaskStore) }) exitWith { true };
+
+        private _status = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];
+        if (_status isEqualTo "") exitWith { true };
+
+        !(_self call ["isTerminalStatus", [_status]])
+    }],
     ["assignTaskVariable", compileFinal {
         private _entity = _self getOrDefault ["entity", objNull];
         private _taskID = _self getOrDefault ["taskID", ""];

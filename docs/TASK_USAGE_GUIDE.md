@@ -188,13 +188,20 @@ server-side.
 
 The mission setup UI does not enable or disable generated missions. It applies
 runtime tuning such as faction, caps, intervals, reward ranges, rating ranges,
-penalties, time limits, and a generator provider preference. Generator
-enablement remains controlled by the CBA setting above.
+penalties, time limits, service pricing, and a generator provider preference.
+Generator enablement remains controlled by the CBA setting above.
 
 When `forge_server_task_enableMissionSetup` is enabled, the mission manager
 waits for setup settings before starting. There is no timeout auto-apply.
 Pressing Cancel, X, or Escape applies default values from CBA, mission
 parameters, and `CfgMissions`.
+
+Service price defaults are stored in `CfgMissions >> ServicePricing`. Mission
+`Params` with matching names override those defaults before the UI opens, and
+submitted UI values override both. The supported names are
+`medicalSpawnCost`, `medicalHealCost`, `serviceRepairCost`,
+`serviceRearmCost`, `fuelCost`, `transportBaseFare`, and
+`transportPricePerKm`.
 
 The setup UI stores the provider preference in
 `forge_server_task_generatorProvider` as `builtin` or `custom`. CAD/manual

@@ -51,10 +51,10 @@ GVAR(DefendTaskBaseClass) merge [createHashMapFromArray [
 
         waitUntil {
             sleep 1;
-            GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
+            !(_self call ["isTaskStoreOpen", []]) || { GVAR(TaskStore) call ["isTaskAccepted", [_taskID]] }
         };
 
-        true
+        _self call ["isTaskStoreOpen", []]
     }],
     ["countBluforInZone", compileFinal {
         private _defenseZone = _self getOrDefault ["defenseZone", ""];
@@ -68,6 +68,7 @@ GVAR(DefendTaskBaseClass) merge [createHashMapFromArray [
         waitUntil {
             sleep 1;
             _self call ["trackParticipants", []];
+            if !(_self call ["isTaskStoreOpen", []]) exitWith { true };
 
             private _ready = (_self call ["countBluforInZone", []]) >= _minBlufor;
             if (_ready) then {
@@ -82,7 +83,7 @@ GVAR(DefendTaskBaseClass) merge [createHashMapFromArray [
             _ready
         };
 
-        true
+        _self call ["isTaskStoreOpen", []]
     }],
     ["tick", compileFinal {
         private _taskID = _self getOrDefault ["taskID", ""];
@@ -186,10 +187,18 @@ GVAR(DefendTaskBaseClass) merge [createHashMapFromArray [
             false
         };
 
-        _self call ["waitForAssignment", []];
-        _self call ["waitForDefenseStart", []];
+        if !(_self call ["waitForAssignment", []]) exitWith {
+            _self call ["markAborted", ["Task reached terminal status before assignment."]];
+            _self call ["cleanup", []];
+            false
+        };
+        if !(_self call ["waitForDefenseStart", []]) exitWith {
+            _self call ["markAborted", ["Task reached terminal status before defense started."]];
+            _self call ["cleanup", []];
+            false
+        };
 
-        while { (_self call ["getStatus", []]) isEqualTo "active" } do {
+        while { _self call ["isTaskLoopActive", []] } do {
             _self call ["trackParticipants", []];
             private _snapshot = _self call ["tick", []];
 
@@ -204,9 +213,12 @@ GVAR(DefendTaskBaseClass) merge [createHashMapFromArray [
             sleep 1;
         };
 
-        if ((_self call ["getStatus", []]) isEqualTo "failed") then {
+        private _finalStatus = _self call ["getStatus", []];
+        if (_finalStatus isEqualTo "failed") then {
             _self call ["handleFailureOutcome", []];
-        } else {
+        };
+
+        if (_finalStatus isEqualTo "succeeded") then {
             _self call ["handleSuccessOutcome", []];
         };
 

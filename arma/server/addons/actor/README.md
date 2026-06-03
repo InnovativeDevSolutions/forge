@@ -25,12 +25,37 @@ life state, phone number, email, organization, and holster state.
 
 ## Runtime Behavior
 - Missing persistent actors can be created from live player snapshots.
-- Newly created actors receive a Field Commander job orientation email, two
+- Newly created actors receive their starting loadout from mission
+  `CfgStartingEquipment`, plus a Field Commander job orientation email, two
   Field Commander text messages, and a `$2,000` starting credit in their bank
   account.
 - Hot actor reads are migrated and hydrated before use.
 - `saveHotState` in the main addon snapshots and saves actor state on player
   disconnect and mission end.
+
+## Starting Equipment
+Missions can include `CfgStartingEquipment.hpp` from `description.ext` to
+override starter actor gear without recompiling the addon or extension.
+
+```cpp
+class CfgStartingEquipment {
+    loadout[] = {
+        {},
+        {},
+        {},
+        {"U_BG_Guerrilla_6_1", {{"FirstAidKit", 2}}},
+        {},
+        {},
+        "H_Cap_blk_ION",
+        "",
+        {},
+        {"ItemMap", "ItemGPS", "ItemRadio", "ItemCompass", "ItemWatch", ""}
+    };
+};
+```
+
+The Rust actor model no longer hardcodes a starter loadout. SQF supplies the
+mission-configured loadout when it creates a missing actor record.
 
 ## Event Surface
 The addon handles server events for actor init, get, set, multi-set, save, and

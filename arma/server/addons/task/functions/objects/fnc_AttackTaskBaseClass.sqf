@@ -96,10 +96,10 @@ GVAR(AttackTaskBaseClass) merge [createHashMapFromArray [
 
         waitUntil {
             sleep 1;
-            GVAR(TaskStore) call ["isTaskAccepted", [_taskID]]
+            !(_self call ["isTaskStoreOpen", []]) || { GVAR(TaskStore) call ["isTaskAccepted", [_taskID]] }
         };
 
-        true
+        _self call ["isTaskStoreOpen", []]
     }],
     ["tick", compileFinal {
         private _startedAt = _self getOrDefault ["startedAt", -1];
@@ -139,7 +139,7 @@ GVAR(AttackTaskBaseClass) merge [createHashMapFromArray [
                 _self call ["refreshTargetsFromStore", []];
                 private _targets = _self getOrDefault ["targets", []];
                 GVAR(TaskStore) call ["trackParticipants", [_taskID, _targets, "", 300]];
-                count _targets > 0
+                !(_self call ["isTaskStoreOpen", []]) || { count _targets > 0 }
             };
         } else {
             waitUntil {
@@ -148,10 +148,20 @@ GVAR(AttackTaskBaseClass) merge [createHashMapFromArray [
             };
         };
 
-        _self call ["waitForAssignment", []];
+        if !(_self call ["isTaskStoreOpen", []]) exitWith {
+            _self call ["markAborted", ["Task reached terminal status before targets registered."]];
+            _self call ["cleanup", []];
+            false
+        };
+
+        if !(_self call ["waitForAssignment", []]) exitWith {
+            _self call ["markAborted", ["Task reached terminal status before assignment."]];
+            _self call ["cleanup", []];
+            false
+        };
         _self call ["markActive", []];
 
-        while { (_self call ["getStatus", []]) isEqualTo "active" } do {
+        while { _self call ["isTaskLoopActive", []] } do {
             private _targets = _self getOrDefault ["targets", []];
 
             if (_useTaskStore) then {
@@ -186,10 +196,8 @@ GVAR(AttackTaskBaseClass) merge [createHashMapFromArray [
             sleep 1;
         };
 
-        if ((_self call ["getStatus", []]) isEqualTo "failed") then {
-            private _targets = _self getOrDefault ["targets", []];
-            { deleteVehicle _x } forEach _targets;
-
+        private _finalStatus = _self call ["getStatus", []];
+        if (_finalStatus isEqualTo "failed") then {
             if (_useTaskStore) then {
                 [_taskID, "FAILED"] call BFUNC(taskSetState);
                 GVAR(TaskStore) call ["setTaskStatus", [_taskID, "failed"]];
@@ -202,10 +210,9 @@ GVAR(AttackTaskBaseClass) merge [createHashMapFromArray [
             };
 
             if (_endFail) then { "EveryoneLost" call BFUNC(endMissionServer); };
-        } else {
-            private _targets = _self getOrDefault ["targets", []];
-            { deleteVehicle _x } forEach _targets;
+        };
 
+        if (_finalStatus isEqualTo "succeeded") then {
             if (_useTaskStore) then {
                 [_taskID, "SUCCEEDED"] call BFUNC(taskSetState);
                 GVAR(TaskStore) call ["setTaskStatus", [_taskID, "succeeded"]];

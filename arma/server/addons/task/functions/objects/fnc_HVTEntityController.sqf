@@ -52,10 +52,17 @@ GVAR(HVTEntityController) merge [createHashMapFromArray [
         private _capturer = objNull;
         waitUntil {
             sleep 1;
+            if !(_self call ["isAssignedTaskOpen", []]) exitWith { true };
             if !(_self call ["isEntityUsable", []]) exitWith { true };
 
             _capturer = _self call ["findNearbyCapturer", []];
             !isNull _capturer
+        };
+
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
         };
 
         if !(_self call ["isEntityUsable", []]) exitWith {

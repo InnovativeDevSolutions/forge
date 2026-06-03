@@ -755,13 +755,20 @@ CAD dispatcher-requested generation.
 The optional framework mission setup UI lets the setup operator choose runtime
 tuning such as opposing faction, mission cap, interval, location cooldown,
 reward ranges, reputation ranges, penalty ranges, time limits, and a generator
-provider preference. It does not enable or disable generated missions; use the
-CBA setting for that policy.
+provider preference. It also exposes service pricing for medical spawn, heal,
+repair, rearm, refuel, and transport defaults. It does not enable or disable
+generated missions; use the CBA setting for that policy.
 
 If mission setup is enabled, the mission manager waits until the setup operator
 applies settings. Cancel, X, and Escape apply default values from CBA, mission
 parameters, and `CfgMissions`. There is no timeout that auto-applies defaults.
 After settings are applied, the setup UI cannot be reopened.
+
+Service pricing fallback values live under `CfgMissions >> ServicePricing`.
+Mission `Params` with matching names, such as `medicalHealCost`,
+`serviceRepairCost`, `serviceRearmCost`, `fuelCost`, `transportBaseFare`, and
+`transportPricePerKm`, are read before the setup UI hydrates so mission makers
+can keep a non-UI backup.
 
 The setup UI stores the provider preference as `builtin` or `custom`. CAD/manual
 generated task requests use the task provider registry and route to the selected

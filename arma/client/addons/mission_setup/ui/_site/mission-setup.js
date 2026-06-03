@@ -14,6 +14,13 @@
             penaltyMax: -25,
             timeLimitMin: 600,
             timeLimitMax: 900,
+            medicalSpawnCost: 100,
+            medicalHealCost: 100,
+            serviceRepairCost: 500,
+            serviceRearmCost: 500,
+            fuelCost: 5,
+            transportBaseFare: 100,
+            transportPricePerKm: 50,
             generatorProvider: "builtin",
         },
         error: "",
@@ -47,6 +54,13 @@
             penaltyMax: fieldNumber("penaltyMax"),
             timeLimitMin: fieldNumber("timeLimitMin"),
             timeLimitMax: fieldNumber("timeLimitMax"),
+            medicalSpawnCost: fieldNumber("medicalSpawnCost"),
+            medicalHealCost: fieldNumber("medicalHealCost"),
+            serviceRepairCost: fieldNumber("serviceRepairCost"),
+            serviceRearmCost: fieldNumber("serviceRearmCost"),
+            fuelCost: fieldNumber("fuelCost"),
+            transportBaseFare: fieldNumber("transportBaseFare"),
+            transportPricePerKm: fieldNumber("transportPricePerKm"),
             generatorProvider: document.getElementById("generatorProviderCustom")?.checked ? "custom" : "builtin",
         };
     }
@@ -82,6 +96,21 @@
 
         if (settings.timeLimitMax < settings.timeLimitMin) {
             state.error = "Time limit max must be greater than or equal to time limit min.";
+            render();
+            return;
+        }
+
+        const costFields = [
+            settings.medicalSpawnCost,
+            settings.medicalHealCost,
+            settings.serviceRepairCost,
+            settings.serviceRearmCost,
+            settings.fuelCost,
+            settings.transportBaseFare,
+            settings.transportPricePerKm,
+        ];
+        if (costFields.some((value) => value < 0)) {
+            state.error = "Service pricing cannot use negative values.";
             render();
             return;
         }
@@ -188,6 +217,43 @@
 
                         <aside class="panel">
                             <div class="panel-head">
+                                <span class="kicker">Service Pricing</span>
+                                <h2>Economy Settings</h2>
+                            </div>
+                            <div class="form compact">
+                                <div class="field">
+                                    <label for="medicalSpawnCost">Medical Spawn</label>
+                                    <input id="medicalSpawnCost" type="number" min="0" step="50" value="${settings.medicalSpawnCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="medicalHealCost">Medical Heal</label>
+                                    <input id="medicalHealCost" type="number" min="0" step="50" value="${settings.medicalHealCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="serviceRepairCost">Repair</label>
+                                    <input id="serviceRepairCost" type="number" min="0" step="50" value="${settings.serviceRepairCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="serviceRearmCost">Rearm</label>
+                                    <input id="serviceRearmCost" type="number" min="0" step="50" value="${settings.serviceRearmCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="fuelCost">Fuel / Liter</label>
+                                    <input id="fuelCost" type="number" min="0" step="1" value="${settings.fuelCost}" />
+                                </div>
+                                <div class="field">
+                                    <label for="transportBaseFare">Transport Base</label>
+                                    <input id="transportBaseFare" type="number" min="0" step="25" value="${settings.transportBaseFare}" />
+                                </div>
+                                <div class="field wide">
+                                    <label for="transportPricePerKm">Transport / KM</label>
+                                    <input id="transportPricePerKm" type="number" min="0" step="25" value="${settings.transportPricePerKm}" />
+                                </div>
+                            </div>
+                        </aside>
+
+                        <aside class="panel">
+                            <div class="panel-head">
                                 <span class="kicker">Current Selection</span>
                                 <h2>Generator Runtime</h2>
                             </div>
@@ -201,6 +267,9 @@
                                 <div class="summary-row"><span>Reputation</span><strong>${settings.reputationMin} - ${settings.reputationMax}</strong></div>
                                 <div class="summary-row"><span>Reputation Hit</span><strong>${settings.penaltyMin} to ${settings.penaltyMax}</strong></div>
                                 <div class="summary-row"><span>Time Limit</span><strong>${settings.timeLimitMin}s - ${settings.timeLimitMax}s</strong></div>
+                                <div class="summary-row"><span>Repair / Rearm</span><strong>$${Number(settings.serviceRepairCost).toLocaleString()} / $${Number(settings.serviceRearmCost).toLocaleString()}</strong></div>
+                                <div class="summary-row"><span>Fuel</span><strong>$${Number(settings.fuelCost).toLocaleString()} / L</strong></div>
+                                <div class="summary-row"><span>Medical</span><strong>$${Number(settings.medicalSpawnCost).toLocaleString()} spawn / $${Number(settings.medicalHealCost).toLocaleString()} heal</strong></div>
                                 ${state.error ? `<div class="notice">${state.error}</div>` : ""}
                             </div>
                         </aside>

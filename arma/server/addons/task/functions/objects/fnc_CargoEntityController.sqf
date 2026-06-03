@@ -38,6 +38,8 @@ GVAR(CargoEntityController) merge [createHashMapFromArray [
 
             private _taskID = _unit getVariable ["assignedTask", _unit getVariable [QGVAR(assignedTask), ""]];
             if (_taskID isEqualTo "") exitWith {};
+            private _taskStatus = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];
+            if (GVAR(TaskStore) call ["isTerminalStatus", [_taskStatus]]) exitWith {};
             if (_unit getVariable [QGVAR(cargoDamageWarned), false]) exitWith {};
 
             _unit setVariable [QGVAR(cargoDamageWarned), true];
@@ -70,7 +72,13 @@ GVAR(CargoEntityController) merge [createHashMapFromArray [
         waitUntil {
             sleep 1;
             private _entity = _self getOrDefault ["entity", objNull];
-            isNull _entity || { !alive _entity } || { damage _entity >= (_self getOrDefault ["damageThreshold", 0.7]) }
+            !(_self call ["isAssignedTaskOpen", []]) || { isNull _entity } || { !alive _entity } || { damage _entity >= (_self getOrDefault ["damageThreshold", 0.7]) }
+        };
+
+        if !(_self call ["isAssignedTaskOpen", []]) exitWith {
+            _self call ["markAborted", []];
+            _self call ["cleanup", []];
+            false
         };
 
         _self call ["markFinished", []];
