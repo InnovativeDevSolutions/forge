@@ -34,6 +34,22 @@ Include `CfgStore.hpp` from `description.ext`:
 ```cpp
 class CfgStore {
     mode = "allowlist"; // dynamic, allowlist, or denylist
+    modMode = "dynamic"; // dynamic, allowlist, or denylist
+    mods[] = {}; // ModSources child class names used when modMode is not dynamic
+
+    class ModSources {
+        class rhs {
+            patches[] = {"rhs_main", "rhsusf_main"};
+            addons[] = {"rhs_", "rhsusf_", "rhsgref_", "rhsafrf_"};
+            prefixes[] = {"rhs_", "rhsusf_", "rhsgref_", "rhsafrf_"};
+        };
+
+        class ace3 {
+            patches[] = {"ace_main"};
+            addons[] = {"ace_"};
+            prefixes[] = {"ace_"};
+        };
+    };
 
     class Categories {
         primary[] = {"arifle_MX_F", "arifle_MXC_F"};
@@ -55,6 +71,13 @@ class CfgStore {
 listed for each category. `denylist` removes listed classnames. Overrides are
 server-side and are used by both the UI payload and checkout validation.
 `units[]` uses the same filter behavior as every other category.
+
+`modMode` applies before category filtering. `allowlist` only keeps generated
+entries that match one of the configured `mods[]`; `denylist` removes matching
+entries. Each `ModSources` child can define `patches[]` to detect whether the
+mod is loaded, `addons[]` for config source addon/source mod names or classname
+prefixes, and `prefixes[]` for classname prefixes. If a mod source defines no
+patches, it is treated as available and only the source/prefix checks are used.
 
 The current filter is global for the mission. Revisit per-store profile support
 if individual vendors need different inventories.
