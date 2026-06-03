@@ -34,8 +34,8 @@ pub use org::{
 };
 pub use phone::{PhoneEmail, PhoneMessage, PhonePayload};
 pub use store::{
-    StoreCheckoutContext, StoreCheckoutItemSeed, StoreCheckoutResult, StoreCheckoutVehicleSeed,
-    StoreGrantedItem, StoreGrantedVehicle,
+    StoreCheckoutContext, StoreCheckoutItemSeed, StoreCheckoutResult, StoreCheckoutUnitSeed,
+    StoreCheckoutVehicleSeed, StoreGrantedItem, StoreGrantedUnit, StoreGrantedVehicle,
 };
 pub use task::{
     TaskJsonMap, TaskOwnershipContext, TaskOwnershipMutationResult, TaskRecord, TaskRewardContext,

@@ -15,7 +15,6 @@ PREP(makeObject);
 PREP(makeShooter);
 PREP(makeTarget);
 PREP(missionManager);
-PREP(requestMissionTask);
 PREP(initTaskStore);
 
 PREP_SUBDIR(generators,attackMissionGenerator);
@@ -57,6 +56,9 @@ PREP_SUBDIR(objects,TaskCatalogStore);
 PREP_SUBDIR(objects,TaskEntityRegistry);
 PREP_SUBDIR(objects,TaskParticipantTracker);
 PREP_SUBDIR(objects,TaskRewardService);
+PREP_SUBDIR(objects,TaskNotificationService);
+PREP_SUBDIR(objects,MissionGeneratorProviderRegistry);
+PREP_SUBDIR(objects,BuiltinMissionGeneratorProvider);
 PREP_SUBDIR(objects,EntityControllerBaseClass);
 PREP_SUBDIR(objects,AttackTaskBaseClass);
 PREP_SUBDIR(objects,HostageTaskBaseClass);

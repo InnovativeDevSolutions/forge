@@ -26,6 +26,7 @@ corpseManagerMode = 0;
 #include "CfgEnemyFactions.hpp"
 #include "CfgFactionUnitMap.hpp"
 #include "CfgMissions.hpp"
+#include "CfgStore.hpp"
 #include "CfgFunctions.hpp"
 
 class CfgSounds

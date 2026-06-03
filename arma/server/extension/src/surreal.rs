@@ -19,6 +19,8 @@ pub type SurrealDb = Surreal<Client>;
 
 const CLIENT_READY_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_READY_POLL_INTERVAL: Duration = Duration::from_millis(25);
+const INIT_MAX_ATTEMPTS: usize = 5;
+const INIT_RETRY_BASE_DELAY: Duration = Duration::from_millis(150);
 
 static SURREAL_DB: LazyLock<StdRwLock<Option<Arc<SurrealDb>>>> =
     LazyLock::new(|| StdRwLock::new(None));
@@ -27,6 +29,8 @@ static SURREAL_CONNECTION_STATE: LazyLock<StdRwLock<SurrealConnectionState>> =
 static SURREAL_FAILURE_REASON: LazyLock<StdRwLock<Option<String>>> =
     LazyLock::new(|| StdRwLock::new(None));
 static SURREAL_INIT_GENERATION: AtomicU64 = AtomicU64::new(0);
+static SURREAL_INIT_LOCK: LazyLock<tokio::sync::Mutex<()>> =
+    LazyLock::new(|| tokio::sync::Mutex::new(()));
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SurrealConnectionState {
@@ -42,6 +46,7 @@ pub fn prepare() {
 }
 
 pub async fn initialize(config: SurrealConfig) {
+    let _init_guard = SURREAL_INIT_LOCK.lock().await;
     let generation = SURREAL_INIT_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
     prepare();
 
@@ -55,7 +60,7 @@ pub async fn initialize(config: SurrealConfig) {
     );
 
     let timeout_duration = Duration::from_millis(config.connect_timeout_ms.unwrap_or(5000));
-    let connection = timeout(timeout_duration, connect(config)).await;
+    let connection = timeout(timeout_duration, connect_with_retries(config)).await;
 
     let db = match connection {
         Err(_) => {
@@ -98,7 +103,7 @@ pub async fn initialize(config: SurrealConfig) {
     }
 
     log::log("surreal", "DEBUG", "Applying SurrealDB schemas");
-    if let Err(error) = schema::apply_all(&db).await {
+    if let Err(error) = apply_schemas_with_retries(&db).await {
         if !is_current_generation(generation) {
             return;
         }
@@ -159,6 +164,70 @@ async fn connect(config: SurrealConfig) -> Result<SurrealDb, String> {
     Ok(db)
 }
 
+async fn connect_with_retries(config: SurrealConfig) -> Result<SurrealDb, String> {
+    let mut last_error = String::new();
+
+    for attempt in 1..=INIT_MAX_ATTEMPTS {
+        match connect(config.clone()).await {
+            Ok(db) => return Ok(db),
+            Err(error) => {
+                if !is_retryable_surreal_error(&error) || attempt == INIT_MAX_ATTEMPTS {
+                    return Err(error);
+                }
+
+                last_error = error;
+                log::log(
+                    "surreal",
+                    "WARNING",
+                    &format!(
+                        "SurrealDB connection attempt {} failed with retryable error: {}",
+                        attempt, last_error
+                    ),
+                );
+                sleep(init_retry_delay(attempt)).await;
+            }
+        }
+    }
+
+    Err(last_error)
+}
+
+async fn apply_schemas_with_retries(db: &SurrealDb) -> Result<(), String> {
+    let mut last_error = String::new();
+
+    for attempt in 1..=INIT_MAX_ATTEMPTS {
+        match schema::apply_all(db).await {
+            Ok(()) => return Ok(()),
+            Err(error) => {
+                if !is_retryable_surreal_error(&error) || attempt == INIT_MAX_ATTEMPTS {
+                    return Err(error);
+                }
+
+                last_error = error;
+                log::log(
+                    "surreal",
+                    "WARNING",
+                    &format!(
+                        "SurrealDB schema bootstrap attempt {} failed with retryable error: {}",
+                        attempt, last_error
+                    ),
+                );
+                sleep(init_retry_delay(attempt)).await;
+            }
+        }
+    }
+
+    Err(last_error)
+}
+
+fn is_retryable_surreal_error(error: &str) -> bool {
+    error.contains("Transaction conflict") || error.contains("Resource busy")
+}
+
+fn init_retry_delay(attempt: usize) -> Duration {
+    INIT_RETRY_BASE_DELAY * attempt as u32
+}
+
 pub async fn client() -> Result<Arc<SurrealDb>, String> {
     if let Some(db) = SURREAL_DB.read().unwrap().clone() {
         return Ok(db);
@@ -203,6 +272,10 @@ pub fn status() -> String {
 }
 
 pub fn reconnect() -> String {
+    if *SURREAL_CONNECTION_STATE.read().unwrap() == SurrealConnectionState::Initializing {
+        return "reconnect skipped: connection already initializing".to_string();
+    }
+
     let surreal_config = config::load().surreal.clone();
     prepare();
     RUNTIME.spawn(async move {

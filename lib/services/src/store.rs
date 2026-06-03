@@ -1,6 +1,6 @@
 use forge_models::{
     Bank, BankCheckoutContext, BankMutationResult, EquipmentCategory, HotOrgRecord, Item, Locker,
-    OrgFleetEntry, StoreCheckoutContext, StoreCheckoutResult, StoreGrantedItem,
+    OrgFleetEntry, StoreCheckoutContext, StoreCheckoutResult, StoreGrantedItem, StoreGrantedUnit,
     StoreGrantedVehicle, VGarage, VLocker, VehicleCategory,
 };
 use forge_repositories::{
@@ -229,7 +229,7 @@ where
         if context.requester_uid.trim().is_empty() {
             return Err("A valid requester UID is required.".to_string());
         }
-        if context.items.is_empty() && context.vehicles.is_empty() {
+        if context.items.is_empty() && context.vehicles.is_empty() && context.units.is_empty() {
             return Err("Add at least one item before checkout.".to_string());
         }
 
@@ -254,6 +254,7 @@ where
         let mut vgarage_patch = HashMap::new();
         let mut locker_granted = Vec::new();
         let mut vehicle_granted = Vec::new();
+        let mut unit_granted = Vec::new();
         let mut va_categories_changed: Vec<&str> = Vec::new();
         let mut vgarage_categories_changed: Vec<&str> = Vec::new();
 
@@ -371,6 +372,22 @@ where
             vehicle_granted.push(StoreGrantedVehicle {
                 classname: vehicle_seed.classname.clone(),
                 category: vehicle_seed.category.clone(),
+            });
+        }
+
+        for unit_seed in &context.units {
+            if unit_seed.classname.trim().is_empty() {
+                return Err("Unit checkout entry was missing a classname.".to_string());
+            }
+
+            let unit_category = unit_seed.category.trim().to_ascii_lowercase();
+            if unit_category != "units" && unit_category != "unit" {
+                return Err(format!("Unit category '{}' is unsupported.", unit_category));
+            }
+
+            unit_granted.push(StoreGrantedUnit {
+                classname: unit_seed.classname.clone(),
+                category: "units".to_string(),
             });
         }
 
@@ -550,13 +567,15 @@ where
             charged_total,
             payment_method,
             message: format!(
-                "Checkout completed. {} charged, {} locker grant(s), {} vehicle unlock(s).",
+                "Checkout completed. {} charged, {} locker grant(s), {} vehicle unlock(s), {} unit grant(s).",
                 format_currency(charged_total),
                 locker_granted.len(),
-                vehicle_granted.len()
+                vehicle_granted.len(),
+                unit_granted.len()
             ),
             locker_granted,
             vehicle_granted,
+            unit_granted,
             locker_patch,
             va_patch,
             vgarage_patch,
@@ -578,8 +597,13 @@ fn checkout_total(context: &StoreCheckoutContext) -> f64 {
         .iter()
         .map(|entry| entry.price_value.max(0.0))
         .sum::<f64>();
+    let unit_total = context
+        .units
+        .iter()
+        .map(|entry| entry.price_value.max(0.0))
+        .sum::<f64>();
 
-    (item_total + vehicle_total).floor()
+    (item_total + vehicle_total + unit_total).floor()
 }
 
 fn resolve_locker_category(category: &str) -> Result<&'static str, String> {

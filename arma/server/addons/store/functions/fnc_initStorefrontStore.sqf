@@ -155,6 +155,7 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             ["chargedTotal", 0],
             ["lockerGranted", []],
             ["vehicleGranted", []],
+            ["unitGranted", []],
             ["bankPatch", createHashMap],
             ["orgPatch", createHashMap],
             ["orgTargetUids", []],
@@ -167,6 +168,71 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
         params [["_amount", 0, [0]]];
 
         format ["$%1", [_amount max 0] call EFUNC(common,formatNumber)]
+    }],
+    ["getUnitSpawnMarkers", compileFinal {
+        private _markers = allMapMarkers select {
+            private _markerName = toLowerANSI _x;
+            _markerName isEqualTo "unit_spawn" || { (_markerName find "unit_spawn_") == 0 }
+        };
+
+        _markers sort true;
+        _markers
+    }],
+    ["getStoreObjects", compileFinal {
+        (allVariables missionNamespace) apply { missionNamespace getVariable [_x, objNull] } select {
+            _x isEqualType objNull
+                && { !isNull _x }
+                && { _x getVariable ["isStore", false] }
+        }
+    }],
+    ["getClosestStoreObject", compileFinal {
+        params [["_origin", objNull, [objNull]]];
+
+        if (isNull _origin) exitWith { objNull };
+
+        private _stores = _self call ["getStoreObjects", []];
+        if (_stores isEqualTo []) exitWith { objNull };
+
+        private _closestStore = objNull;
+        private _closestDistance = 1e12;
+        {
+            private _distance = _origin distance2D _x;
+            if (_distance < _closestDistance) then {
+                _closestDistance = _distance;
+                _closestStore = _x;
+            };
+        } forEach _stores;
+
+        _closestStore
+    }],
+    ["getClosestUnitSpawnMarker", compileFinal {
+        params [["_origin", objNull, [objNull, []]], ["_maxDistance", -1, [0]]];
+
+        private _markers = _self call ["getUnitSpawnMarkers", []];
+        if (_markers isEqualTo []) exitWith { "" };
+
+        private _originPosition = if (_origin isEqualType objNull) then {
+            getPosATL _origin
+        } else {
+            _origin
+        };
+
+        if (_maxDistance >= 0) then {
+            _markers = _markers select { ((getMarkerPos _x) distance2D _originPosition) <= _maxDistance };
+            if (_markers isEqualTo []) exitWith { "" };
+        };
+
+        private _closestMarker = "";
+        private _closestDistance = 1e12;
+        {
+            private _distance = _originPosition distance2D (getMarkerPos _x);
+            if (_distance < _closestDistance) then {
+                _closestDistance = _distance;
+                _closestMarker = _x;
+            };
+        } forEach _markers;
+
+        _closestMarker
     }],
     ["callCheckoutBackendEnvelope", compileFinal {
         params [["_context", createHashMap, [createHashMap]]];
@@ -207,7 +273,8 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             ["_player", objNull, [objNull]],
             ["_paymentMethod", "cash", [""]],
             ["_items", [], [[]]],
-            ["_vehicles", [], [[]]]
+            ["_vehicles", [], [[]]],
+            ["_units", [], [[]]]
         ];
 
         if (_uid isEqualTo "" || { isNull _player }) exitWith { createHashMap };
@@ -225,8 +292,57 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             ["requesterIsDefaultOrgCeo", _requesterIsDefaultOrgCeo],
             ["paymentMethod", toLowerANSI _paymentMethod],
             ["items", _items],
-            ["vehicles", _vehicles]
+            ["vehicles", _vehicles],
+            ["units", _units]
         ]
+    }],
+    ["spawnPurchasedUnits", compileFinal {
+        params [["_player", objNull, [objNull]], ["_units", [], [[]]]];
+
+        private _result = createHashMapFromArray [
+            ["spawned", []],
+            ["failed", []]
+        ];
+        if (isNull _player || { _units isEqualTo [] }) exitWith { _result };
+
+        private _group = group _player;
+        private _store = _self call ["getClosestStoreObject", [_player]];
+        private _spawnAnchor = [objNull, _store] select !(isNull _store);
+        if (isNull _spawnAnchor) then { _spawnAnchor = _player; };
+
+        private _spawnMarker = "";
+        if !(isNull _store) then {
+            _spawnMarker = _self call ["getClosestUnitSpawnMarker", [_store, 25]];
+        };
+        {
+            private _className = _x getOrDefault ["classname", ""];
+            if (_className isEqualTo "" || { !(isClass (configFile >> "CfgVehicles" >> _className)) }) then {
+                (_result get "failed") pushBack _className;
+            } else {
+                private _basePosition = getPosATL _spawnAnchor;
+                private _baseDirection = getDir _spawnAnchor;
+                if (_spawnMarker isNotEqualTo "") then {
+                    _basePosition = getMarkerPos _spawnMarker;
+                    _baseDirection = markerDir _spawnMarker;
+                };
+
+                private _spawnPos = _basePosition findEmptyPosition [0, 18 + (_forEachIndex min 12), _className];
+                if (_spawnPos isEqualTo []) then {
+                    _spawnPos = _basePosition getPos [3 + _forEachIndex, _baseDirection + 90];
+                };
+
+                private _unit = _group createUnit [_className, _spawnPos, [], 0, "NONE"];
+                if (isNull _unit) then {
+                    (_result get "failed") pushBack _className;
+                } else {
+                    _unit setDir _baseDirection;
+                    [_unit] joinSilent _group;
+                    (_result get "spawned") pushBack _className;
+                };
+            };
+        } forEach _units;
+
+        _result
     }],
     ["syncCheckoutResult", compileFinal {
         params [["_player", objNull, [objNull]], ["_result", createHashMap, [createHashMap]]];
@@ -238,6 +354,7 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
         private _vgPatch = _result getOrDefault ["vgaragePatch", createHashMap];
         private _bankPatch = _result getOrDefault ["bankPatch", createHashMap];
         private _orgPatch = _result getOrDefault ["orgPatch", createHashMap];
+        private _unitGranted = _result getOrDefault ["unitGranted", []];
         private _uid = getPlayerUID _player;
 
         if (keys _lockerPatch isNotEqualTo []) then {
@@ -320,6 +437,14 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             };
         };
 
+        if (_unitGranted isNotEqualTo []) then {
+            private _unitSpawnResult = _self call ["spawnPurchasedUnits", [_player, _unitGranted]];
+            private _failedUnits = _unitSpawnResult getOrDefault ["failed", []];
+            if (_failedUnits isNotEqualTo []) then {
+                ["ERROR", format ["Store checkout unit spawn failed for %1: %2", _uid, _failedUnits joinString ", "]] call EFUNC(common,log);
+            };
+        };
+
         true
     }],
     ["persistCheckoutState", compileFinal {
@@ -398,19 +523,20 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
         private _paymentMethod = toLowerANSI (_payload getOrDefault ["paymentMethod", "cash"]);
         private _items = _payload getOrDefault ["items", []];
         private _vehicles = _payload getOrDefault ["vehicles", []];
+        private _units = _payload getOrDefault ["units", []];
 
         if (isNil QGVAR(StoreCatalogService)) exitWith {
             _result set ["message", "Store catalog service is unavailable."];
             _result
         };
 
-        private _checkoutRequest = GVAR(StoreCatalogService) call ["buildCheckoutRequest", [_items, _vehicles]];
+        private _checkoutRequest = GVAR(StoreCatalogService) call ["buildCheckoutRequest", [_items, _vehicles, _units]];
         private _totalPrice = _checkoutRequest getOrDefault ["total", 0];
 
         _result set ["paymentMethod", _paymentMethod];
         _result set ["chargedTotal", _totalPrice];
 
-        if (_items isEqualTo [] && { _vehicles isEqualTo [] }) exitWith {
+        if (_items isEqualTo [] && { _vehicles isEqualTo [] } && { _units isEqualTo [] }) exitWith {
             _result set ["message", "Add at least one item before checkout."];
             _result
         };
@@ -425,7 +551,8 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             _player,
             _paymentMethod,
             _checkoutRequest getOrDefault ["items", []],
-            _checkoutRequest getOrDefault ["vehicles", []]
+            _checkoutRequest getOrDefault ["vehicles", []],
+            _checkoutRequest getOrDefault ["units", []]
         ]];
         if (_checkoutContext isEqualTo createHashMap) exitWith {
             _result set ["message", "Checkout request context was invalid."];
@@ -451,13 +578,15 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
 
         _result set ["success", true];
         _result set ["message", _backendResult getOrDefault ["message", format [
-            "Checkout completed. %1 charged, %2 locker grant(s), %3 vehicle unlock(s).",
+            "Checkout completed. %1 charged, %2 locker grant(s), %3 vehicle unlock(s), %4 unit grant(s).",
             _self call ["formatCurrency", [_totalPrice]],
             count (_backendResult getOrDefault ["lockerGranted", []]),
-            count (_backendResult getOrDefault ["vehicleGranted", []])
+            count (_backendResult getOrDefault ["vehicleGranted", []]),
+            count (_backendResult getOrDefault ["unitGranted", []])
         ]]];
         _result set ["lockerGranted", _backendResult getOrDefault ["lockerGranted", []]];
         _result set ["vehicleGranted", _backendResult getOrDefault ["vehicleGranted", []]];
+        _result set ["unitGranted", _backendResult getOrDefault ["unitGranted", []]];
         _result set ["persistenceSucceeded", _persistenceResult getOrDefault ["success", false]];
         _result set ["persistenceFailures", _persistenceResult getOrDefault ["failures", []]];
         _result set ["persistenceMessage", _persistenceResult getOrDefault ["message", ""]];

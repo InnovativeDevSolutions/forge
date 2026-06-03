@@ -93,9 +93,9 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
         private _registryKey = _self call ["getRegistryKey", []];
         if (_registryKey isEqualTo "") exitWith { false };
 
-        private _registry = missionNamespace getVariable [QGVAR(ObjectTaskInstances), createHashMap];
+        private _registry = GETMVAR(GVAR(ObjectTaskInstances),createHashMap);
         _registry set [_registryKey, _self];
-        missionNamespace setVariable [QGVAR(ObjectTaskInstances), _registry];
+        SETMVAR(GVAR(ObjectTaskInstances),_registry);
         missionNamespace setVariable [_registryKey, _self];
         true
     }],
@@ -103,7 +103,7 @@ GVAR(TaskInstanceBaseClass) = createHashMapFromArray [
         private _registryKey = _self call ["getRegistryKey", []];
         if (_registryKey isEqualTo "") exitWith { false };
 
-        private _registry = missionNamespace getVariable [QGVAR(ObjectTaskInstances), createHashMap];
+        private _registry = GETMVAR(GVAR(ObjectTaskInstances),createHashMap);
         _registry deleteAt _registryKey;
         missionNamespace setVariable [_registryKey, nil];
         true

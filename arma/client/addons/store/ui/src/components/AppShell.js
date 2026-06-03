@@ -571,7 +571,7 @@ ${scopeSelector} .store-toast.is-error {
                                         { className: "filter-placeholder" },
                                         selectedPaymentSource
                                             ? selectedPaymentSource.label
-                                            : "Cash",
+                                            : "Select Payment",
                                     ),
                                 ),
                             ),
@@ -645,7 +645,7 @@ ${scopeSelector} .store-toast.is-error {
                         h(
                             "span",
                             { className: "footer-copy" },
-                            "Uniforms, protective gear, weapon slots, vehicles, ammunition groups, and general support inventory.",
+                            "Uniforms, protective gear, weapon slots, vehicles, units, ammunition groups, and general support inventory.",
                         ),
                     ),
                     h(

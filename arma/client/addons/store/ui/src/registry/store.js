@@ -58,7 +58,7 @@
                 [this.getIsCheckingOut, this.setIsCheckingOut] =
                     createSignal(false);
                 [this.getSelectedPaymentSource, this.setSelectedPaymentSource] =
-                    createSignal("cash");
+                    createSignal("");
             }
 
             resetToCategories() {
@@ -191,23 +191,9 @@
                 const currentSource = String(
                     this.getSelectedPaymentSource() || "",
                 ).trim();
-                const defaultSource = String(
-                    storeConfig?.defaultPaymentSource || "",
-                ).trim();
                 const sourceIds = paymentSources.map((source) =>
                     String(source?.id || "").trim(),
                 );
-                const enabledSource = paymentSources.find(
-                    (source) => source && source.enabled !== false,
-                );
-                const defaultAvailable =
-                    defaultSource && sourceIds.includes(defaultSource)
-                        ? paymentSources.find(
-                              (source) =>
-                                  String(source?.id || "").trim() ===
-                                  defaultSource,
-                          )
-                        : null;
 
                 if (
                     currentSource &&
@@ -221,19 +207,7 @@
                     return;
                 }
 
-                if (defaultAvailable && defaultAvailable.enabled !== false) {
-                    this.setSelectedPaymentSource(defaultSource);
-                    return;
-                }
-
-                if (enabledSource) {
-                    this.setSelectedPaymentSource(
-                        String(enabledSource.id || "cash"),
-                    );
-                    return;
-                }
-
-                this.setSelectedPaymentSource(defaultSource || "cash");
+                this.setSelectedPaymentSource("");
             }
 
             navigateToBreadcrumb(target) {

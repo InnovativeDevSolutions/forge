@@ -112,8 +112,8 @@
         return {
             eyebrow: "Supply Categories",
             title: "Procurement Dashboard",
-            copy: "Choose a category to enter the exchange. Weapons and vehicles open a second tier, while the other departments display placeholder product inventory inside the new runtime/store architecture.",
-            badge: "8 Categories",
+            copy: "Choose a category to enter the exchange. Weapons and vehicles open a second tier, while the other departments display live product inventory inside the runtime store architecture.",
+            badge: "11 Categories",
         };
     }
 

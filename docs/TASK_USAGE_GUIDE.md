@@ -188,19 +188,20 @@ server-side.
 
 The mission setup UI does not enable or disable generated missions. It applies
 runtime tuning such as faction, caps, intervals, reward ranges, rating ranges,
-penalties, and time limits. Generator enablement remains controlled by the CBA
-setting above.
+penalties, time limits, and a generator provider preference. Generator
+enablement remains controlled by the CBA setting above.
 
 When `forge_server_task_enableMissionSetup` is enabled, the mission manager
 waits for setup settings before starting. There is no timeout auto-apply.
 Pressing Cancel, X, or Escape applies default values from CBA, mission
 parameters, and `CfgMissions`.
 
-Planned custom-generator work should add an explicit provider option for
-mission designers or developers who want to select or toggle a custom mission
-generator. That provider option should be separate from the built-in generator
-CBA gate so disabling Forge's built-in generator does not prevent custom
-providers from publishing CAD-visible work.
+The setup UI stores the provider preference in
+`forge_server_task_generatorProvider` as `builtin` or `custom`. CAD/manual
+generated task requests use the task provider registry and route to the selected
+provider. That provider option stays separate from the built-in generator CBA
+gate so disabling Forge's built-in generator does not prevent custom providers
+from publishing CAD-visible work.
 
 ## CAD Compatibility
 

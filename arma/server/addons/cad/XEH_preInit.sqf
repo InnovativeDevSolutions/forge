@@ -91,12 +91,12 @@ call FUNC(registerEventListeners);
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
 
-    if (isNil QEFUNC(task,requestMissionTask)) exitWith {
-        _result set ["message", "Framework generated mission requests are unavailable."];
+    if (isNil QEGVAR(task,MissionGeneratorProviderRegistry)) exitWith {
+        _result set ["message", "Generated mission provider registry is unavailable."];
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);
     };
 
-    _result = [_taskType, _metadata, _uid] call EFUNC(task,requestMissionTask);
+    _result = EGVAR(task,MissionGeneratorProviderRegistry) call ["requestMissionTask", [_taskType, _metadata, _uid]];
 
     if !(_result getOrDefault ["success", false]) exitWith {
         [CRPC(cad,responseCadRequest), [_result], _player] call CFUNC(targetEvent);

@@ -20,6 +20,14 @@ pub struct StoreCheckoutVehicleSeed {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StoreCheckoutUnitSeed {
+    pub classname: String,
+    pub category: String,
+    pub price_value: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StoreCheckoutContext {
     pub requester_uid: String,
     pub requester_name: String,
@@ -30,6 +38,8 @@ pub struct StoreCheckoutContext {
     pub items: Vec<StoreCheckoutItemSeed>,
     #[serde(default)]
     pub vehicles: Vec<StoreCheckoutVehicleSeed>,
+    #[serde(default)]
+    pub units: Vec<StoreCheckoutUnitSeed>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +59,13 @@ pub struct StoreGrantedVehicle {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StoreGrantedUnit {
+    pub classname: String,
+    pub category: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StoreCheckoutResult {
     pub charged_total: f64,
     pub payment_method: String,
@@ -57,6 +74,8 @@ pub struct StoreCheckoutResult {
     pub locker_granted: Vec<StoreGrantedItem>,
     #[serde(default)]
     pub vehicle_granted: Vec<StoreGrantedVehicle>,
+    #[serde(default)]
+    pub unit_granted: Vec<StoreGrantedUnit>,
     #[serde(default)]
     pub locker_patch: HashMap<String, serde_json::Value>,
     #[serde(default)]

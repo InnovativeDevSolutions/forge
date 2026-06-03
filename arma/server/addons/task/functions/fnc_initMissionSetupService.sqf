@@ -104,6 +104,10 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         private _penMax = [["penaltyMax", -25, _overrides] call _paramOrDefault, -25] call (_self get "numberOrDefault");
         private _timeMin = [["timeLimitMin", 600, _overrides] call _paramOrDefault, 600] call (_self get "numberOrDefault");
         private _timeMax = [["timeLimitMax", 900, _overrides] call _paramOrDefault, 900] call (_self get "numberOrDefault");
+        private _generatorProvider = _overrides getOrDefault ["generatorProvider", GETGVAR(generatorProvider,"builtin")];
+        if !(_generatorProvider isEqualType "") then { _generatorProvider = str _generatorProvider; };
+        _generatorProvider = toLowerANSI _generatorProvider;
+        if !(_generatorProvider in ["builtin", "custom"]) then { _generatorProvider = "builtin"; };
 
         private _enemyFaction = _overrides getOrDefault [
             "enemyFaction",
@@ -141,11 +145,13 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
             ["penaltyMax", _penMax],
             ["timeLimitMin", _timeMin],
             ["timeLimitMax", _timeMax],
-            ["enemyFaction", _enemyFaction]
+            ["enemyFaction", _enemyFaction],
+            ["generatorProvider", _generatorProvider]
         ];
 
         SETMPVAR(GVAR(missionSetup_settings),_settings);
         SETMPVAR(GVAR(missionSetup_settingsApplied),true);
+        SETMPVAR(GVAR(generatorProvider),_generatorProvider);
 
         private _side = _self call ["resolveFactionSide", [_enemyFaction, east]];
         ENEMY_SIDE = _side;
@@ -153,11 +159,12 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         publicVariable "ENEMY_SIDE";
 
         ["INFO", format [
-            "Framework mission setup applied. Faction=%1, Side=%2, MaxConcurrent=%3, Interval=%4",
+            "Framework mission setup applied. Faction=%1, Side=%2, MaxConcurrent=%3, Interval=%4, GeneratorProvider=%5",
             _enemyFaction,
             _side,
             _maxConcurrent,
-            _interval
+            _interval,
+            _generatorProvider
         ]] call EFUNC(common,log);
 
         if !(isNil QEGVAR(common,EventBus)) then {

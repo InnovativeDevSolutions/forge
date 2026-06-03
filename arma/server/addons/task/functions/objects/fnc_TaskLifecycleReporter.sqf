@@ -122,6 +122,53 @@ GVAR(TaskLifecycleReporter) = createHashMapObject [[
             _self call ["buildTaskLifecycleEventPayload", [_taskID, _status, _extra]],
             createHashMapFromArray [["source", "task"]]
         ]]
+    }],
+    ["registerEventLogListeners", compileFinal {
+        if !(isNil QGVAR(TaskLifecycleEventLogTokens)) exitWith { GVAR(TaskLifecycleEventLogTokens) };
+
+        private _logTaskLifecycleEvent = {
+            params ["_event"];
+
+            if !(GETGVAR(enableEventLogs,false)) exitWith {};
+
+            ["INFO", format [
+                "Task lifecycle event: %1 taskID=%2 taskType=%3 status=%4 participants=%5",
+                _event getOrDefault ["event", ""],
+                _event getOrDefault ["taskID", ""],
+                _event getOrDefault ["taskType", ""],
+                _event getOrDefault ["status", ""],
+                _event getOrDefault ["participants", []]
+            ]] call EFUNC(common,log);
+        };
+
+        private _logTaskRewardEvent = {
+            params ["_event"];
+
+            if !(GETGVAR(enableEventLogs,false)) exitWith {};
+
+            ["INFO", format [
+                "Task reward event: %1 taskID=%2 success=%3 message=%4",
+                _event getOrDefault ["event", ""],
+                _event getOrDefault ["taskID", ""],
+                !((_event getOrDefault ["event", ""]) in ["task.reward.failed", "task.rating.failed"]),
+                _event getOrDefault ["message", ""]
+            ]] call EFUNC(common,log);
+        };
+
+        GVAR(TaskLifecycleEventLogTokens) = [
+            EGVAR(common,EventBus) call ["on", ["task.created", _logTaskLifecycleEvent, "task.lifecycle.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.started", _logTaskLifecycleEvent, "task.lifecycle.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.completed", _logTaskLifecycleEvent, "task.lifecycle.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.failed", _logTaskLifecycleEvent, "task.lifecycle.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.cleared", _logTaskLifecycleEvent, "task.lifecycle.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.reward.requested", _logTaskRewardEvent, "task.reward.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.reward.applied", _logTaskRewardEvent, "task.reward.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.reward.failed", _logTaskRewardEvent, "task.reward.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.rating.applied", _logTaskRewardEvent, "task.reward.log"]],
+            EGVAR(common,EventBus) call ["on", ["task.rating.failed", _logTaskRewardEvent, "task.reward.log"]]
+        ];
+
+        GVAR(TaskLifecycleEventLogTokens)
     }]
 ]];
 
