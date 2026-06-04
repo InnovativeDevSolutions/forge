@@ -72,12 +72,24 @@ listed for each category. `denylist` removes listed classnames. Overrides are
 server-side and are used by both the UI payload and checkout validation.
 `units[]` uses the same filter behavior as every other category.
 
-`modMode` applies before category filtering. `allowlist` only keeps generated
-entries that match one of the configured `mods[]`; `denylist` removes matching
-entries. Each `ModSources` child can define `patches[]` to detect whether the
-mod is loaded, `addons[]` for config source addon/source mod names or classname
-prefixes, and `prefixes[]` for classname prefixes. If a mod source defines no
-patches, it is treated as available and only the source/prefix checks are used.
+`modMode` applies before category filtering. `dynamic` means no mod-source
+filtering. `allowlist` only keeps generated entries that match one of the
+configured `mods[]`; `denylist` removes matching entries. Each `ModSources`
+child can define `patches[]` to detect whether the mod is loaded, `addons[]`
+for exact config source addon/source mod names, and `prefixes[]` for classname,
+source addon, or source mod prefixes. If a mod source defines no patches, it is
+treated as available and only the source/prefix checks are used.
+
+For example, to show only RHS-sourced generated inventory:
+
+```cpp
+modMode = "allowlist";
+mods[] = {"rhs"};
+```
+
+The matching `class rhs` must exist under `ModSources`. Category `mode` is still
+applied afterward, so leave `mode = "dynamic"` if the mod filter should be the
+only inventory filter.
 
 The current filter is global for the mission. Revisit per-store profile support
 if individual vendors need different inventories.

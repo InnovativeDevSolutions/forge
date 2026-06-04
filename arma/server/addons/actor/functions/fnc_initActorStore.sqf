@@ -34,7 +34,7 @@ GVAR(ActorModel) = compileFinal createHashMapObject [[
 
         if (isArray _loadoutConfig) exitWith { getArray _loadoutConfig };
 
-        [[],[],[],["U_BG_Guerrilla_6_1",[["FirstAidKit", 2]]],[],[],"H_Cap_blk_ION","",[],["ItemMap","ItemGPS","ItemRadio","ItemCompass","ItemWatch",""]]
+        [[],[],["hgun_P07_F","","","",["16Rnd_9x21_Mag",4,17],[],""],["U_BG_Guerrilla_6_1",[["FirstAidKit", 2],["ACE_EarPlugs",1]]],["V_Rangemaster_belt",[["16Rnd_9x21_Mag",4]]],[],"H_Cap_blk_ION","",["Binocular","","","",[],[],""],["ItemMap","ItemGPS","ItemRadio","ItemCompass","ItemWatch",""]]
     }],
     ["defaults", compileFinal {
         private _actor = createHashMap;
@@ -116,13 +116,11 @@ GVAR(ActorModel) = compileFinal createHashMapObject [[
     }]
 ]];
 
-GVAR(ActorBaseStore) = compileFinal ([
-    EGVAR(common,BaseStore),
-    createHashMapFromArray [
+GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
+    ["#base", EGVAR(common,BaseStore)],
     ["#type", "ActorBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Actor Store Initialized!"] call EFUNC(common,log);
-        true
     }],
     ["cacheActor", compileFinal {
         params [["_uid", "", [""]], ["_actor", createHashMap, [createHashMap]]];
@@ -574,13 +572,7 @@ GVAR(ActorBaseStore) = compileFinal ([
 
         _self call ["override", [_uid, _finalActor, false]]
     }]
-]] call {
-    params ["_base", "_child"];
+];
 
-    private _merged = +_base;
-    { _merged set [_x, _y]; } forEach _child;
-    _merged
-});
-
-GVAR(ActorStore) = createHashMapObject [GVAR(ActorBaseStore), []];
-true
+GVAR(ActorStore) = createHashMapObject [GVAR(ActorBaseStore)];
+GVAR(ActorStore)

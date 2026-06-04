@@ -631,6 +631,10 @@ Task time limits use `0` for no limit:
 Positive values are measured in seconds. Do not pass `-1` as a no-limit value;
 the task runtime treats any non-zero task time limit as active.
 
+The mission setup UI uses the same rule. Turning off the task timer stores
+`timeLimitMin = 0` and `timeLimitMax = 0`; turning it on uses the configured
+positive min/max range for generated tasks.
+
 Defuse IED timers are different. `iedTimer` must be greater than `0`, because
 IEDs are expected to have an active countdown. The Eden defuse module defaults
 to `300` seconds.

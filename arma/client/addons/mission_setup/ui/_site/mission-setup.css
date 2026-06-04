@@ -152,6 +152,12 @@ option {
     grid-column: 1 / -1;
 }
 
+.timer-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.95fr) minmax(0, 0.95fr);
+    gap: 0.5rem;
+}
+
 label {
     color: var(--text-subtle);
     font-size: 0.62rem;
@@ -259,6 +265,10 @@ select {
     border: 1px solid var(--border);
     background: rgba(24, 31, 40, 0.9);
     color: var(--text-main);
+}
+
+input:disabled {
+    opacity: 0.45;
 }
 
 input:focus,

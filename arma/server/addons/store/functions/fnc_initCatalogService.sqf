@@ -111,17 +111,18 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _sourceMod = _item getOrDefault ["sourceMod", ""];
         private _addons = (_self call ["getMissionStoreModSourceValues", [_modID, "addons"]]) apply { toLowerANSI _x };
         private _prefixes = (_self call ["getMissionStoreModSourceValues", [_modID, "prefixes"]]) apply { toLowerANSI _x };
+        private _matchPrefixes = _addons + _prefixes;
         private _sourceModLower = toLowerANSI _sourceMod;
 
         if (_sourceModLower in _addons) exitWith { true };
         private _sourceAddonMatched = false;
         {
             if (_x in _addons) exitWith { _sourceAddonMatched = true; };
-            if (_self call ["doesValueMatchAnyPrefix", [_x, _addons]]) exitWith { _sourceAddonMatched = true; };
+            if (_self call ["doesValueMatchAnyPrefix", [_x, _matchPrefixes]]) exitWith { _sourceAddonMatched = true; };
         } forEach _sourceAddons;
         if (_sourceAddonMatched) exitWith { true };
-        if (_self call ["doesValueMatchAnyPrefix", [_className, _addons + _prefixes]]) exitWith { true };
-        if (_self call ["doesValueMatchAnyPrefix", [_sourceMod, _addons]]) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_className, _matchPrefixes]]) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_sourceMod, _matchPrefixes]]) exitWith { true };
 
         false
     }],

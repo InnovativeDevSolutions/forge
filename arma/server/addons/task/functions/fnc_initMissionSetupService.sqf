@@ -154,7 +154,7 @@ GVAR(MissionSetupServiceBaseClass) = compileFinal createHashMapFromArray [
         _penMin = _penMin min 0;
         _penMax = _penMax min 0;
 
-        _timeMin = _timeMin max 1;
+        _timeMin = _timeMin max 0;
         _timeMax = _timeMax max _timeMin;
         _medicalSpawnCost = _medicalSpawnCost max 0;
         _medicalHealCost = _medicalHealCost max 0;
