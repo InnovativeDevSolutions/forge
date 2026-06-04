@@ -325,13 +325,19 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         ]
     }],
     ["appendCfgWeaponsByItemInfoType", compileFinal {
-        params [["_items", [], [[]]], ["_itemInfoType", -1, [0]], ["_typeLabel", "", [""]], ["_fallbackDescription", "", [""]]];
+        params [["_items", [], [[]]], ["_itemInfoType", -1, [0]], ["_itemKind", "", [""]], ["_typeLabel", "", [""]], ["_fallbackDescription", "", [""]]];
 
         {
             private _cfg = _x;
+            private _className = configName _cfg;
+            private _itemType = [_className] call BIS_fnc_itemType;
+            private _kind = _itemType param [1, ""];
             if (
                 _self call ["isVisibleConfig", [_cfg]]
-                && { getNumber (_cfg >> "ItemInfo" >> "type") isEqualTo _itemInfoType }
+                && {
+                    (getNumber (_cfg >> "ItemInfo" >> "type") isEqualTo _itemInfoType)
+                    || { _kind isEqualTo _itemKind }
+                }
             ) then {
                 _items pushBack (_self call ["buildCatalogItem", [_cfg, _typeLabel, _fallbackDescription]]);
             };
@@ -466,9 +472,9 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _items = [];
 
         switch (_categoryKey) do {
-            case "uniforms": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_UNIFORM, "Uniform", "Live uniform entry generated from the game inventory."]]; };
-            case "headgear": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_HEADGEAR, "Headgear", "Live headgear entry generated from the game inventory."]]; };
-            case "vests": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_VEST, "Vest", "Live vest entry generated from the game inventory."]]; };
+            case "uniforms": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_UNIFORM, "Uniform", "Uniform", "Live uniform entry generated from the game inventory."]]; };
+            case "headgear": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_HEADGEAR, "Headgear", "Headgear", "Live headgear entry generated from the game inventory."]]; };
+            case "vests": { _items = _self call ["appendCfgWeaponsByItemInfoType", [_items, TYPE_VEST, "Vest", "Vest", "Live vest entry generated from the game inventory."]]; };
             case "backpacks": { _items = _self call ["appendCfgBackpacks", [_items, "Backpack", "Live backpack entry generated from the game inventory."]]; };
             case "attachments": {
                 _items = _self call ["appendCfgAttachments", [_items, "Live attachment entry generated from the game inventory."]];
