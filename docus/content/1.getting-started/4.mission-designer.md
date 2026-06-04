@@ -164,9 +164,13 @@ airports, bus stops, teleport terminals, or any other mission transport system.
 The framework owns the menu, billing, cargo scan, and movement logic. The
 mission only needs placed objects and optional arrival markers.
 
-![Placeholder: Eden transport node object placement](images/eden/transport_node_obj.svg)
+![Eden transport location one](images/eden/transport_loc_1.jpg)
 
-![Placeholder: Eden transport node variable name](images/eden/transport_node_var.svg)
+![Eden transport location two](images/eden/transport_loc_2.jpg)
+
+![Eden transport node object placement](images/eden/transport_obj_1.jpg)
+
+![Eden transport node variable name](images/eden/transport_obj_1_var.jpg)
 
 Place transport node objects with these variable names:
 
@@ -188,7 +192,9 @@ transport_arrival_2
 transport_arrival_10
 ```
 
-![Placeholder: Eden transport arrival marker placement](images/eden/transport_arrival_marker.svg)
+![Eden transport arrival marker placement](images/eden/transport_arrival_mrkr.jpg)
+
+![Eden transport arrival marker variable name](images/eden/transport_arrival_mrkr_var.jpg)
 
 Objects that should be excluded from the nearby cargo scan, such as the actual
 boat or transport vehicle used as set dressing, should use:
@@ -201,7 +207,9 @@ transport_vehicle_2
 transport_vehicle_10
 ```
 
-![Placeholder: Eden transport vehicle exclusion object variable name](images/eden/transport_vehicle_var.svg)
+![Eden transport vehicle exclusion object placement](images/eden/transport_veh_obj.jpg)
+
+![Eden transport vehicle exclusion object variable name](images/eden/transport_veh_obj_var.jpg)
 
 Minimum Eden setup:
 
