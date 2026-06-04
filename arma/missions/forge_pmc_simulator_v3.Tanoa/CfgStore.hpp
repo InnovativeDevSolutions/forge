@@ -35,7 +35,7 @@ class CfgStore {
             patches[] = {"ace_main"};
             addons[] = {"ace_"};
             prefixes[] = {"ace_", "ace3_"};
-            contains[] = {"ace_", "ace3_“};
+            contains[] = {"ace_", "ace3_"};
             dlcs[] = {};
         };
 
