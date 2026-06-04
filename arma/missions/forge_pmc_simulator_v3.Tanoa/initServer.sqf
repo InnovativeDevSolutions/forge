@@ -22,29 +22,23 @@ if (isServer) then {
             private _unit = _x;
             private _uid = getPlayerUID _unit;
 
-            if (_uid isEqualTo "" || { !alive _unit }) then {
-                continue;
-            };
+            if (_uid isNotEqualTo "" && { alive _unit } && { isNull (getAssignedCuratorLogic _unit) }) then {
+                private _curator = objNull;
+                {
+                    private _assignedUnit = getAssignedCuratorUnit _x;
+                    if (isNull _assignedUnit) exitWith {
+                        _curator = _x;
+                    };
 
-            if !(isNull getAssignedCuratorLogic _unit) then {
-                continue;
-            };
+                    if (!alive _assignedUnit || { (getPlayerUID _assignedUnit) isEqualTo _uid }) exitWith {
+                        unassignCurator _x;
+                        _curator = _x;
+                    };
+                } forEach allCurators;
 
-            private _curator = objNull;
-            {
-                private _assignedUnit = assignedCuratorUnit _x;
-                if (isNull _assignedUnit) exitWith {
-                    _curator = _x;
+                if !(isNull _curator) then {
+                    _unit assignCurator _curator;
                 };
-
-                if (!alive _assignedUnit || { (getPlayerUID _assignedUnit) isEqualTo _uid }) exitWith {
-                    unassignCurator _x;
-                    _curator = _x;
-                };
-            } forEach allCurators;
-
-            if !(isNull _curator) then {
-                _unit assignCurator _curator;
             };
         } forEach (allPlayers select { [_x] call FORGE_fnc_isCuratorEligibleUnit });
     };

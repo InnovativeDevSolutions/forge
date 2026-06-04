@@ -8,13 +8,13 @@ class CfgStartingEquipment {
     loadout[] = {
         {},
         {},
-        {"hgun_P07_F", "", "", "", ["16Rnd_9x21_Mag", 17], [], ""},
+        {"hgun_P07_F", "", "", "", {"16Rnd_9x21_Mag", 4, 17}, {}, ""},
         {"U_BG_Guerrilla_6_1", {{"FirstAidKit", 2}, {"ACE_EarPlugs", 1}}},
         {"V_Rangemaster_belt", {{"16Rnd_9x21_Mag", 4}}},
         {},
         "H_Cap_blk_ION",
         "",
-        {"Binocular", "", "", "", [], [], ""},
+        {"Binocular", "", "", "", {}, {}, ""},
         {"ItemMap", "ItemGPS", "ItemRadio", "ItemCompass", "ItemWatch", ""}
     };
 

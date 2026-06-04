@@ -4,6 +4,8 @@ PREP_RECOMPILE_START;
 #include "XEH_PREP.hpp"
 PREP_RECOMPILE_END;
 
+if (isServer) then { "forge_server" callExtension ["surreal:reconnect", []]; };
+
 GVAR(PlayerBootstrapRegistry) = createHashMap;
 
 ["forge_icom_event", {
