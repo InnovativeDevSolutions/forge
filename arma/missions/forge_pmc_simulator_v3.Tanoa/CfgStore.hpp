@@ -34,8 +34,8 @@ class CfgStore {
         class ace3 {
             patches[] = {"ace_main"};
             addons[] = {"ace_"};
-            prefixes[] = {"ace_"};
-            contains[] = {"ace_"};
+            prefixes[] = {"ace_", "ace3_"};
+            contains[] = {"ace_", "ace3_“};
             dlcs[] = {};
         };
 
@@ -59,7 +59,7 @@ class CfgStore {
             patches[] = {};
             addons[] = {"ef_"};
             prefixes[] = {"ef_"};
-            contains[] = {"ef_", "_ef_", "_ef", "ef_"};
+            contains[] = {"_ef_", "_ef", "ef_"};
             dlcs[] = {"ef", "expeditionaryforces", "expeditionary forces"};
         };
 
@@ -67,7 +67,7 @@ class CfgStore {
             patches[] = {};
             addons[] = {"lxrf_", "rf_"};
             prefixes[] = {"lxrf_", "rf_"};
-            contains[] = {"lxrf", "_lxrf_", "_lxrf", "lxrf_"};
+            contains[] = {"lxrf", "_lxrf_", "_lxrf", "lxrf_" "_rf_", "_rf", "rf_"};
             dlcs[] = {"rf", "reactionforces", "reaction forces"};
         };
 
@@ -75,7 +75,7 @@ class CfgStore {
             patches[] = {};
             addons[] = {"lxws_", "ws_"};
             prefixes[] = {"lxws_", "ws_"};
-            contains[] = {"lxws", "_lxws_", "_lxws", "lxws_"};
+            contains[] = {"lxws", "_lxws_", "_lxws", "lxws_", "_ws_", "_ws", "ws_"};
             dlcs[] = {"ws", "lxws", "westernsahara", "western sahara"};
         };
     };
