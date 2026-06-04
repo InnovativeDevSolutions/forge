@@ -87,6 +87,28 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         _loaded
     }],
+    ["describeMissionStoreModSources", compileFinal {
+        params [["_mods", [], [[]]]];
+
+        _mods apply {
+            private _modID = _x;
+            private _patches = _self call ["getMissionStoreModSourceValues", [_modID, "patches"]];
+            private _addons = _self call ["getMissionStoreModSourceValues", [_modID, "addons"]];
+            private _prefixes = _self call ["getMissionStoreModSourceValues", [_modID, "prefixes"]];
+            private _dlcs = _self call ["getMissionStoreModSourceValues", [_modID, "dlcs"]];
+            private _loaded = _self call ["isMissionStoreModLoaded", [_modID]];
+
+            format [
+                "%1 loaded=%2 patches=%3 addons=%4 prefixes=%5 dlcs=%6",
+                _modID,
+                _loaded,
+                _patches,
+                _addons,
+                _prefixes,
+                _dlcs
+            ]
+        }
+    }],
     ["doesValueMatchAnyPrefix", compileFinal {
         params [["_value", "", [""]], ["_prefixes", [], [[]]]];
 
@@ -109,12 +131,19 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _className = _item getOrDefault ["className", ""];
         private _sourceAddons = (_item getOrDefault ["sourceAddons", []]) apply { toLowerANSI _x };
         private _sourceMod = _item getOrDefault ["sourceMod", ""];
+        private _sourceDLC = _item getOrDefault ["sourceDLC", ""];
+        private _sourceAuthor = _item getOrDefault ["sourceAuthor", ""];
         private _addons = (_self call ["getMissionStoreModSourceValues", [_modID, "addons"]]) apply { toLowerANSI _x };
         private _prefixes = (_self call ["getMissionStoreModSourceValues", [_modID, "prefixes"]]) apply { toLowerANSI _x };
+        private _dlcs = (_self call ["getMissionStoreModSourceValues", [_modID, "dlcs"]]) apply { toLowerANSI _x };
         private _matchPrefixes = _addons + _prefixes;
         private _sourceModLower = toLowerANSI _sourceMod;
+        private _sourceDLCLower = toLowerANSI _sourceDLC;
+        private _sourceAuthorLower = toLowerANSI _sourceAuthor;
 
         if (_sourceModLower in _addons) exitWith { true };
+        if (_sourceDLCLower in _dlcs) exitWith { true };
+        if (_sourceAuthorLower in _dlcs) exitWith { true };
         private _sourceAddonMatched = false;
         {
             if (_x in _addons) exitWith { _sourceAddonMatched = true; };
@@ -123,6 +152,8 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         if (_sourceAddonMatched) exitWith { true };
         if (_self call ["doesValueMatchAnyPrefix", [_className, _matchPrefixes]]) exitWith { true };
         if (_self call ["doesValueMatchAnyPrefix", [_sourceMod, _matchPrefixes]]) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_sourceDLC, _dlcs]]) exitWith { true };
+        if (_self call ["doesValueMatchAnyPrefix", [_sourceAuthor, _dlcs]]) exitWith { true };
 
         false
     }],
@@ -141,9 +172,18 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         private _mode = _self call ["getMissionStoreModMode", []];
         private _mods = _self call ["getMissionStoreModList", []];
-        if (_mode isEqualTo "dynamic" || { _mods isEqualTo [] }) exitWith { +_items };
+        private _beforeCount = count _items;
+        if (_mode isEqualTo "dynamic" || { _mods isEqualTo [] }) exitWith {
+            ["INFO", format [
+                "Store mod filter skipped. Mode=%1 Mods=%2 Items=%3",
+                _mode,
+                _mods,
+                _beforeCount
+            ]] call EFUNC(common,log);
+            +_items
+        };
 
-        switch (_mode) do {
+        private _filteredItems = switch (_mode) do {
             case "allowlist": {
                 _items select { _self call ["doesItemMatchMissionStoreMods", [_x, _mods]] }
             };
@@ -153,7 +193,18 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             default {
                 +_items
             };
-        }
+        };
+
+        ["INFO", format [
+            "Store mod filter applied. Mode=%1 Mods=%2 Items=%3 -> %4 Sources=[%5]",
+            _mode,
+            _mods,
+            _beforeCount,
+            count _filteredItems,
+            (_self call ["describeMissionStoreModSources", [_mods]]) joinString "; "
+        ]] call EFUNC(common,log);
+
+        _filteredItems
     }],
     ["getMissionStoreCategoryList", compileFinal {
         params [["_category", "", [""]]];
@@ -304,6 +355,8 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _displayName = getText (_cfg >> "displayName");
         private _sourceAddons = configSourceAddonList _cfg;
         private _sourceMod = configSourceMod _cfg;
+        private _sourceDLC = getText (_cfg >> "DLC");
+        private _sourceAuthor = getText (_cfg >> "author");
         private _picture = getText (_cfg >> _imageField);
         if (_picture isEqualTo "" && { _imageField isNotEqualTo "picture" }) then {
             _picture = getText (_cfg >> "picture");
@@ -321,7 +374,9 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             ["image", _picture],
             ["type", _typeLabel],
             ["sourceAddons", _sourceAddons],
-            ["sourceMod", _sourceMod]
+            ["sourceMod", _sourceMod],
+            ["sourceDLC", _sourceDLC],
+            ["sourceAuthor", _sourceAuthor]
         ]
     }],
     ["appendCfgWeaponsByItemInfoType", compileFinal {

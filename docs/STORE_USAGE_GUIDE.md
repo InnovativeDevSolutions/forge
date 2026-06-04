@@ -42,12 +42,14 @@ class CfgStore {
             patches[] = {"rhs_main", "rhsusf_main"};
             addons[] = {"rhs_", "rhsusf_", "rhsgref_", "rhsafrf_"};
             prefixes[] = {"rhs_", "rhsusf_", "rhsgref_", "rhsafrf_"};
+            dlcs[] = {};
         };
 
         class ace3 {
             patches[] = {"ace_main"};
             addons[] = {"ace_"};
             prefixes[] = {"ace_"};
+            dlcs[] = {};
         };
     };
 
@@ -76,9 +78,10 @@ server-side and are used by both the UI payload and checkout validation.
 filtering. `allowlist` only keeps generated entries that match one of the
 configured `mods[]`; `denylist` removes matching entries. Each `ModSources`
 child can define `patches[]` to detect whether the mod is loaded, `addons[]`
-for exact config source addon/source mod names, and `prefixes[]` for classname,
-source addon, or source mod prefixes. If a mod source defines no patches, it is
-treated as available and only the source/prefix checks are used.
+for exact config source addon/source mod names, `prefixes[]` for classname,
+source addon, or source mod prefixes, and `dlcs[]` for DLC/source/author labels
+used by Creator DLC content. If a mod source defines no patches, it is treated
+as available and only the source/prefix/DLC checks are used.
 
 For example, to show only RHS-sourced generated inventory:
 
@@ -90,6 +93,17 @@ mods[] = {"rhs"};
 The matching `class rhs` must exist under `ModSources`. Category `mode` is still
 applied afterward, so leave `mode = "dynamic"` if the mod filter should be the
 only inventory filter.
+
+For Creator DLCs such as RF or WS, prefer both prefixes and DLC labels:
+
+```cpp
+class rf {
+    patches[] = {};
+    addons[] = {"lxrf_", "rf_"};
+    prefixes[] = {"lxrf_", "rf_"};
+    dlcs[] = {"rf", "reactionforces", "reaction forces"};
+};
+```
 
 The current filter is global for the mission. Revisit per-store profile support
 if individual vendors need different inventories.
