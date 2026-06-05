@@ -85,13 +85,23 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _taskTitle = _logic getVariable ["TaskTitle", ""];
+if (_taskTitle isEqualTo "") then { _taskTitle = format ["Defend: %1", _taskID]; };
+private _taskDescription = _logic getVariable ["TaskDescription", ""];
+if (_taskDescription isEqualTo "") then { _taskDescription = "Hold the defense zone against incoming enemy forces."; };
+private _taskIcon = _logic getVariable ["TaskIcon", "defend"];
+private _display = [
+    _taskID,
+    _taskTitle,
+    _taskDescription
+] call FUNC(resolveTaskDisplay);
 
 [
     "defend",
     _taskID,
     getMarkerPos _defenseZone,
-    format ["Defend: %1", _taskID],
-    "Hold the defense zone against incoming enemy forces.",
+    _display select 0,
+    _display select 1,
     createHashMap,
     createHashMapFromArray ([
         ["funds", _logic getVariable ["CompanyFunds", 0]],
@@ -105,6 +115,7 @@ private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
         ["waveCooldown", _logic getVariable ["WaveCooldown", 300]],
         ["minBlufor", _logic getVariable ["MinBlufor", 1]],
         ["enemyTemplates", _templateGroups],
+        ["displayType", _taskIcon],
         ["equipment", _equipmentRewards],
         ["supplies", _supplyRewards],
         ["weapons", _weaponRewards],

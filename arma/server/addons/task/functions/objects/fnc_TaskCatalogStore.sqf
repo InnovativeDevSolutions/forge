@@ -358,6 +358,27 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         _result set ["entry", _entry];
         _result
     }],
+    ["ensureBisTaskCreated", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { false };
+        if ([_taskID] call BFUNC(taskExists)) exitWith { true };
+
+        [(_self call ["getTaskCatalogEntry", [_taskID]])] params [["_entry", createHashMap, [createHashMap]]];
+        if (_entry isEqualTo createHashMap) exitWith {
+            ["WARNING", format ["Unable to create BIS task for %1 because no task catalog entry exists.", _taskID]] call EFUNC(common,log);
+            false
+        };
+
+        private _taskType = _entry getOrDefault ["taskType", "task"];
+        private _title = _entry getOrDefault ["title", _taskID];
+        private _description = _entry getOrDefault ["description", ""];
+        private _position = _entry getOrDefault ["position", [0, 0, 0]];
+        private _displayType = _entry getOrDefault ["type", _taskType];
+
+        [west, _taskID, [_description, _title, _displayType], _position, "CREATED", 1, true, _displayType] call BFUNC(taskCreate);
+        true
+    }],
     ["setTaskStatus", compileFinal {
         params [["_taskID", "", [""]], ["_status", "", [""]]];
 
@@ -415,6 +436,10 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
                 _taskID,
                 _normalizedStatus
             ]] call EFUNC(common,log);
+        };
+
+        if (_normalizedStatus isEqualTo "active") then {
+            _self call ["ensureBisTaskCreated", [_taskID]];
         };
 
         _statusResult

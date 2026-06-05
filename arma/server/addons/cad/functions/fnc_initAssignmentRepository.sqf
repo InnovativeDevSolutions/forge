@@ -514,15 +514,17 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
             _result
         };
 
+        private _transitionAllowed = true;
         switch (_transition) do {
             case "acknowledge": {
                 if (!_isDispatchOrder) then {
                     private _acceptResult = EGVAR(task,TaskStore) call ["acceptTask", [_taskID, _requesterUid]];
-                    if !(_acceptResult getOrDefault ["success", false]) exitWith {
+                    if !(_acceptResult getOrDefault ["success", false]) then {
                         _result set ["message", _acceptResult getOrDefault ["message", "Failed to accept task."]];
-                        _result
+                        _transitionAllowed = false;
+                    } else {
+                        EGVAR(task,TaskStore) call ["setTaskStatus", [_taskID, "active"]];
                     };
-                    EGVAR(task,TaskStore) call ["setTaskStatus", [_taskID, "active"]];
                 };
             };
             case "decline": {
@@ -533,6 +535,7 @@ GVAR(AssignmentRepositoryBaseClass) = compileFinal createHashMapFromArray [
             };
         };
 
+        if (!_transitionAllowed) exitWith { _result };
         if (_result getOrDefault ["success", false]) exitWith { _result };
 
         private _persistenceService = _self getOrDefault ["persistenceService", createHashMap];

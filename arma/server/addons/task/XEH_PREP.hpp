@@ -31,6 +31,7 @@ PREP_SUBDIR(helpers,getMissionSettingRange);
 PREP_SUBDIR(helpers,handleTaskRewards);
 PREP_SUBDIR(helpers,parseTaskChainAttributes);
 PREP_SUBDIR(helpers,parseRewards);
+PREP_SUBDIR(helpers,resolveTaskDisplay);
 PREP_SUBDIR(helpers,spawnEnemyWave);
 PREP_SUBDIR(helpers,startTask);
 PREP_SUBDIR(helpers,updateEnemyCountFromActivePlayers);

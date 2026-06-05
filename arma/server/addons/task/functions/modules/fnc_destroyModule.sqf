@@ -42,13 +42,23 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _taskTitle = _logic getVariable ["TaskTitle", ""];
+if (_taskTitle isEqualTo "") then { _taskTitle = format ["Destroy: %1", _taskID]; };
+private _taskDescription = _logic getVariable ["TaskDescription", ""];
+if (_taskDescription isEqualTo "") then { _taskDescription = "Locate and destroy all designated targets."; };
+private _taskIcon = _logic getVariable ["TaskIcon", "destroy"];
+private _display = [
+    _taskID,
+    _taskTitle,
+    _taskDescription
+] call FUNC(resolveTaskDisplay);
 
 [
     "destroy",
     _taskID,
     _taskPos,
-    format ["Destroy: %1", _taskID],
-    "Locate and destroy all designated targets.",
+    _display select 0,
+    _display select 1,
     createHashMapFromArray [
         ["targets", _syncedEntities]
     ],
@@ -61,6 +71,7 @@ private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
         ["endSuccess", _logic getVariable ["EndSuccess", false]],
         ["endFail", _logic getVariable ["EndFail", false]],
         ["timeLimit", _logic getVariable ["TimeLimit", 0]],
+        ["displayType", _taskIcon],
         ["equipment", _equipmentRewards],
         ["supplies", _supplyRewards],
         ["weapons", _weaponRewards],

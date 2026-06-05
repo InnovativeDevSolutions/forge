@@ -3,6 +3,7 @@ class CfgVehicles {
     class Module_F: Logic {
         class AttributesBase {
             class Edit;
+            class EditMulti;
             class Combo;
         };
         class ModuleDescription {};
@@ -34,6 +35,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Attack,attack)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Attack)
             class LimitFail: Edit {
                 property = "FORGE_Module_Attack_LimitFail";
@@ -293,6 +295,7 @@ class CfgVehicles {
                 tooltip = "Unique identifier for this task";
                 typeName = "STRING";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Defend,defend)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Defend)
             class DefenseZone: Edit {
                 property = "FORGE_Module_Defend_DefenseZone";
@@ -419,6 +422,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Defuse,danger)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Defuse)
             class LimitFail: Edit {
                 property = "FORGE_Module_Defuse_LimitFail";
@@ -532,6 +536,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Destroy,destroy)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Destroy)
             class LimitFail: Edit {
                 property = "FORGE_Module_Destroy_LimitFail";
@@ -645,6 +650,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Hostage,help)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Hostage)
             class LimitFail: Edit {
                 property = "FORGE_Module_Hostage_LimitFail";
@@ -794,6 +800,7 @@ class CfgVehicles {
                 tooltip = "Unique identifier for this task";
                 typeName = "STRING";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_Delivery,truck)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_Delivery)
             class DeliveryZone: Edit {
                 property = "FORGE_Module_Delivery_DeliveryZone";
@@ -948,6 +955,7 @@ class CfgVehicles {
                 typeName = "STRING";
                 // defaultValue = """";
             };
+            TASK_DISPLAY_ATTRIBUTES(FORGE_Module_HVT,target)
             TASK_CHAIN_ATTRIBUTES(FORGE_Module_HVT)
             class LimitFail: Edit {
                 property = "FORGE_Module_HVT_LimitFail";
