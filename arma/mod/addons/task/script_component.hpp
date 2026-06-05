@@ -81,7 +81,6 @@
                     class Exit { name = "exit"; value = "exit"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\exit_ca.paa"; }; \
                     class GetIn { name = "getin"; value = "getin"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\getin_ca.paa"; }; \
                     class GetOut { name = "getout"; value = "getout"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\getout_ca.paa"; }; \
-                    class Ghosts { name = "ghosts"; value = "ghosts"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\ghosts_ca.paa"; }; \
                     class Heal { name = "heal"; value = "heal"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\heal_ca.paa"; }; \
                     class Heli { name = "heli"; value = "heli"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\heli_ca.paa"; }; \
                     class Help { name = "help"; value = "help"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\help_ca.paa"; }; \
@@ -109,7 +108,6 @@
                     class Run { name = "run"; value = "run"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\run_ca.paa"; }; \
                     class Scout { name = "scout"; value = "scout"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\scout_ca.paa"; }; \
                     class Search { name = "search"; value = "search"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\search_ca.paa"; }; \
-                    class Slingload { name = "slingload"; value = "slingload"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\slingload_ca.paa"; }; \
                     class Takeoff { name = "takeoff"; value = "takeoff"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\takeoff_ca.paa"; }; \
                     class Talk { name = "talk"; value = "talk"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\talk_ca.paa"; }; \
                     class Talk1 { name = "talk1"; value = "talk1"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\talk1_ca.paa"; }; \
