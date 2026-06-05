@@ -3,7 +3,6 @@ class CfgVehicles {
     class Module_F: Logic {
         class AttributesBase {
             class Edit;
-            class EditMulti;
             class Combo;
         };
         class ModuleDescription {};

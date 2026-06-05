@@ -71,7 +71,7 @@ private _taskTitle = _logic getVariable ["TaskTitle", ""];
 if (_taskTitle isEqualTo "") then { _taskTitle = format ["Hostage Rescue: %1", _taskID]; };
 private _taskDescription = _logic getVariable ["TaskDescription", ""];
 if (_taskDescription isEqualTo "") then { _taskDescription = "Locate and rescue the hostages and bring them to the extraction zone."; };
-private _taskIcon = _logic getVariable ["TaskIcon", "help"];
+private _taskIcon = _logic getVariable ["TaskIcon", "heal"];
 private _display = [
     _taskID,
     _taskTitle,

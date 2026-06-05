@@ -50,11 +50,12 @@
                 tooltip = "Optional title shown in CAD, the map task list, and task notifications. Leave blank to use the Forge default."; \
                 typeName = "STRING"; \
             }; \
-            class TaskDescription: EditMulti { \
+            class TaskDescription: Edit { \
                 property = QUOTE(DOUBLES(PREFIX,TaskDescription)); \
                 displayName = "Task Description"; \
                 tooltip = "Optional description shown in CAD and the map task list. Leave blank to use the Forge default."; \
                 typeName = "STRING"; \
+                control = "EditMulti5"; \
             }; \
             class TaskIcon: Combo { \
                 property = QUOTE(DOUBLES(PREFIX,TaskIcon)); \
@@ -63,7 +64,7 @@
                 typeName = "STRING"; \
                 defaultValue = QUOTE(DEFAULT_ICON); \
                 class Values { \
-                    class AirDrop { name = "airdrop"; value = "airdrop"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\airdrop_ca.paa"; }; \
+                    class AirDrop { name = "airdrop"; value = "airdrop"; picture = "\a3\ui_f_orange\data\cfgTaskTypes\airdrop_ca.paa"; }; \
                     class Armor { name = "armor"; value = "armor"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\armor_ca.paa"; }; \
                     class Attack { name = "attack"; value = "attack"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\attack_ca.paa"; }; \
                     class Backpack { name = "backpack"; value = "backpack"; picture = "\a3\ui_f\data\IGUI\Cfg\simpleTasks\types\backpack_ca.paa"; }; \
