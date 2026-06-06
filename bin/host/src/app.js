@@ -1,7 +1,7 @@
 const serviceNames = {
     surrealdb: "SurrealDB",
     icom: "ICOM",
-    arma: "Arma 3 Server",
+    arma: "Arma Server",
 };
 
 const subtitles = {
@@ -566,7 +566,7 @@ function renderArmaSettings(config) {
     return `
     <section class="settings-panel active">
       <div class="settings-header">
-        <h2>Arma 3 Server</h2>
+        <h2>Arma Server</h2>
         <label class="toggle-row">
           <input type="checkbox" data-service="arma" data-field="enabled" ${config.enabled ? "checked" : ""} />
           <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>

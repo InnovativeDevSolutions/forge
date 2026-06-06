@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Forge Host",
+  "productName": "FORGE Host",
   "version": "0.1.0",
   "identifier": "com.idsolutions.forge.host",
   "build": {
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Forge Host",
+        "title": "FORGE Host",
         "width": 1280,
         "height": 720,
         "minWidth": 980,
