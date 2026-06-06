@@ -606,7 +606,7 @@ function renderArmaSettings(config) {
             ${argumentInput("Name", "name", parsed.name)}
             ${argumentInput("Mods", "mods", parsed.mods)}
             ${argumentInput("Server Mods", "serverMods", parsed.serverMods)}
-            ${toggleArgument("AutoInit", "autoinit", parsed.autoinit)}
+            ${toggleArgument("AutoInit", "autoInit", parsed.autoInit)}
             ${toggleArgument("ReportNonNetworkObject", "reportNonNetworkObject", parsed.reportNonNetworkObject)}
             ${toggleArgument("BattlEye", "battleye", parsed.battleye)}
             ${argumentInput("Misc Arguments", "misc", parsed.misc.join(" "), "full")}
@@ -706,7 +706,7 @@ function readArgumentFields(service, container) {
         if (value("name")) args.push(`-name=${value("name")}`);
         if (value("mods")) args.push(`-mod=${value("mods")}`);
         if (value("serverMods")) args.push(`-serverMod=${value("serverMods")}`);
-        checked("autoinit") && args.push("-autoInit");
+        checked("autoInit") && args.push("-autoInit");
         checked("reportNonNetworkObject") && args.push("-reportNonNetworkObject");
         args.push(checked("battleye") ? "-battleye" : "-noBattlEye");
         args.push(...splitMiscArgs(value("misc")));
@@ -757,7 +757,7 @@ function parseArmaArgs(args) {
         name: "",
         mods: "",
         serverMods: "",
-        autoinit: false,
+        autoInit: false,
         reportNonNetworkObject: false,
         battleye: true,
         misc: [],
@@ -783,8 +783,8 @@ function parseArmaArgs(args) {
             parsed.battleye = false;
         } else if (lowerArg === "-battleye") {
             parsed.battleye = true;
-        } else if (lowerArg === "-autoInit") {
-            parsed.autoinit = true;
+        } else if (lowerArg === "-autoinit") {
+            parsed.autoInit = true;
         } else if (lowerArg === "-reportnonnetworkobject") {
             parsed.reportNonNetworkObject = true;
         } else {
