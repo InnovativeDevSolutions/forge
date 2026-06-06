@@ -28,6 +28,7 @@ arma/
   client/      Client-side addons and browser UIs
   server/      Server-side addons and extension crate
 bin/
+  host/        Tauri host control panel for SurrealDB, ICOM, and Arma server
   icom/        Interprocess communication helper
 lib/
   models/      Shared domain models
@@ -42,6 +43,7 @@ tools/         Web UI build tooling
 ```powershell
 cargo test
 npm run build:webui
+npm run host:dev
 .\build-arma.ps1
 ```
 
@@ -64,3 +66,27 @@ clients, and `@forge_server` on the server only.
 ```
 
 Both commands report the persistence connection state.
+
+## Host Control Panel
+
+`bin/host` contains a Tauri control app for local Forge server hosting. It can
+start and stop SurrealDB, `forge-icom.exe`, and an Arma 3 dedicated server,
+edit their launch commands, and show basic TCP health plus captured logs.
+
+```powershell
+# Build ICOM first if the host config points at target/release/forge-icom.exe
+cargo build --release -p forge-icom
+
+# Run the host UI during development
+npm run host:dev
+
+# Build the packaged desktop app
+npm run host:build
+```
+
+The app reads the shared `config.toml` from the repo root during development, or
+from the current/executable directory in packaged use. If no shared config exists,
+it falls back to `bin/host/host.example.toml`; saving from the Settings view writes
+the active shared `config.toml`. The shared file includes the host process sections
+plus the `[server]` section used by ICOM and the `[surreal]` section used by the
+Arma extension.

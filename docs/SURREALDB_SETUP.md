@@ -36,45 +36,12 @@ Official SurrealDB resources:
 - [SurrealDB install page](https://surrealdb.com/install)
 - [SurrealDB CLI `start` reference](https://surrealdb.com/docs/surrealdb/cli/start)
 
-Forge also includes helper scripts under `arma/server/surrealdb`:
-
-```powershell
-cd arma/server/surrealdb
-.\UpdateMe.bat
-.\RunMe.bat
-```
-
-On Windows, `UpdateMe.bat` is a wrapper around `UpdateSurrealDB.ps1`. By
-default it installs or updates to the newest compatible SurrealDB 3.x release
-reported by SurrealDB's official version endpoint. You can also pin an exact
-release:
-
-```powershell
-.\UpdateMe.bat v3.1.2
-.\UpdateSurrealDB.ps1 -Version v3.1.2
-```
-
-To intentionally install the latest stable SurrealDB release regardless of
-major version, run:
-
-```powershell
-.\UpdateMe.bat latest
-```
-
-The `latest` option prompts for confirmation because a newer SurrealDB major
-version can require rebuilding the Forge server extension from source with a
-compatible `surrealdb` Rust crate.
-
-`RunMe.bat` is a wrapper around `RunSurrealDB.ps1`, which starts the local
-Forge database with the same defaults shown below.
-
-On Linux or macOS:
-
-```bash
-cd arma/server/surrealdb
-./setup.sh
-./run.sh
-```
+Forge Host includes the recommended local setup path. Open the SurrealDB view
+to install or update SurrealDB, configure the bind address and database path,
+and start or stop the local database. Enter `3` to install the latest compatible
+SurrealDB 3.x release, enter an exact version such as `v3.1.2` to pin a
+release, or enter `latest` only after confirming compatibility with the Forge
+server extension.
 
 Install SurrealDB with the official method for your platform:
 
