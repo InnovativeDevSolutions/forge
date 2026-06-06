@@ -706,7 +706,7 @@ function readArgumentFields(service, container) {
         if (value("name")) args.push(`-name=${value("name")}`);
         if (value("mods")) args.push(`-mod=${value("mods")}`);
         if (value("serverMods")) args.push(`-serverMod=${value("serverMods")}`);
-        checked("autoinit") && args.push("-autoinit");
+        checked("autoinit") && args.push("-autoInit");
         checked("reportNonNetworkObject") && args.push("-reportNonNetworkObject");
         args.push(checked("battleye") ? "-battleye" : "-noBattlEye");
         args.push(...splitMiscArgs(value("misc")));
@@ -783,7 +783,7 @@ function parseArmaArgs(args) {
             parsed.battleye = false;
         } else if (lowerArg === "-battleye") {
             parsed.battleye = true;
-        } else if (lowerArg === "-autoinit") {
+        } else if (lowerArg === "-autoInit") {
             parsed.autoinit = true;
         } else if (lowerArg === "-reportnonnetworkobject") {
             parsed.reportNonNetworkObject = true;
