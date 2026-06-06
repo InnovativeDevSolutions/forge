@@ -756,7 +756,7 @@ fn service_status(
     };
     let pid = slot.as_ref().map(|managed| managed.child.id());
 
-    let (healthy, ping_ms) = if matches!(kind, ServiceKind::Icom) {
+    let (healthy, ping_ms) = if matches!(kind, ServiceKind::Icom | ServiceKind::Arma) {
         if running {
             (true, Some(0))
         } else {
