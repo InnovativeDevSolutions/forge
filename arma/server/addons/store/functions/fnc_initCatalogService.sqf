@@ -294,20 +294,77 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         private _classNames = _self call ["getMissionStoreCategoryList", [_category]];
         private _filteredItems = _self call ["applyMissionStoreModFilter", [_items]];
 
-        switch (_mode) do {
-            case "allowlist": {
-                _filteredItems = _filteredItems select {
-                    (toLowerANSI (_x getOrDefault ["className", ""])) in _classNames
-                };
+        if (_classNames isNotEqualTo []) then {
+            _filteredItems = _filteredItems select {
+                (toLowerANSI (_x getOrDefault ["className", ""])) in _classNames
             };
-            case "denylist": {
-                _filteredItems = _filteredItems select {
-                    !((toLowerANSI (_x getOrDefault ["className", ""])) in _classNames)
+        } else {
+            switch (_mode) do {
+                case "allowlist": {
+                    _filteredItems = [];
+                };
+                case "denylist": {
+                    _filteredItems = _filteredItems select {
+                        !((toLowerANSI (_x getOrDefault ["className", ""])) in _classNames)
+                    };
                 };
             };
         };
 
         _filteredItems apply { _self call ["applyMissionStoreOverrides", [_x]] }
+    }],
+    ["resolveSideLabel", compileFinal {
+        params [["_sideValue", -1, [0]]];
+
+        switch _sideValue do {
+            case 0: { "OPFOR" };
+            case 1: { "BLUFOR" };
+            case 2: { "Independent" };
+            case 3: { "Civilian" };
+            default { "Unknown" };
+        }
+    }],
+    ["resolveSideKey", compileFinal {
+        params [["_sideValue", -1, [0]]];
+
+        switch _sideValue do {
+            case 0: { "east" };
+            case 1: { "west" };
+            case 2: { "resistance" };
+            case 3: { "civilian" };
+            default { "" };
+        }
+    }],
+    ["resolvePlayerSideKey", compileFinal {
+        params [["_player", objNull, [objNull]]];
+
+        if (isNull _player) exitWith { "" };
+
+        switch (side group _player) do {
+            case west: { "west" };
+            case east: { "east" };
+            case independent: { "resistance" };
+            case civilian: { "civilian" };
+            default { "" };
+        }
+    }],
+    ["doesItemMatchPlayerSide", compileFinal {
+        params [["_item", createHashMap, [createHashMap]], ["_player", objNull, [objNull]]];
+
+        if (_item isEqualTo createHashMap) exitWith { false };
+
+        private _playerSideKey = _self call ["resolvePlayerSideKey", [_player]];
+        if (_playerSideKey isEqualTo "") exitWith { true };
+
+        private _itemSideKey = _item getOrDefault ["side", ""];
+        _itemSideKey isEqualTo "" || { _itemSideKey isEqualTo _playerSideKey }
+    }],
+    ["applyPlayerSideFilter", compileFinal {
+        params [["_category", "", [""]], ["_items", [], [[]]], ["_player", objNull, [objNull]]];
+
+        if !(_self call ["isUnitCategory", [_category]]) exitWith { +_items };
+
+        _items select { _self call ["doesItemMatchPlayerSide", [_x, _player]] }
     }],
     ["formatCurrency", compileFinal {
         params [["_amount", 0, [0]]];
@@ -384,8 +441,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         };
 
         private _priceValue = _self call ["calculateCatalogPriceValue", [_cfg, _isVehicle]];
-
-        createHashMapFromArray [
+        private _item = createHashMapFromArray [
             ["className", _className],
             ["code", _className],
             ["name", _displayName],
@@ -398,7 +454,26 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             ["sourceMod", _sourceMod],
             ["sourceDLC", _sourceDLC],
             ["sourceAuthor", _sourceAuthor]
-        ]
+        ];
+
+        if (isNumber (_cfg >> "side")) then {
+            private _sideValue = getNumber (_cfg >> "side");
+            _item set ["sideValue", _sideValue];
+            _item set ["side", _self call ["resolveSideKey", [_sideValue]]];
+            _item set ["sideLabel", _self call ["resolveSideLabel", [_sideValue]]];
+        };
+
+        if (isText (_cfg >> "faction")) then {
+            private _faction = getText (_cfg >> "faction");
+            if (_faction isNotEqualTo "") then {
+                private _factionName = getText (configFile >> "CfgFactionClasses" >> _faction >> "displayName");
+                if (_factionName isEqualTo "") then { _factionName = _faction; };
+                _item set ["faction", _faction];
+                _item set ["factionName", _factionName];
+            };
+        };
+
+        _item
     }],
     ["appendCfgWeaponsByItemInfoType", compileFinal {
         params [["_items", [], [[]]], ["_itemInfoType", -1, [0]], ["_itemKind", "", [""]], ["_typeLabel", "", [""]], ["_fallbackDescription", "", [""]]];
@@ -686,7 +761,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         _items
     }],
     ["buildCategoryResponse", compileFinal {
-        params [["_category", "", [""]]];
+        params [["_category", "", [""]], ["_player", objNull, [objNull]]];
 
         private _categoryKey = _self call ["normalizeCategoryKey", [_category]];
         private _response = createHashMapFromArray [["success", false], ["category", _categoryKey], ["items", []], ["message", "No store category was provided."]];
@@ -699,7 +774,9 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         _response set ["success", true];
         _response set ["message", ""];
-        _response set ["items", _self call ["buildCategoryItems", [_categoryKey]]];
+        private _items = _self call ["buildCategoryItems", [_categoryKey]];
+        _items = _self call ["applyPlayerSideFilter", [_categoryKey, _items, _player]];
+        _response set ["items", _items];
         _response
     }],
     ["resolveCheckoutCategories", compileFinal {
@@ -734,7 +811,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         _resolved
     }],
     ["buildCheckoutRequest", compileFinal {
-        params [["_items", [], [[]]], ["_vehicles", [], [[]]], ["_units", [], [[]]]];
+        params [["_items", [], [[]]], ["_vehicles", [], [[]]], ["_units", [], [[]]], ["_player", objNull, [objNull]]];
 
         private _result = createHashMapFromArray [
             ["success", false],
@@ -810,6 +887,12 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
                     if (_catalogEntry isEqualTo createHashMap) then {
                         _message = format ["Unsupported store unit: %1", _className];
                     } else {
+                        if !(_self call ["doesItemMatchPlayerSide", [_catalogEntry, _player]]) then {
+                            _message = format ["Store unit is not available for your side: %1", _className];
+                        };
+                    };
+
+                    if (_message isEqualTo "") then {
                         private _priceValue = _catalogEntry getOrDefault ["priceValue", 0];
                         _total = _total + _priceValue;
                         _resolvedUnits pushBack (createHashMapFromArray [
