@@ -6,12 +6,14 @@ const serviceNames = {
 
 const subtitles = {
     overview: "Start, stop, and check local Forge hosting services.",
-    settings: "Edit process command, arguments, working directory, and health port.",
+    settings:
+        "Edit process command, arguments, working directory, and health port.",
     logs: "Recent stdout, stderr, and host supervisor events.",
 };
 
 let snapshot = null;
 let refreshTimer = null;
+let lastRenderedLogText = "";
 let activeSettingsService = "surrealdb";
 let configDirty = false;
 let activeEditorPath = "";
@@ -28,7 +30,10 @@ document.querySelectorAll(".nav-button").forEach((button) => {
     button.addEventListener("click", () => {
         const view = button.dataset.view;
         if (button.dataset.service) {
-            if (configDirty && button.dataset.service !== activeSettingsService) {
+            if (
+                configDirty &&
+                button.dataset.service !== activeSettingsService
+            ) {
                 persistActiveSettingsForm();
             }
             activeSettingsService = button.dataset.service;
@@ -38,9 +43,13 @@ document.querySelectorAll(".nav-button").forEach((button) => {
             }
             activeSettingsService = "surrealdb";
         }
-        document.querySelectorAll(".nav-button").forEach((item) => item.classList.remove("active"));
+        document
+            .querySelectorAll(".nav-button")
+            .forEach((item) => item.classList.remove("active"));
         button.classList.add("active");
-        Object.entries(views).forEach(([key, element]) => element.classList.toggle("active", key === view));
+        Object.entries(views).forEach(([key, element]) =>
+            element.classList.toggle("active", key === view),
+        );
         setHeader(view);
         renderSettings(true);
         syncBulkActionsVisibility();
@@ -52,9 +61,29 @@ document.getElementById("refreshButton").addEventListener("click", refresh);
 document.getElementById("saveButton").addEventListener("click", saveConfig);
 document.getElementById("startAllButton").addEventListener("click", startAll);
 document.getElementById("stopAllButton").addEventListener("click", stopAll);
-document.getElementById("editorCloseButton").addEventListener("click", closeConfigEditor);
-document.getElementById("editorReloadButton").addEventListener("click", () => runAction(() => openConfigEditor(activeEditorPath)));
-document.getElementById("editorSaveButton").addEventListener("click", () => runAction(saveConfigEditor));
+document
+    .getElementById("editorCloseButton")
+    .addEventListener("click", closeConfigEditor);
+document
+    .getElementById("editorReloadButton")
+    .addEventListener("click", () =>
+        runAction(() => openConfigEditor(activeEditorPath)),
+    );
+document
+    .getElementById("editorSaveButton")
+    .addEventListener("click", () => runAction(saveConfigEditor));
+
+async function loadAppVersion() {
+    const getVersion = window.__TAURI__?.app?.getVersion;
+    if (!getVersion) return;
+
+    try {
+        document.getElementById("appVersion").textContent =
+            `v${await getVersion()}`;
+    } catch (error) {
+        console.warn("Unable to load app version:", error);
+    }
+}
 
 async function refresh() {
     if (isSettingsViewActive() && configDirty) {
@@ -89,7 +118,9 @@ async function startAll() {
 
     const serviceNames = Object.keys(snapshot.config).filter(
         (name) =>
-            snapshot.config[name].enabled && (name === "surrealdb" || snapshot.config[name].command.trim() !== "")
+            snapshot.config[name].enabled &&
+            (name === "surrealdb" ||
+                snapshot.config[name].command.trim() !== ""),
     );
 
     for (const name of serviceNames) {
@@ -106,7 +137,9 @@ async function startAll() {
 
 async function stopAll() {
     if (!snapshot) return;
-    const serviceNames = Object.keys(snapshot.config).filter((name) => snapshot.config[name].enabled);
+    const serviceNames = Object.keys(snapshot.config).filter(
+        (name) => snapshot.config[name].enabled,
+    );
     for (const name of serviceNames) {
         const status = snapshot.statuses.find((s) => s.name === name);
         if (status && status.running) {
@@ -141,7 +174,9 @@ async function saveConfig() {
 function tauriInvoke(command, payload) {
     const invoke = window.__TAURI__?.core?.invoke;
     if (!invoke) {
-        return Promise.reject("Tauri invoke API is not available in this window.");
+        return Promise.reject(
+            "Tauri invoke API is not available in this window.",
+        );
     }
     return invoke(command, payload);
 }
@@ -157,32 +192,43 @@ function render() {
 }
 
 function setHeader(view) {
-    const title = view === "settings" ? serviceNames[activeSettingsService] : activeNavLabel();
+    const title =
+        view === "settings"
+            ? serviceNames[activeSettingsService]
+            : activeNavLabel();
     document.getElementById("viewTitle").textContent = title;
     document.getElementById("viewSubtitle").textContent = subtitles[view];
 }
 
 function activeNavLabel() {
-    return document.querySelector(".nav-button.active span:last-child")?.textContent.trim() || "Overview";
+    return (
+        document
+            .querySelector(".nav-button.active span:last-child")
+            ?.textContent.trim() || "Overview"
+    );
 }
 
 function syncSidebarStatus() {
-    document.querySelectorAll(".nav-button[data-service], .nav-button[data-view='settings']:not([data-service])").forEach((button) => {
-        const service = button.dataset.service || "surrealdb";
-        const config = snapshot.config[service];
-        const status = snapshot.statuses.find((s) => s.name === service);
-        const enabled = config?.enabled;
-        const running = status?.running;
-        const healthy = status?.healthy;
+    document
+        .querySelectorAll(
+            ".nav-button[data-service], .nav-button[data-view='settings']:not([data-service])",
+        )
+        .forEach((button) => {
+            const service = button.dataset.service || "surrealdb";
+            const config = snapshot.config[service];
+            const status = snapshot.statuses.find((s) => s.name === service);
+            const enabled = config?.enabled;
+            const running = status?.running;
+            const healthy = status?.healthy;
 
-        const isDisabled = !enabled;
-        const isOnline = enabled && running && healthy;
-        const isStopped = enabled && !isOnline;
+            const isDisabled = !enabled;
+            const isOnline = enabled && running && healthy;
+            const isStopped = enabled && !isOnline;
 
-        button.classList.toggle("service-enabled", Boolean(isOnline));
-        button.classList.toggle("service-disabled", Boolean(isDisabled));
-        button.classList.toggle("service-stopped", Boolean(isStopped));
-    });
+            button.classList.toggle("service-enabled", Boolean(isOnline));
+            button.classList.toggle("service-disabled", Boolean(isDisabled));
+            button.classList.toggle("service-stopped", Boolean(isStopped));
+        });
 }
 
 function renderServices() {
@@ -192,31 +238,44 @@ function renderServices() {
 
     snapshot.statuses.forEach((status) => {
         const node = template.content.firstElementChild.cloneNode(true);
-        node.querySelector("h2").textContent = serviceNames[status.name] || status.name;
+        node.querySelector("h2").textContent =
+            serviceNames[status.name] || status.name;
         const pingPill = node.querySelector(".ping-pill");
         const pingDisplay = resolvePingDisplay(status);
         pingPill.textContent = pingDisplay.label;
         pingPill.classList.remove("good", "warn", "bad", "unavailable");
         pingPill.classList.add(pingDisplay.className);
-        node.querySelector(".command-line").textContent = status.command || "No command configured";
+        node.querySelector(".command-line").textContent =
+            status.command || "No command configured";
 
         const pill = node.querySelector(".status-pill");
         pill.textContent = status.running ? "Running" : "Stopped";
         pill.classList.add(status.running ? "running" : "stopped");
 
-        node.querySelector(".pid").textContent = status.pid ? String(status.pid) : "-";
+        node.querySelector(".pid").textContent = status.pid
+            ? String(status.pid)
+            : "-";
         node.querySelector(".health").textContent = status.health;
-        node.querySelector(".enabled").textContent = status.enabled ? "Yes" : "No";
+        node.querySelector(".enabled").textContent = status.enabled
+            ? "Yes"
+            : "No";
 
         const start = node.querySelector(".start");
         const stop = node.querySelector(".stop");
         if (!start || !stop) {
-            throw new Error("Service card template is missing start or stop controls.");
+            throw new Error(
+                "Service card template is missing start or stop controls.",
+            );
         }
-        start.disabled = status.running || !status.enabled || !status.configured;
+        start.disabled =
+            status.running || !status.enabled || !status.configured;
         stop.disabled = !status.running;
-        start.addEventListener("click", () => runAction(() => startService(status.name)));
-        stop.addEventListener("click", () => runAction(() => stopService(status.name)));
+        start.addEventListener("click", () =>
+            runAction(() => startService(status.name)),
+        );
+        stop.addEventListener("click", () =>
+            runAction(() => stopService(status.name)),
+        );
 
         grid.appendChild(node);
     });
@@ -256,7 +315,9 @@ function renderSettings(force = false) {
     form.className = "settings-form";
     form.innerHTML = renderSettingsPanel(name, config);
 
-    form.querySelectorAll("input[data-service], input[data-arg-key], select[data-arg-key]").forEach((input) => {
+    form.querySelectorAll(
+        "input[data-service], input[data-arg-key], select[data-arg-key]",
+    ).forEach((input) => {
         input.addEventListener("input", () => {
             configDirty = true;
         });
@@ -267,20 +328,30 @@ function renderSettings(force = false) {
 
     form.querySelectorAll("[data-picker]").forEach((button) => {
         button.addEventListener("click", () => {
-            runAction(() => pickPath(button.dataset.picker, button.dataset.target, button.dataset.serviceTarget));
+            runAction(() =>
+                pickPath(
+                    button.dataset.picker,
+                    button.dataset.target,
+                    button.dataset.serviceTarget,
+                ),
+            );
         });
     });
 
     form.querySelectorAll("[data-create-server-config]").forEach((button) => {
         button.addEventListener("click", () => {
-            const template = document.querySelector("[data-config-template]")?.value || "server";
+            const template =
+                document.querySelector("[data-config-template]")?.value ||
+                "server";
             runAction(() => createArmaServerConfig(template));
         });
     });
 
     form.querySelectorAll("[data-edit-server-config]").forEach((button) => {
         button.addEventListener("click", () => {
-            const path = document.querySelector('[data-arg-key="config"]')?.value.trim();
+            const path = document
+                .querySelector('[data-arg-key="config"]')
+                ?.value.trim();
             if (!path) {
                 alert("Select or create a server config first.");
                 return;
@@ -310,13 +381,21 @@ function renderSettings(force = false) {
 
     if (name === "surrealdb" && !surrealInstallInfo) {
         loadSurrealInstallInfo();
-    } else if (name === "surrealdb" && surrealInstallInfo && !surrealInstallInfo.latest) {
+    } else if (
+        name === "surrealdb" &&
+        surrealInstallInfo &&
+        !surrealInstallInfo.latest
+    ) {
         loadLatestSurrealVersion();
     }
 }
 
 function isSettingsViewActive() {
     return views.settings.classList.contains("active");
+}
+
+function isLogsViewActive() {
+    return views.logs.classList.contains("active");
 }
 
 function syncRefreshTimer() {
@@ -326,22 +405,32 @@ function syncRefreshTimer() {
     }
 
     if (!isSettingsViewActive()) {
-        refreshTimer = setInterval(refresh, 2500);
+        refreshTimer = setInterval(refresh, isLogsViewActive() ? 30000 : 2500);
     }
 }
 
 function syncBulkActionsVisibility() {
     const bulkActions = document.getElementById("bulkActions");
-    bulkActions.style.display = views.overview.classList.contains("active") ? "flex" : "none";
+    bulkActions.style.display = views.overview.classList.contains("active")
+        ? "flex"
+        : "none";
 
     const stopAllButton = document.getElementById("stopAllButton");
-    const hasRunningService = Boolean(snapshot?.statuses.some((status) => status.running));
+    const hasRunningService = Boolean(
+        snapshot?.statuses.some((status) => status.running),
+    );
     stopAllButton.disabled = !hasRunningService;
 }
 
 function renderLogs() {
     const output = document.getElementById("logOutput");
-    output.textContent = snapshot.logs.length ? snapshot.logs.join("\n") : "No host logs yet.";
+    const nextLogText = snapshot.logs.length
+        ? snapshot.logs.join("\n")
+        : "No host logs yet.";
+    if (nextLogText === lastRenderedLogText) return;
+
+    lastRenderedLogText = nextLogText;
+    output.textContent = nextLogText;
     output.scrollTop = output.scrollHeight;
 }
 
@@ -350,6 +439,7 @@ function renderError(error) {
     document.getElementById("configPath").textContent = "Unable to load";
     document.getElementById("serviceGrid").replaceChildren();
     document.getElementById("configForm").replaceChildren();
+    lastRenderedLogText = message;
     document.getElementById("logOutput").textContent = message;
 }
 
@@ -418,7 +508,9 @@ function renderSurrealInstallControls() {
     const installed = surrealInstallInfo?.installed;
     const version = surrealInstallInfo?.version || "Not installed";
     const latest = surrealInstallInfo?.latest || "Checking...";
-    const path = surrealInstallInfo?.path || "SurrealDB will be installed to the user-local default path.";
+    const path =
+        surrealInstallInfo?.path ||
+        "SurrealDB will be installed to the user-local default path.";
 
     return `
     <div class="field full surreal-install">
@@ -455,17 +547,23 @@ function renderSurrealInstallControls() {
 }
 
 function selectedSurrealInstallVersion() {
-    const mode = document.querySelector("[data-surreal-version-mode]")?.value || "3";
+    const mode =
+        document.querySelector("[data-surreal-version-mode]")?.value || "3";
     if (mode !== "custom") {
         return mode;
     }
-    return document.querySelector("[data-surreal-custom-version]")?.value.trim() || "3";
+    return (
+        document.querySelector("[data-surreal-custom-version]")?.value.trim() ||
+        "3"
+    );
 }
 
 function syncSurrealCustomVersion() {
     const custom = document.querySelector(".install-custom");
     if (!custom) return;
-    const isCustom = document.querySelector("[data-surreal-version-mode]")?.value === "custom";
+    const isCustom =
+        document.querySelector("[data-surreal-version-mode]")?.value ===
+        "custom";
     custom.hidden = !isCustom;
     if (isCustom) {
         custom.querySelector("input")?.focus();
@@ -475,7 +573,12 @@ function syncSurrealCustomVersion() {
 async function loadSurrealInstallInfo() {
     try {
         surrealInstallInfo = await tauriInvoke("get_surrealdb_install_info");
-        if (activeSettingsService === "surrealdb" && isSettingsViewActive() && !configDirty && !isSurrealInstallFocused()) {
+        if (
+            activeSettingsService === "surrealdb" &&
+            isSettingsViewActive() &&
+            !configDirty &&
+            !isSurrealInstallFocused()
+        ) {
             renderSettings(true);
         }
         await loadLatestSurrealVersion();
@@ -493,12 +596,25 @@ async function loadLatestSurrealVersion() {
     try {
         const latest = await tauriInvoke("get_latest_surrealdb_version");
         surrealInstallInfo = { ...(surrealInstallInfo || {}), latest };
-        if (activeSettingsService === "surrealdb" && isSettingsViewActive() && !configDirty && !isSurrealInstallFocused()) {
+        if (
+            activeSettingsService === "surrealdb" &&
+            isSettingsViewActive() &&
+            !configDirty &&
+            !isSurrealInstallFocused()
+        ) {
             renderSettings(true);
         }
     } catch (error) {
-        surrealInstallInfo = { ...(surrealInstallInfo || {}), latest: "Unavailable" };
-        if (activeSettingsService === "surrealdb" && isSettingsViewActive() && !configDirty && !isSurrealInstallFocused()) {
+        surrealInstallInfo = {
+            ...(surrealInstallInfo || {}),
+            latest: "Unavailable",
+        };
+        if (
+            activeSettingsService === "surrealdb" &&
+            isSettingsViewActive() &&
+            !configDirty &&
+            !isSurrealInstallFocused()
+        ) {
             renderSettings(true);
         }
     }
@@ -685,8 +801,10 @@ function toggleArgument(label, key, value) {
 }
 
 function readArgumentFields(service, container) {
-    const value = (key) => container.querySelector(`[data-arg-key="${key}"]`)?.value.trim() || "";
-    const checked = (key) => Boolean(container.querySelector(`[data-arg-key="${key}"]`)?.checked);
+    const value = (key) =>
+        container.querySelector(`[data-arg-key="${key}"]`)?.value.trim() || "";
+    const checked = (key) =>
+        Boolean(container.querySelector(`[data-arg-key="${key}"]`)?.checked);
     if (service === "surrealdb") {
         const args = [];
         if (value("subcommand")) args.push(value("subcommand"));
@@ -707,7 +825,8 @@ function readArgumentFields(service, container) {
         if (value("mods")) args.push(`-mod=${value("mods")}`);
         if (value("serverMods")) args.push(`-serverMod=${value("serverMods")}`);
         checked("autoInit") && args.push("-autoInit");
-        checked("reportNonNetworkObject") && args.push("-reportNonNetworkObject");
+        checked("reportNonNetworkObject") &&
+            args.push("-reportNonNetworkObject");
         args.push(checked("battleye") ? "-battleye" : "-noBattlEye");
         args.push(...splitMiscArgs(value("misc")));
         return args;
@@ -796,7 +915,10 @@ function parseArmaArgs(args) {
 }
 
 function splitMiscArgs(value) {
-    return value.split(/\s+/).map((arg) => arg.trim()).filter(Boolean);
+    return value
+        .split(/\s+/)
+        .map((arg) => arg.trim())
+        .filter(Boolean);
 }
 
 async function pickPath(kind, targetSelector, service) {
@@ -818,7 +940,9 @@ async function pickPath(kind, targetSelector, service) {
     input.value = finalPath;
 
     if (kind === "file" && targetSelector.includes('data-field="command"')) {
-        const workingDir = document.querySelector(`[data-service="${service}"][data-field="working_dir"]`);
+        const workingDir = document.querySelector(
+            `[data-service="${service}"][data-field="working_dir"]`,
+        );
         if (workingDir) {
             workingDir.value = finalPath.replace(/[\\/][^\\/]+$/, "");
         }
@@ -845,10 +969,14 @@ function pickerFilters(kind) {
 async function createArmaServerConfig(template) {
     const save = window.__TAURI__?.dialog?.save;
     if (!save) {
-        throw new Error("Tauri save dialog API is not available in this window.");
+        throw new Error(
+            "Tauri save dialog API is not available in this window.",
+        );
     }
 
-    const workingDir = document.querySelector('[data-service="arma"][data-field="working_dir"]')?.value.trim();
+    const workingDir = document
+        .querySelector('[data-service="arma"][data-field="working_dir"]')
+        ?.value.trim();
     const defaultPath = workingDir ? `${workingDir}\\server.cfg` : "server.cfg";
     const selected = await save({
         defaultPath,
@@ -856,7 +984,10 @@ async function createArmaServerConfig(template) {
     });
     if (!selected) return;
 
-    await tauriInvoke("create_arma_server_config", { path: selected, template });
+    await tauriInvoke("create_arma_server_config", {
+        path: selected,
+        template,
+    });
     const input = document.querySelector('[data-arg-key="config"]');
     if (input) {
         input.value = selected;
@@ -871,7 +1002,9 @@ function resolveArmaConfigPath(path) {
         return path;
     }
 
-    const workingDir = document.querySelector('[data-service="arma"][data-field="working_dir"]')?.value.trim();
+    const workingDir = document
+        .querySelector('[data-service="arma"][data-field="working_dir"]')
+        ?.value.trim();
     return workingDir ? `${workingDir}\\${path}` : path;
 }
 
@@ -906,11 +1039,15 @@ function normalizePickedExecutable(service, path) {
     }
 
     if (fileName === "arma3_x64.exe" || fileName === "arma3.exe") {
-        alert("That is the Arma 3 client executable. Forge Host will use arma3server_x64.exe from the same directory instead.");
+        alert(
+            "That is the Arma 3 client executable. Forge Host will use arma3server_x64.exe from the same directory instead.",
+        );
         return path.replace(/[\\/][^\\/]+$/, "\\arma3server_x64.exe");
     }
 
-    alert("Select arma3server_x64.exe for dedicated server hosting. The app will block client executables at launch.");
+    alert(
+        "Select arma3server_x64.exe for dedicated server hosting. The app will block client executables at launch.",
+    );
     return path;
 }
 
@@ -944,3 +1081,4 @@ function selectedAttr(selected) {
 
 refresh();
 syncRefreshTimer();
+loadAppVersion();

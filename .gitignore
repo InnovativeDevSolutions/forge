@@ -27,6 +27,7 @@ docus/.nuxt/
 docus/.output/
 docus/.data/
 docus/.nitro/
+bin/launcher/
 
 # OS
 .DS_Store
