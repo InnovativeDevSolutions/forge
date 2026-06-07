@@ -28,11 +28,18 @@ Before starting a Forge-enabled dedicated server or local multiplayer test,
 server owners and developers must:
 
 1. Start SurrealDB.
-2. Place `config.toml` beside `forge_server_x64.dll`.
+2. Place a Forge `config.toml` where the extension can find it. Use
+   `arma/server/extension/config.example.toml` for an extension-only config, or
+   use `bin/host/config.example.toml` at the repo root when Forge Host should
+   manage SurrealDB, ICOM, and the Arma server.
 3. Keep the `config.toml` SurrealDB endpoint, namespace, database, username,
    and password aligned with the running database.
 4. Load `@forge_mod` with the server's normal mod list and `@forge_server` as
    a server-only mod.
+5. Start Arma with both dedicated server config files: `server.cfg` through
+   `-config` for server rules and mission rotation, and `basic.cfg` through
+   `-cfg` for network tuning. Forge Host can create both files from
+   `bin/host/server.example.cfg` and `bin/host/basic.example.cfg`.
 
 Mission designers and players do not need to run SurrealDB unless they are
 hosting locally, but they do need `@forge_mod` for Forge mission config classes.

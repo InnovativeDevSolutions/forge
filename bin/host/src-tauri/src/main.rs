@@ -202,7 +202,10 @@ impl AppState {
 
 fn load_example_config() -> Result<HostConfig, String> {
     if let Some(repo_root) = find_repo_root() {
-        let example = repo_root.join("bin").join("host").join("host.example.toml");
+        let example = repo_root
+            .join("bin")
+            .join("host")
+            .join("config.example.toml");
         return load_config(&example);
     }
 
@@ -426,13 +429,7 @@ fn create_arma_server_config(path: String, template: String) -> Result<(), Strin
             .map_err(|error| format!("Failed to create config directory: {error}"))?;
     }
 
-    let template_path = resolve_arma_config_template(&template)?;
-    let content = fs::read_to_string(&template_path).map_err(|error| {
-        format!(
-            "Failed to read config template {}: {error}",
-            template_path.display()
-        )
-    })?;
+    let content = arma_config_template(&template)?;
 
     fs::write(&path, content).map_err(|error| format!("Failed to write server config: {error}"))
 }
@@ -690,32 +687,12 @@ fn ensure_surreal_on_user_path(_install_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn resolve_arma_config_template(template: &str) -> Result<PathBuf, String> {
-    let file_name = match template {
-        "basic" => "basic.example.cfg",
-        "server" | "" => "server.example.cfg",
-        other => return Err(format!("Unknown Arma config template '{other}'")),
-    };
-
-    let mut candidates = Vec::new();
-    if let Some(repo_root) = find_repo_root() {
-        candidates.push(repo_root.join("bin").join("host").join(file_name));
+fn arma_config_template(template: &str) -> Result<&'static str, String> {
+    match template {
+        "basic" => Ok(include_str!("../../basic.example.cfg")),
+        "server" | "" => Ok(include_str!("../../server.example.cfg")),
+        other => Err(format!("Unknown Arma config template '{other}'")),
     }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            candidates.push(dir.join(file_name));
-            candidates.push(dir.join("bin").join("host").join(file_name));
-        }
-    }
-    if let Ok(cwd) = std::env::current_dir() {
-        candidates.push(cwd.join(file_name));
-        candidates.push(cwd.join("bin").join("host").join(file_name));
-    }
-
-    candidates
-        .into_iter()
-        .find(|path| path.exists())
-        .ok_or_else(|| format!("Unable to find Arma config template '{file_name}'"))
 }
 
 fn service_config(kind: ServiceKind, config: &HostConfig) -> ServiceConfig {
@@ -971,7 +948,7 @@ fn default_surrealdb_service() -> ServiceConfig {
             "127.0.0.1:8000".to_string(),
             "rocksdb://forge.db".to_string(),
         ],
-        working_dir: "../../arma/server/surrealdb".to_string(),
+        working_dir: "arma/server/surrealdb".to_string(),
         health_host: "127.0.0.1".to_string(),
         health_port: 8000,
     }
@@ -982,7 +959,7 @@ fn default_icom_service() -> ServiceConfig {
         enabled: true,
         command: "target/release/forge-icom.exe".to_string(),
         args: Vec::new(),
-        working_dir: "../..".to_string(),
+        working_dir: ".".to_string(),
         health_host: "127.0.0.1".to_string(),
         health_port: 9090,
     }
@@ -993,8 +970,10 @@ fn default_arma_service() -> ServiceConfig {
         enabled: false,
         command: "arma3server_x64.exe".to_string(),
         args: vec![
+            "-config=server.cfg".to_string(),
+            "-cfg=basic.cfg".to_string(),
             "-port=2302".to_string(),
-            "-profiles=profiles".to_string(),
+            "-profiles=serverprofiles".to_string(),
             "-name=server".to_string(),
             "-noBattlEye".to_string(),
         ],

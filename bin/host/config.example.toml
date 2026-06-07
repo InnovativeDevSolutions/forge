@@ -1,0 +1,71 @@
+# Forge shared host configuration.
+#
+# Copy this file to `config.toml` at the repository root for development, or
+# place it beside the packaged Forge Host executable for deployment. Forge Host
+# writes the active config to that shared `config.toml`.
+#
+# This file intentionally contains:
+# - [server], used by the standalone ICOM hub.
+# - [surreal], used by the Arma server extension.
+# - [surrealdb], [icom], and [arma], used by Forge Host to manage processes.
+
+[server]
+# ICOM hub bind address. Use "127.0.0.1" for same-machine testing only, or
+# "0.0.0.0" when remote Arma servers need to connect through the firewall.
+host = "0.0.0.0"
+port = 9090
+
+[surreal]
+# SurrealDB HTTP endpoint used by the Arma server extension.
+# Keep this aligned with [surrealdb].args --bind.
+endpoint = "127.0.0.1:8000"
+
+# Namespace and database selected after the extension connects.
+namespace = "forge"
+database = "main"
+
+# Local development defaults. Use a real password for shared or public servers.
+username = "root"
+password = "root"
+
+# How long the extension waits for the initial SurrealDB connection.
+connect_timeout_ms = 5000
+
+[surrealdb]
+# Managed SurrealDB process. Forge Host can install SurrealDB into the user's
+# local app data directory and will prefer that executable when available.
+enabled = true
+command = "surreal"
+
+# Persistent local database using RocksDB. The bind address must match
+# [surreal].endpoint and health_host/health_port.
+args = ["start", "--user", "root", "--pass", "root", "--bind", "127.0.0.1:8000", "rocksdb://forge.db"]
+
+# Relative paths are resolved from the active config.toml directory.
+working_dir = "arma/server/surrealdb"
+health_host = "127.0.0.1"
+health_port = 8000
+
+[icom]
+# Managed ICOM hub process. Build it first with:
+# cargo build --release -p forge-icom
+enabled = true
+command = "target/release/forge-icom.exe"
+args = []
+working_dir = "."
+health_host = "127.0.0.1"
+health_port = 9090
+
+[arma]
+# Managed Arma 3 dedicated server process. This is disabled by default because
+# every installation needs its own arma3server_x64.exe path and server config.
+enabled = false
+command = "arma3server_x64.exe"
+
+# Forge Host can create/edit both Arma config files:
+# - -config=server.cfg controls game server rules, missions, passwords, and admins.
+# - -cfg=basic.cfg controls dedicated server network tuning.
+args = ["-config=server.cfg", "-cfg=basic.cfg", "-port=2302", "-profiles=serverprofiles", "-name=server", "-noBattlEye"]
+working_dir = ""
+health_host = "127.0.0.1"
+health_port = 2302

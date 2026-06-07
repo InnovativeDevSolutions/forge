@@ -18,7 +18,6 @@ let activeSettingsService = "surrealdb";
 let configDirty = false;
 let activeEditorPath = "";
 let surrealInstallInfo = null;
-let selectedArmaConfigTemplate = "server";
 
 const views = {
     overview: document.getElementById("overviewView"),
@@ -340,20 +339,24 @@ function renderSettings(force = false) {
 
     form.querySelectorAll("[data-create-server-config]").forEach((button) => {
         button.addEventListener("click", () => {
-            const template =
-                document.querySelector("[data-config-template]")?.value ||
-                "server";
-            runAction(() => createArmaServerConfig(template));
+            runAction(() =>
+                createArmaServerConfig(
+                    button.dataset.configTemplate || "server",
+                    button.dataset.configTarget || "config",
+                    button.dataset.defaultFile || "server.cfg",
+                ),
+            );
         });
     });
 
     form.querySelectorAll("[data-edit-server-config]").forEach((button) => {
         button.addEventListener("click", () => {
+            const target = button.dataset.configTarget || "config";
             const path = document
-                .querySelector('[data-arg-key="config"]')
+                .querySelector(`[data-arg-key="${target}"]`)
                 ?.value.trim();
             if (!path) {
-                alert("Select or create a server config first.");
+                alert("Select or create a config first.");
                 return;
             }
             runAction(() => openConfigEditor(resolveArmaConfigPath(path)));
@@ -370,12 +373,6 @@ function renderSettings(force = false) {
     form.querySelectorAll("[data-surreal-version-mode]").forEach((select) => {
         select.addEventListener("change", () => {
             syncSurrealCustomVersion();
-        });
-    });
-
-    form.querySelectorAll("[data-config-template]").forEach((select) => {
-        select.addEventListener("change", () => {
-            selectedArmaConfigTemplate = select.value;
         });
     });
 
@@ -716,7 +713,7 @@ function renderArmaSettings(config) {
           <label>Launch Options</label>
           <div class="args-list arma-args" data-service="arma" data-field="args">
             ${serverConfigInput(parsed.config)}
-            ${serverConfigTemplateInput()}
+            ${basicConfigInput(parsed.cfg)}
             ${argumentInput("Port", "port", parsed.port)}
             ${argumentInput("Profiles", "profiles", parsed.profiles)}
             ${argumentInput("Name", "name", parsed.name)}
@@ -766,27 +763,45 @@ function argumentInput(label, key, value, className = "") {
 }
 
 function serverConfigInput(value) {
-    return `
-    <div class="arg-field full">
-      <label>Server Config</label>
-      <div class="input-action action-three">
-        <input class="arg-input" data-arg-key="config" value="${escapeAttr(value)}" placeholder="server.cfg" />
-        <button class="icon-button" type="button" data-picker="config" data-service-target="arma" data-target='[data-arg-key="config"]' title="Select config" aria-label="Select config"><span class="svg-icon icon-browse"></span></button>
-        <button class="icon-button" type="button" data-create-server-config title="Create default config" aria-label="Create default config"><span class="svg-icon icon-new"></span></button>
-        <button class="icon-button" type="button" data-edit-server-config title="Edit config" aria-label="Edit config"><span class="svg-icon icon-edit"></span></button>
-      </div>
-    </div>
-  `;
+    return configFileInput({
+        label: "Server Config",
+        key: "config",
+        value,
+        placeholder: "server.cfg",
+        template: "server",
+        defaultFile: "server.cfg",
+    });
 }
 
-function serverConfigTemplateInput() {
+function basicConfigInput(value) {
+    return configFileInput({
+        label: "Basic Network Config",
+        key: "cfg",
+        value,
+        placeholder: "basic.cfg",
+        template: "basic",
+        defaultFile: "basic.cfg",
+    });
+}
+
+function configFileInput({
+    label,
+    key,
+    value,
+    placeholder,
+    template,
+    defaultFile,
+}) {
+    const target = `[data-arg-key="${key}"]`;
     return `
-    <div class="arg-field">
-      <label>Config Template</label>
-      <select data-config-template>
-        <option value="server" ${selectedAttr(selectedArmaConfigTemplate === "server")}>Server</option>
-        <option value="basic" ${selectedAttr(selectedArmaConfigTemplate === "basic")}>Basic Network</option>
-      </select>
+    <div class="arg-field full">
+      <label>${label}</label>
+      <div class="input-action action-three">
+        <input class="arg-input" data-arg-key="${key}" value="${escapeAttr(value)}" placeholder="${placeholder}" />
+        <button class="icon-button" type="button" data-picker="config" data-service-target="arma" data-target='${target}' title="Select config" aria-label="Select config"><span class="svg-icon icon-browse"></span></button>
+        <button class="icon-button" type="button" data-create-server-config data-config-template="${template}" data-config-target="${key}" data-default-file="${defaultFile}" title="Create default config" aria-label="Create default config"><span class="svg-icon icon-new"></span></button>
+        <button class="icon-button" type="button" data-edit-server-config data-config-target="${key}" title="Edit config" aria-label="Edit config"><span class="svg-icon icon-edit"></span></button>
+      </div>
     </div>
   `;
 }
@@ -819,6 +834,7 @@ function readArgumentFields(service, container) {
     if (service === "arma") {
         const args = [];
         if (value("config")) args.push(`-config=${value("config")}`);
+        if (value("cfg")) args.push(`-cfg=${value("cfg")}`);
         if (value("port")) args.push(`-port=${value("port")}`);
         if (value("profiles")) args.push(`-profiles=${value("profiles")}`);
         if (value("name")) args.push(`-name=${value("name")}`);
@@ -871,6 +887,7 @@ function parseSurrealArgs(args) {
 function parseArmaArgs(args) {
     const parsed = {
         config: "",
+        cfg: "",
         port: "",
         profiles: "",
         name: "",
@@ -888,6 +905,8 @@ function parseArmaArgs(args) {
 
         if (lowerArg.startsWith("-config=")) {
             parsed.config = arg.slice("-config=".length);
+        } else if (lowerArg.startsWith("-cfg=")) {
+            parsed.cfg = arg.slice("-cfg=".length);
         } else if (lowerArg.startsWith("-port=")) {
             parsed.port = arg.slice("-port=".length);
         } else if (lowerArg.startsWith("-profiles=")) {
@@ -936,7 +955,10 @@ async function pickPath(kind, targetSelector, service) {
 
     const input = document.querySelector(targetSelector);
     if (!input) return;
-    const finalPath = normalizePickedExecutable(service, selected);
+    const finalPath =
+        kind === "file"
+            ? normalizePickedExecutable(service, selected)
+            : selected;
     input.value = finalPath;
 
     if (kind === "file" && targetSelector.includes('data-field="command"')) {
@@ -966,7 +988,7 @@ function pickerFilters(kind) {
     return undefined;
 }
 
-async function createArmaServerConfig(template) {
+async function createArmaServerConfig(template, targetKey, defaultFile) {
     const save = window.__TAURI__?.dialog?.save;
     if (!save) {
         throw new Error(
@@ -977,7 +999,9 @@ async function createArmaServerConfig(template) {
     const workingDir = document
         .querySelector('[data-service="arma"][data-field="working_dir"]')
         ?.value.trim();
-    const defaultPath = workingDir ? `${workingDir}\\server.cfg` : "server.cfg";
+    const defaultPath = workingDir
+        ? `${workingDir}\\${defaultFile}`
+        : defaultFile;
     const selected = await save({
         defaultPath,
         filters: [{ name: "Arma Server Config", extensions: ["cfg"] }],
@@ -988,7 +1012,7 @@ async function createArmaServerConfig(template) {
         path: selected,
         template,
     });
-    const input = document.querySelector('[data-arg-key="config"]');
+    const input = document.querySelector(`[data-arg-key="${targetKey}"]`);
     if (input) {
         input.value = selected;
         configDirty = true;
@@ -1073,10 +1097,6 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
     return escapeHtml(value).replaceAll('"', "&quot;");
-}
-
-function selectedAttr(selected) {
-    return selected ? "selected" : "";
 }
 
 refresh();

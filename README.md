@@ -85,8 +85,23 @@ npm run host:build
 ```
 
 The app reads the shared `config.toml` from the repo root during development, or
-from the current/executable directory in packaged use. If no shared config exists,
-it falls back to `bin/host/host.example.toml`; saving from the Settings view writes
-the active shared `config.toml`. The shared file includes the host process sections
-plus the `[server]` section used by ICOM and the `[surreal]` section used by the
-Arma extension.
+from the current/executable directory in packaged use. Start from
+`bin/host/config.example.toml` when you want one shared config for Forge Host,
+ICOM, and the Arma extension. Saving from the Settings view writes the active
+shared `config.toml`.
+
+The shared file includes:
+
+- `[server]` for the ICOM hub bind address.
+- `[surreal]` for the Arma extension SurrealDB connection.
+- `[surrealdb]`, `[icom]`, and `[arma]` for Forge Host managed processes.
+
+Forge Host manages the two Arma dedicated server config files separately:
+`server.cfg` is launched with `-config` for server rules, missions, passwords,
+and admins, while `basic.cfg` is launched with `-cfg` for network tuning. The
+Arma Server settings view can create either file from `bin/host/server.example.cfg`
+or `bin/host/basic.example.cfg`, then open it in the built-in editor.
+
+Component-specific examples still exist for narrow deployments:
+`bin/icom/config.example.toml` contains only `[server]`, and
+`arma/server/extension/config.example.toml` contains only `[surreal]`.

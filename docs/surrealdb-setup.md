@@ -9,8 +9,10 @@ comes down to running a reachable database and matching the Forge config.
 Before launching an Arma server or local multiplayer test with Forge enabled:
 
 1. Start SurrealDB and confirm it is listening on the endpoint Forge will use.
-2. Copy `arma/server/extension/config.example.toml` to `config.toml` beside
-   `forge_server_x64.dll`.
+2. Create Forge's `config.toml`. Use `bin/host/config.example.toml` at the repo
+   root when Forge Host manages local services, or copy
+   `arma/server/extension/config.example.toml` beside `forge_server_x64.dll`
+   for an extension-only deployment.
 3. Make sure `config.toml` matches the running SurrealDB endpoint, namespace,
    database, username, and password.
 
@@ -70,9 +72,12 @@ surreal start --user root --pass root --bind 127.0.0.1:8000 rocksdb://forge.db
 `root`/`root` is only the local development default. For a public or shared
 server, set a real password and keep `config.toml` aligned.
 
-Then copy `arma/server/extension/config.example.toml` to `config.toml` next to
-`forge_server_x64.dll` and keep the values aligned with the database you
-started:
+Then create Forge's `config.toml` and keep the values aligned with the database
+you started. If you use Forge Host locally, copy `bin/host/config.example.toml`
+to the repo root as `config.toml`; the host will use the same file for managed
+processes, ICOM, and extension settings. If you only need the Arma extension
+config, copy `arma/server/extension/config.example.toml` next to
+`forge_server_x64.dll`.
 
 ```toml
 [surreal]
