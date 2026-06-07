@@ -1,13 +1,7 @@
 #include "script_component.hpp"
 
-[SRPC(task,registerMissionGeneratorProvider), {
-    params [
-        ["_providerId", "", [""]],
-        ["_provider", createHashMap, [createHashMap]]
-    ];
-
-    GVAR(MissionGeneratorProviderRegistry) call ["registerProvider", [_providerId, _provider]];
-}] call CFUNC(addEventHandler);
+if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); true };
+if (isNil QGVAR(MissionSetupService)) then { call FUNC(initMissionSetupService); };
 
 [SRPC(task,registerMissionGeneratorProvider), {
     params [

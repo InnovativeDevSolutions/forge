@@ -118,12 +118,6 @@ private _iedTimer = _taskParams getOrDefault ["iedTimer", 0];
     } forEach _objects;
 } forEach ["targets", "hostages", "shooters", "hvts", "ieds", "protected", "cargo"];
 
-// --- 2. Create BIS task ---
-
-[west, _taskID, [_description, _title, _taskType], _position, "CREATED", 1, true, _taskType] call BFUNC(taskCreate);
-
-// --- 3. Register catalog entry ---
-
 private _prerequisiteTaskIds = _taskParams getOrDefault [
     "prerequisiteTaskIds",
     _taskParams getOrDefault [
@@ -132,6 +126,8 @@ private _prerequisiteTaskIds = _taskParams getOrDefault [
     ]
 ];
 private _displayType = _taskParams getOrDefault ["displayType", _taskType];
+
+// --- 2. Register catalog entry ---
 
 GVAR(TaskStore) call ["registerTaskCatalogEntry", [_taskID, createHashMapFromArray [
     ["taskID", _taskID],
@@ -148,7 +144,7 @@ GVAR(TaskStore) call ["registerTaskCatalogEntry", [_taskID, createHashMapFromArr
     ["prerequisiteTaskIds", _prerequisiteTaskIds]
 ]]];
 
-// --- 4. Assemble type-specific handler args ---
+// --- 3. Assemble type-specific handler args ---
 
 private _limitFail = _taskParams getOrDefault ["limitFail", -1];
 private _limitSuccess = _taskParams getOrDefault ["limitSuccess", -1];
@@ -212,7 +208,7 @@ private _handlerArgs = switch (_taskType) do {
 
 if (_handlerArgs isEqualTo []) exitWith { false };
 
-// --- 5. Dispatch handler ---
+// --- 4. Dispatch handler ---
 
 [_taskType, _handlerArgs, _minRating, _requesterUid] spawn FUNC(handler);
 

@@ -41,14 +41,7 @@ impl Default for SurrealConfig {
 pub fn load() -> Config {
     CONFIG_CACHE
         .get_or_init(|| {
-            let config_path = std::env::current_exe()
-                .ok()
-                .and_then(|exe| {
-                    exe.parent()
-                        .map(|dir| dir.join("@forge_server").join("config.toml"))
-                })
-                .filter(|path| path.exists())
-                .unwrap_or_else(|| PathBuf::from("@forge_server/config.toml"));
+            let config_path = locate_config_path();
 
             match fs::read_to_string(&config_path) {
                 Ok(contents) => {
@@ -76,4 +69,25 @@ pub fn load() -> Config {
             }
         })
         .clone()
+}
+
+fn locate_config_path() -> PathBuf {
+    let mut candidates = Vec::new();
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("@forge_server").join("config.toml"));
+        candidates.push(cwd.join("config.toml"));
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("@forge_server").join("config.toml"));
+            candidates.push(dir.join("config.toml"));
+        }
+    }
+
+    candidates
+        .into_iter()
+        .find(|path| path.exists())
+        .unwrap_or_else(|| PathBuf::from("@forge_server/config.toml"))
 }

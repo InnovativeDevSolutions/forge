@@ -14,11 +14,13 @@
  */
 
 #pragma hemtt ignore_variables ["_self"]
-GVAR(BankBaseStore) = compileFinal createHashMapFromArray [
-    ["#base", EGVAR(common,BaseStore)],
+GVAR(BankBaseStore) = compileFinal ([
+    EGVAR(common,BaseStore),
+    createHashMapFromArray [
     ["#type", "BankBaseStore"],
     ["#create", compileFinal {
         ["INFO", "Bank Store Initialized!"] call EFUNC(common,log);
+        true
     }],
     ["normalizeAccount", compileFinal {
         params [["_uid", "", [""]], ["_account", createHashMap, [createHashMap]], ["_playerName", "", [""]]];
@@ -571,7 +573,13 @@ GVAR(BankBaseStore) = compileFinal createHashMapFromArray [
             ]
         ]
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(BankStore) = createHashMapObject [GVAR(BankBaseStore)];
-GVAR(BankStore)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(BankStore) = createHashMapObject [GVAR(BankBaseStore), []];
+true

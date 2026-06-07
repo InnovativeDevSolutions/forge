@@ -67,10 +67,15 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _taskTitle = _logic getVariable ["TaskTitle", ""];
+if (_taskTitle isEqualTo "") then { _taskTitle = format ["Hostage Rescue: %1", _taskID]; };
+private _taskDescription = _logic getVariable ["TaskDescription", ""];
+if (_taskDescription isEqualTo "") then { _taskDescription = "Locate and rescue the hostages and bring them to the extraction zone."; };
+private _taskIcon = _logic getVariable ["TaskIcon", "heal"];
 private _display = [
     _taskID,
-    format ["Hostage Rescue: %1", _taskID],
-    "Locate and rescue the hostages and bring them to the extraction zone."
+    _taskTitle,
+    _taskDescription
 ] call FUNC(resolveTaskDisplay);
 
 [
@@ -96,6 +101,7 @@ private _display = [
         ["cbrn", _logic getVariable ["CBRN", false]],
         ["execution", _logic getVariable ["Execution", false]],
         ["cbrnZone", _logic getVariable ["CBRNZone", ""]],
+        ["displayType", _taskIcon],
         ["equipment", _equipmentRewards],
         ["supplies", _supplyRewards],
         ["weapons", _weaponRewards],

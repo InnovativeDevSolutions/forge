@@ -1,16 +1,22 @@
-# Forge Server Configuration
-# Copy this file to config.toml and place it beside forge_server_x64.dll.
-# Start SurrealDB before launching the Arma server, and keep these values
-# aligned with the running database.
+# Forge Arma server extension configuration.
+#
+# Copy this file to `config.toml` beside `forge_server_x64.dll`, or use the
+# shared config generated from `bin/host/config.example.toml`.
+#
+# The Arma extension reads the [surreal] section. Extra host/ICOM sections in a
+# shared config are ignored by the extension.
 
 [surreal]
-# SurrealDB HTTP endpoint. Use "127.0.0.1:8000" for a local server.
+# SurrealDB HTTP endpoint. This must match the running SurrealDB --bind value.
 endpoint = "127.0.0.1:8000"
+
+# Namespace and database selected by the extension after connecting.
 namespace = "forge"
 database = "main"
 
-# Optional authentication.
+# Local development defaults. Use a real password for shared or public servers.
 username = "root"
 password = "root"
 
+# Initial connection timeout in milliseconds.
 connect_timeout_ms = 5000

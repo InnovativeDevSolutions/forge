@@ -2,7 +2,7 @@
 
 call FUNC(initBank);
 
-if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); };
+if (isNil QEGVAR(common,EventBus)) then { call EFUNC(common,eventBus); true };
 if (isNil QGVAR(AccountSyncEventTokens)) then {
     private _sendAccountSync = {
         params ["_event"];

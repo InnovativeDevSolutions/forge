@@ -23,11 +23,14 @@
 private _webUIDeclarations = call EFUNC(common,initWebUIBridge);
 private _webUIBridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
 
-GVAR(BankUIBridgeBaseClass) = compileFinal createHashMapFromArray [
-    ["#base", _webUIBridgeDeclaration],
+GVAR(BankUIBridgeBaseClass) = compileFinal ([
+    _webUIBridgeDeclaration,
+    createHashMapFromArray [
     ["#type", "BankUIBridgeBaseClass"],
     ["#create", compileFinal {
+        _self set ["screen", createHashMapObject [EGVAR(common,WebUIScreenDeclaration), []]];
         _self set ["mode", "bank"];
+        true
     }],
     ["getActiveBrowserControl", compileFinal {
         private _display = uiNamespace getVariable ["RscBank", displayNull];
@@ -166,7 +169,13 @@ GVAR(BankUIBridgeBaseClass) = compileFinal createHashMapFromArray [
         _self set ["mode", _finalMode];
         _finalMode
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(BankUIBridge) = createHashMapObject [GVAR(BankUIBridgeBaseClass)];
-GVAR(BankUIBridge)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(BankUIBridge) = createHashMapObject [GVAR(BankUIBridgeBaseClass), []];
+true

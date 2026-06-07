@@ -23,6 +23,8 @@ params [["_taskType", "", [""]], ["_args", [], [[]]], ["_minRating", 0, [0]], ["
 
 private _taskID = "";
 private _shouldStartTaskLogic = true;
+private _catalogEntry = createHashMap;
+private _source = "";
 
 if (_minRating > 0) then {
     if (_requesterUid isEqualTo "") then {
@@ -48,14 +50,14 @@ if (_args isNotEqualTo [] && { (_args select 0) isEqualType "" }) then {
 };
 
 if (_taskID isNotEqualTo "") then {
-    private _catalogEntry = GVAR(TaskStore) call ["getTaskCatalogEntry", [_taskID]];
-    private _source = if (_catalogEntry isEqualType createHashMap) then {
+    _catalogEntry = GVAR(TaskStore) call ["getTaskCatalogEntry", [_taskID]];
+    _source = if (_catalogEntry isEqualType createHashMap) then {
         _catalogEntry getOrDefault ["source", ""]
     } else {
         ""
     };
 
-    if (_requesterUid isNotEqualTo "" || { _source isNotEqualTo "mission_manager" }) then {
+    if (_requesterUid isNotEqualTo "") then {
         private _ownershipResult = GVAR(TaskStore) call ["bindTaskOwnership", [_taskID, _requesterUid]];
         if !(_ownershipResult getOrDefault ["success", false]) then {
             ["WARNING", format [
@@ -67,8 +69,9 @@ if (_taskID isNotEqualTo "") then {
         };
     } else {
         ["INFO", format [
-            "Skipped automatic ownership bind for generated mission %1 so it remains unaccepted until a player accepts it.",
-            _taskID
+            "Skipped automatic ownership bind for %1 from source '%2' so it remains unaccepted until CAD acknowledgement.",
+            _taskID,
+            _source
         ]] call EFUNC(common,log);
     };
 
@@ -86,9 +89,33 @@ if (_taskID isNotEqualTo "") then {
             ["WARNING", format ["Task %1 was cleared before its chained prerequisites unlocked.", _taskID]] call EFUNC(common,log);
         };
     };
+
+    if (_shouldStartTaskLogic && { _source in ["eden", "mission_manager"] }) then {
+        ["INFO", format ["Task %1 from source '%2' is waiting for dispatcher assignment acknowledgement before task logic starts.", _taskID, _source]] call EFUNC(common,log);
+        waitUntil {
+            sleep 2;
+            private _status = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];
+            _status in ["active", "failed", "succeeded", ""]
+        };
+
+        private _acknowledgedStatus = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];
+        if (_acknowledgedStatus isNotEqualTo "active") then {
+            _shouldStartTaskLogic = false;
+            ["WARNING", format [
+                "Task %1 from source '%2' did not become active before task logic start. Status=%3",
+                _taskID,
+                _source,
+                _acknowledgedStatus
+            ]] call EFUNC(common,log);
+        };
+    };
 };
 
 if !(_shouldStartTaskLogic) exitWith {};
+
+if (_taskID isNotEqualTo "") then {
+    GVAR(TaskStore) call ["ensureBisTaskCreated", [_taskID]];
+};
 
 switch (_taskType) do {
 	case "attack": {

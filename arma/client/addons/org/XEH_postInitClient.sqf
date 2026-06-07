@@ -1,7 +1,7 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(OrgRepository)) then { call FUNC(initRepository); };
-if (isNil QGVAR(OrgUIBridge)) then { call FUNC(initUIBridge); };
+if (isNil QGVAR(OrgRepository)) then { call FUNC(initRepository); true };
+if (isNil QGVAR(OrgUIBridge)) then { call FUNC(initUIBridge); true };
 
 [QGVAR(initOrg), {
     GVAR(OrgRepository) call ["init", []];

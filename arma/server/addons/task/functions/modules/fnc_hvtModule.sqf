@@ -48,10 +48,15 @@ private _weaponRewards = [_logic getVariable ["WeaponRewards", "[]"], _taskID, "
 private _vehicleRewards = [_logic getVariable ["VehicleRewards", "[]"], _taskID, "vehicles"] call FUNC(parseRewards);
 private _specialRewards = [_logic getVariable ["SpecialRewards", "[]"], _taskID, "special"] call FUNC(parseRewards);
 private _taskChainParams = [_logic] call FUNC(parseTaskChainAttributes);
+private _taskTitle = _logic getVariable ["TaskTitle", ""];
+if (_taskTitle isEqualTo "") then { _taskTitle = format ["HVT: %1", _taskID]; };
+private _taskDescription = _logic getVariable ["TaskDescription", ""];
+if (_taskDescription isEqualTo "") then { _taskDescription = "Locate and capture or eliminate the high-value target."; };
+private _taskIcon = _logic getVariable ["TaskIcon", "target"];
 private _display = [
     _taskID,
-    format ["HVT: %1", _taskID],
-    "Locate and capture or eliminate the high-value target."
+    _taskTitle,
+    _taskDescription
 ] call FUNC(resolveTaskDisplay);
 
 [
@@ -74,6 +79,7 @@ private _display = [
         ["timeLimit", _logic getVariable ["TimeLimit", 0]],
         ["extractionZone", _logic getVariable ["ExtZone", ""]],
         ["captureHvt", _logic getVariable ["CaptureHVT", true]],
+        ["displayType", _taskIcon],
         ["equipment", _equipmentRewards],
         ["supplies", _supplyRewards],
         ["weapons", _weaponRewards],

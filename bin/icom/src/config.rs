@@ -54,19 +54,7 @@ fn default_port() -> u16 {
 ///
 /// If no config file is found, uses default values.
 pub fn load() -> Config {
-    // Try current directory first
-    let config_path = PathBuf::from("config.toml");
-
-    let config_path = if config_path.exists() {
-        config_path
-    } else {
-        // Try executable directory
-        std::env::current_exe()
-            .ok()
-            .and_then(|exe| exe.parent().map(|dir| dir.join("config.toml")))
-            .filter(|p| p.exists())
-            .unwrap_or_else(|| PathBuf::from("config.toml"))
-    };
+    let config_path = locate_config_path();
 
     match fs::read_to_string(&config_path) {
         Ok(contents) => {
@@ -88,4 +76,28 @@ pub fn load() -> Config {
             Config::default()
         }
     }
+}
+
+fn locate_config_path() -> PathBuf {
+    let mut candidates = Vec::new();
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidates.push(cwd.join("config.toml"));
+        candidates.push(cwd.join("@forge_server").join("config.toml"));
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("config.toml"));
+            if let Some(parent) = dir.parent() {
+                candidates.push(parent.join("config.toml"));
+                candidates.push(parent.join("@forge_server").join("config.toml"));
+            }
+        }
+    }
+
+    candidates
+        .into_iter()
+        .find(|path| path.exists())
+        .unwrap_or_else(|| PathBuf::from("config.toml"))
 }

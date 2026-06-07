@@ -23,8 +23,9 @@
 private _webUIDeclarations = call EFUNC(common,initWebUIBridge);
 private _webUIBridgeDeclaration = _webUIDeclarations get "bridgeDeclaration";
 
-GVAR(GarageUIBridgeBaseClass) = compileFinal createHashMapFromArray [
-    ["#base", _webUIBridgeDeclaration],
+GVAR(GarageUIBridgeBaseClass) = compileFinal ([
+    _webUIBridgeDeclaration,
+    createHashMapFromArray [
     ["#type", "GarageUIBridgeBaseClass"],
     ["getActiveBrowserControl", compileFinal {
         private _display = uiNamespace getVariable ["RscGarage", displayNull];
@@ -53,7 +54,13 @@ GVAR(GarageUIBridgeBaseClass) = compileFinal createHashMapFromArray [
 
         _self call ["sendEvent", ["garage::sync", GVAR(GaragePayloadService) call ["buildPayload", []], _control]]
     }]
-];
+]] call {
+    params ["_base", "_child"];
 
-GVAR(GarageUIBridge) = createHashMapObject [GVAR(GarageUIBridgeBaseClass)];
-GVAR(GarageUIBridge)
+    private _merged = +_base;
+    { _merged set [_x, _y]; } forEach _child;
+    _merged
+});
+
+GVAR(GarageUIBridge) = createHashMapObject [GVAR(GarageUIBridgeBaseClass), []];
+true

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FORGE Host</title>
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+
+    <body>
+        <main class="shell">
+            <aside class="rail">
+                <nav class="nav">
+                    <button
+                        class="nav-button active"
+                        type="button"
+                        data-view="overview"
+                        title="Overview"
+                    >
+                        <span class="svg-icon icon-dashboard"></span>
+                        <span>Overview</span>
+                    </button>
+                    <button
+                        class="nav-button"
+                        type="button"
+                        data-view="settings"
+                        title="Settings"
+                    >
+                        <span class="svg-icon icon-database"></span>
+                        <span>SurrealDB</span>
+                    </button>
+                    <button
+                        class="nav-button"
+                        type="button"
+                        data-view="settings"
+                        data-service="icom"
+                        title="ICOM"
+                    >
+                        <span class="svg-icon icon-icom"></span>
+                        <span>ICOM</span>
+                    </button>
+                    <button
+                        class="nav-button"
+                        type="button"
+                        data-view="settings"
+                        data-service="arma"
+                        title="Arma 3 Server"
+                    >
+                        <span class="svg-icon icon-server"></span>
+                        <span>Arma Server</span>
+                    </button>
+                    <button
+                        class="nav-button"
+                        type="button"
+                        data-view="logs"
+                        title="Logs"
+                    >
+                        <span class="svg-icon icon-logs"></span>
+                        <span>Logs</span>
+                    </button>
+                </nav>
+            </aside>
+
+            <section class="workspace">
+                <header class="topbar">
+                    <div class="view-heading">
+                        <h1 id="viewTitle">Overview</h1>
+                        <p id="viewSubtitle">
+                            Local service control for Forge server hosting.
+                        </p>
+                    </div>
+                    <div class="top-actions">
+                        <div
+                            id="bulkActions"
+                            class="bulk-actions"
+                            style="display: none"
+                        >
+                            <button
+                                id="startAllButton"
+                                class="start icon-button"
+                                type="button"
+                                aria-label="Start All"
+                                title="Start all services"
+                            >
+                                <span class="svg-icon icon-play"></span>
+                            </button>
+                            <button
+                                id="stopAllButton"
+                                class="stop icon-button"
+                                type="button"
+                                aria-label="Stop All"
+                                title="Stop all services"
+                            >
+                                <span class="svg-icon icon-stop"></span>
+                            </button>
+                        </div>
+                        <button
+                            id="refreshButton"
+                            class="primary icon-button"
+                            type="button"
+                            aria-label="Refresh"
+                            title="Refresh"
+                        >
+                            <span class="svg-icon icon-refresh"></span>
+                        </button>
+                        <button
+                            id="saveButton"
+                            class="icon-button"
+                            type="button"
+                            aria-label="Save"
+                            title="Save"
+                        >
+                            <span class="svg-icon icon-save"></span>
+                        </button>
+                    </div>
+                    <div class="config-path">
+                        <span>Config</span>
+                        <strong id="configPath">Loading</strong>
+                    </div>
+                </header>
+
+                <section id="overviewView" class="view active">
+                    <div id="serviceGrid" class="service-grid"></div>
+                </section>
+
+                <section id="settingsView" class="view">
+                    <form id="configForm" class="settings-grid"></form>
+                </section>
+
+                <section id="logsView" class="view">
+                    <div id="logOutput" class="log-output"></div>
+                </section>
+            </section>
+            <div class="version-display" title="FORGE Host version">
+                <span id="appVersion" class="version-text">v0.1.0</span>
+            </div>
+        </main>
+
+        <div id="editorOverlay" class="editor-overlay" hidden>
+            <section class="editor-modal">
+                <header class="editor-header">
+                    <div>
+                        <h2>Server Config</h2>
+                        <p id="editorPath"></p>
+                    </div>
+                    <button
+                        id="editorCloseButton"
+                        class="icon-button"
+                        type="button"
+                        title="Close"
+                        aria-label="Close"
+                    >
+                        <span class="svg-icon icon-close"></span>
+                    </button>
+                </header>
+                <textarea id="configEditor" spellcheck="false"></textarea>
+                <footer class="editor-actions">
+                    <button
+                        id="editorReloadButton"
+                        class="primary"
+                        type="button"
+                        aria-label="Refresh"
+                    >
+                        <span class="svg-icon icon-refresh"></span>
+                    </button>
+                    <button
+                        id="editorSaveButton"
+                        class="icon-button"
+                        type="button"
+                        aria-label="Save"
+                    >
+                        <span class="svg-icon icon-save"></span>
+                    </button>
+                </footer>
+            </section>
+        </div>
+
+        <template id="serviceCardTemplate">
+            <article class="service-card">
+                <header>
+                    <div>
+                        <div class="service-title-row">
+                            <h2></h2>
+                            <span class="ping-pill"></span>
+                        </div>
+                        <p class="command-line"></p>
+                    </div>
+                    <span class="status-pill"></span>
+                </header>
+                <dl class="metrics">
+                    <div>
+                        <dt>Process</dt>
+                        <dd class="pid"></dd>
+                    </div>
+                    <div>
+                        <dt>Health</dt>
+                        <dd class="health"></dd>
+                    </div>
+                    <div>
+                        <dt>Enabled</dt>
+                        <dd class="enabled"></dd>
+                    </div>
+                </dl>
+                <div class="card-actions">
+                    <button
+                        class="start icon-button"
+                        type="button"
+                        aria-label="Start"
+                    >
+                        <span class="svg-icon icon-play"></span>
+                    </button>
+                    <button
+                        class="stop icon-button"
+                        type="button"
+                        aria-label="Stop"
+                    >
+                        <span class="svg-icon icon-stop"></span>
+                    </button>
+                </div>
+            </article>
+        </template>
+
+        <script src="./app.js"></script>
+    </body>
+</html>

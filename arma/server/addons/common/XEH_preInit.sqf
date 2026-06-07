@@ -6,7 +6,7 @@ PREP_RECOMPILE_END;
 
 // private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 
-if (isNil QGVAR(EventBus)) then { call FUNC(eventBus); };
+if (isNil QGVAR(EventBus)) then { call FUNC(eventBus); true };
 if (isNil QGVAR(NotificationEventTokens)) then {
     private _sendNotification = {
         params ["_event"];

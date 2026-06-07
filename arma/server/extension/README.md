@@ -11,7 +11,10 @@ This extension build targets SurrealDB `3.x`.
 Before starting the Arma server with Forge enabled:
 
 1. Start SurrealDB.
-2. Copy `config.example.toml` to `config.toml` beside `forge_server_x64.dll`.
+2. Create Forge's `config.toml`. Copy `config.example.toml` beside
+   `forge_server_x64.dll` for an extension-only deployment, or use the shared
+   repo-root config from `bin/host/config.example.toml` when Forge Host manages
+   local services.
 3. Match the `config.toml` endpoint, namespace, database, username, and password
    to the running SurrealDB instance.
 
@@ -23,7 +26,8 @@ normal gameplay.
 
 - Register extension command groups for actor, bank, garage, locker, org,
   phone, store, task, CAD, terrain, and transport systems.
-- Load extension configuration from `@forge_server/config.toml`.
+- Load extension configuration from `@forge_server/config.toml`, `config.toml`
+  in the working directory, or `config.toml` beside the extension DLL.
 - Connect to SurrealDB and apply schema modules on startup.
 - Keep SQF-facing command handlers thin while service crates own domain rules.
 
@@ -31,13 +35,23 @@ normal gameplay.
 
 ```toml
 [surreal]
+# SurrealDB HTTP endpoint.
 endpoint = "127.0.0.1:8000"
+
+# Namespace and database selected after connecting.
 namespace = "forge"
 database = "main"
+
+# Local development credentials.
 username = "root"
 password = "root"
+
+# Initial connection timeout in milliseconds.
 connect_timeout_ms = 5000
 ```
+
+The extension reads only `[surreal]`. Extra sections from the shared Forge Host
+config are ignored.
 
 ## Status
 

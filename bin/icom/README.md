@@ -20,18 +20,21 @@ The ICOM server can be configured using a `config.toml` file. Create one from th
 cp bin/icom/config.example.toml config.toml
 ```
 
-Place `config.toml` in the same directory as the `forge-icom` executable or in the current working directory.
+Place `config.toml` in the same directory as the `forge-icom` executable or in
+the current working directory. If Forge Host manages the hub, use the shared
+repo-root `config.toml` created from `bin/host/config.example.toml`; it includes
+the same `[server]` section and the ICOM hub ignores unrelated sections.
 
 ### Configuration Options
 
 ```toml
 [server]
-# Host to bind to
-# "0.0.0.0" = All interfaces (allows remote connections)
-# "127.0.0.1" = Localhost only
+# TCP address to bind.
+# "0.0.0.0" = all interfaces, allowing remote servers.
+# "127.0.0.1" = localhost only.
 host = "0.0.0.0"
 
-# Port to listen on
+# TCP port used by extension `icom:connect`.
 port = 9090
 ```
 

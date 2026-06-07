@@ -294,42 +294,6 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         _self call ["emitGroupEvent", ["cad.group.updated", _result]];
         _result
     }],
-    ["hydrateContractsWithTaskCatalog", compileFinal {
-        params [
-            ["_payload", createHashMap, [createHashMap]],
-            ["_catalogByID", createHashMap, [createHashMap]]
-        ];
-
-        private _contracts = _payload getOrDefault ["contracts", []];
-        if !(_contracts isEqualType []) exitWith { _payload };
-
-        {
-            if !(_x isEqualType createHashMap) then { continue; };
-
-            private _taskID = _x getOrDefault ["taskID", _x getOrDefault ["taskId", ""]];
-            if (_taskID isEqualTo "") then { continue; };
-
-            private _catalogEntry = _catalogByID getOrDefault [_taskID, createHashMap];
-            if !(_catalogEntry isEqualType createHashMap) then { continue; };
-            if (_catalogEntry isEqualTo createHashMap) then { continue; };
-
-            private _title = _catalogEntry getOrDefault ["title", ""];
-            if (_title isNotEqualTo "") then {
-                _x set ["title", _title];
-            };
-
-            private _description = _catalogEntry getOrDefault ["description", ""];
-            if (_description isNotEqualTo "") then {
-                _x set ["description", _description];
-            };
-
-            _x set ["taskId", _taskID];
-            _x set ["taskID", _taskID];
-        } forEach _contracts;
-
-        _payload set ["contracts", _contracts];
-        _payload
-    }],
     ["buildHydratePayload", compileFinal {
         params [["_uid", "", [""]]];
 
@@ -350,18 +314,9 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
             ["groupId", _groupID],
             ["isLeader", _groupRepository call ["isGroupLeader", [_uid, _groupID]]]
         ];
-        private _activeTasks = EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []];
-        private _activeTaskByID = createHashMap;
-        {
-            if !(_x isEqualType createHashMap) then { continue; };
-
-            private _taskID = _x getOrDefault ["taskID", _x getOrDefault ["taskId", ""]];
-            if (_taskID isNotEqualTo "") then { _activeTaskByID set [_taskID, _x]; };
-        } forEach _activeTasks;
-
         private _seed = createHashMapFromArray [
             ["groups", _groupRepository call ["buildGroups", []]],
-            ["activeTasks", _activeTasks],
+            ["activeTasks", EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []]],
             ["generatedTaskTypes", _generatedTaskTypes],
             ["session", _session]
         ];
@@ -385,7 +340,6 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         if (_hydrateResult getOrDefault ["success", false]) exitWith {
             private _data = _hydrateResult getOrDefault ["data", createHashMap];
             _data set ["generatedTaskTypes", _generatedTaskTypes];
-            _data = _self call ["hydrateContractsWithTaskCatalog", [_data, _activeTaskByID]];
             _data
         };
 

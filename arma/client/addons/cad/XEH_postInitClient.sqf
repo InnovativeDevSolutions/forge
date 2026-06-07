@@ -1,7 +1,7 @@
 #include "script_component.hpp"
 
-if (isNil QGVAR(CADRepository)) then { call FUNC(initRepository); };
-if (isNil QGVAR(CADUIBridge)) then { call FUNC(initUIBridge); };
+if (isNil QGVAR(CADRepository)) then { call FUNC(initRepository); true };
+if (isNil QGVAR(CADUIBridge)) then { call FUNC(initUIBridge); true };
 
 [QGVAR(openCAD), {
     call FUNC(openUI);
