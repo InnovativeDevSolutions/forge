@@ -71,10 +71,12 @@ class CfgStore {
 };
 ```
 
-`dynamic` keeps the full generated catalog. `allowlist` only shows classnames
-listed for the requested category. `denylist` removes listed classnames from the
-generated category. Overrides are applied server-side, so checkout validation
-uses the same prices and descriptions the UI displays.
+`modMode` is applied first. After that, any non-empty
+`Categories.<category>[]` array acts as an explicit allowlist for only that
+category, regardless of `mode`. Categories with empty arrays follow `mode`:
+`dynamic` keeps generated entries and `allowlist` hides the category. Overrides
+are applied server-side, so checkout validation uses the same prices and
+descriptions the UI displays.
 
 `modMode` applies before category filtering. `dynamic` means no mod-source
 filtering. `allowlist` only keeps generated entries that match one of the
@@ -86,9 +88,10 @@ metadata tokens that can appear anywhere, and `dlcs[]` for DLC/source/author
 labels used by Creator DLC content. If a mod source defines no patches, it is
 treated as available and only the source/prefix/contains/DLC checks are used.
 
-`units[]` follows the same `dynamic`, `allowlist`, and `denylist` behavior as
-item and vehicle categories. Unit purchases are immediate spawn grants, not
-durable virtual garage unlocks.
+Unit catalog responses are additionally filtered to the requesting player's
+side. Unit entries include side and faction metadata for UI display, and
+checkout validation rejects unit classnames from another side. Unit purchases
+are immediate spawn grants, not durable virtual garage unlocks.
 
 The filter is currently global for the mission. Revisit per-store profile
 support if individual vendors need different inventories.

@@ -195,6 +195,8 @@
                 item.description,
                 item.price,
                 item.type,
+                item.sideLabel,
+                item.factionName,
             ]),
         );
     }

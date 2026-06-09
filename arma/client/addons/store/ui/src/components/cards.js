@@ -94,6 +94,7 @@ ${scopeSelector} .product-card:hover {
 
 ${scopeSelector} .card-kicker,
 ${scopeSelector} .product-code,
+${scopeSelector} .product-tag,
 ${scopeSelector} .empty-state-kicker {
     font-size: 0.72rem;
     letter-spacing: 0.14em;
@@ -154,6 +155,21 @@ ${scopeSelector} .product-meta {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+}
+
+${scopeSelector} .product-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+${scopeSelector} .product-tag {
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.18rem 0.42rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--store-accent-line);
+    background: rgb(255 255 255 / 0.42);
 }
 
 ${scopeSelector} .product-name {
@@ -370,6 +386,10 @@ ${scopeSelector} .product-copy {
             item.description,
             item.className || item.code,
         );
+        const tags = [
+            item.sideLabel ? item.sideLabel : "",
+            item.factionName ? item.factionName : "",
+        ].filter(Boolean);
 
         return h(
             "article",
@@ -399,6 +419,15 @@ ${scopeSelector} .product-copy {
                     { className: "product-code" },
                     item.type || item.code || item.className,
                 ),
+                tags.length > 0
+                    ? h(
+                          "div",
+                          { className: "product-tags" },
+                          tags.map((tag) =>
+                              h("span", { className: "product-tag" }, tag),
+                          ),
+                      )
+                    : null,
                 h("strong", { className: "product-name" }, item.name),
             ),
             h("p", { className: "product-copy" }, description),

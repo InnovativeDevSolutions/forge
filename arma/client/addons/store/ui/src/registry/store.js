@@ -17,6 +17,10 @@
                 type: String(item?.type || ""),
                 category: String(item?.category || ""),
                 entryKind: String(item?.entryKind || "item"),
+                side: String(item?.side || ""),
+                sideLabel: String(item?.sideLabel || ""),
+                faction: String(item?.faction || ""),
+                factionName: String(item?.factionName || ""),
                 quantity: Math.max(0, Number(item?.quantity || 0)),
             };
         }

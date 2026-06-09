@@ -530,7 +530,7 @@ GVAR(StorefrontBaseStore) = compileFinal createHashMapFromArray [
             _result
         };
 
-        private _checkoutRequest = GVAR(StoreCatalogService) call ["buildCheckoutRequest", [_items, _vehicles, _units]];
+        private _checkoutRequest = GVAR(StoreCatalogService) call ["buildCheckoutRequest", [_items, _vehicles, _units, _player]];
         private _totalPrice = _checkoutRequest getOrDefault ["total", 0];
 
         _result set ["paymentMethod", _paymentMethod];

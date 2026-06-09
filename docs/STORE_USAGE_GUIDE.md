@@ -71,10 +71,17 @@ class CfgStore {
 };
 ```
 
-`dynamic` keeps the full generated catalog. `allowlist` only shows classnames
-listed for each category. `denylist` removes listed classnames. Overrides are
-server-side and are used by both the UI payload and checkout validation.
-`units[]` uses the same filter behavior as every other category.
+`modMode` is applied first. After that, any non-empty
+`Categories.<category>[]` array acts as an explicit allowlist for only that
+category, regardless of `mode`. Categories with empty arrays follow `mode`:
+`dynamic` keeps the generated entries and `allowlist` hides the category.
+Overrides are server-side and are used by both the UI payload and checkout
+validation.
+
+Unit catalog responses are additionally filtered to the requesting player's
+side. Unit entries include side and faction metadata so the UI can show the
+available faction before purchase, and checkout validation rejects unit
+classnames from another side.
 
 `modMode` applies before category filtering. `dynamic` means no mod-source
 filtering. `allowlist` only keeps generated entries that match one of the
@@ -93,9 +100,9 @@ modMode = "allowlist";
 mods[] = {"rhs"};
 ```
 
-The matching `class rhs` must exist under `ModSources`. Category `mode` is still
-applied afterward, so leave `mode = "dynamic"` if the mod filter should be the
-only inventory filter.
+The matching `class rhs` must exist under `ModSources`. Category arrays are
+still applied afterward, so leave arrays empty and `mode = "dynamic"` if the mod
+filter should be the only inventory filter.
 
 For Creator DLCs such as RF or WS, prefer both prefixes and DLC labels:
 

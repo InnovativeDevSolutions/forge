@@ -20,7 +20,7 @@ PREP_RECOMPILE_END;
         diag_log "[FORGE:Server:Store] Store catalog service is unavailable."
     };
 
-    private _result = GVAR(StoreCatalogService) call ["buildCategoryResponse", [_category]];
+    private _result = GVAR(StoreCatalogService) call ["buildCategoryResponse", [_category, _player]];
     [CRPC(store,responseCategory), [_result], _player] call CFUNC(targetEvent);
 }] call CFUNC(addEventHandler);
 
