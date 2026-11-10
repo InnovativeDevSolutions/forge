@@ -216,8 +216,8 @@ CAD hydrates assignable tasks from `TaskStore.getActiveTaskCatalog`. A task must
 have a catalog entry and a task status of `available`, `assigned`, or `active`
 before CAD can show it.
 CAD assignment only reserves a task for a group. The task is accepted and task
-logic starts after the assigned group leader acknowledges the assignment. If
-the leader declines, the CAD assignment is removed and the task returns to the
+logic starts after the assigned group leader accepts the assignment. If
+the leader declines, the assignment is cleared and the task returns to the
 open contract board.
 
 CAD-compatible creation paths:
@@ -298,7 +298,7 @@ Use these rules for every Forge task:
 3. Prefer `RECTANGLE` or `ELLIPSE` markers with real size.
 4. Set success and fail limits explicitly instead of relying on defaults.
 5. If a task uses a timer, the countdown now waits until the assigned group
-   leader acknowledges the task.
+   leader accepts the task.
 6. Grouping modules such as `Explosive Entities`, `Protected Entities`,
    `Cargo`, `Hostages`, and `Shooters` should be synced to real world objects,
    not other logic modules.
@@ -453,7 +453,7 @@ Notes:
 
 - Hostages and shooters are filtered to real units only.
 - Hostages are protected immediately on task registration to avoid startup race conditions.
-- The hostage timer now waits until the assigned group leader acknowledges the
+- The hostage timer now waits until the assigned group leader accepts the
   task before counting down.
 - `ExtZone` is checked with `inArea`, so it must be an area marker.
 
@@ -481,7 +481,7 @@ Notes:
 
 - Capture mode uses `ExtZone` with `inArea`, so use an area marker.
 - Elimination mode does not require an extraction zone.
-- The HVT timer now waits until the assigned group leader acknowledges the task
+- The HVT timer now waits until the assigned group leader accepts the task
   before counting down.
 
 ### Defend Task

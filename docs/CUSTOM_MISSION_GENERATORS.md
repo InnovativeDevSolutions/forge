@@ -288,7 +288,7 @@ CAD assignment and task execution are intentionally separate.
 | --- | --- | --- |
 | Created and visible | `available` | No group reservation yet. |
 | Dispatcher assigns | `assigned` | CAD reserves the task for a group. |
-| Group leader acknowledges | `active` | Task ownership is accepted for the acknowledging player/org. |
+| Group leader accepts | `active` | Task ownership is bound to the accepting leader and their org. |
 | Runtime finishes | `succeeded` or `failed` | CAD refreshes and removes completed active contracts. |
 
 Custom task logic should account for this lifecycle. If the task should not
@@ -303,7 +303,9 @@ waitUntil {
 };
 ```
 
-If a group declines the assignment, CAD returns the task to `available`.
+If a group declines the assignment, CAD returns the task to `available` and
+records `lastDeclinedGroupId` and `lastDeclinedGroupCallsign` on the catalog
+entry. An accepted (`active`) task cannot be declined.
 
 ## EventBus Integration
 
@@ -319,15 +321,14 @@ Subscribe to CAD and task lifecycle events:
 
 ```sqf
 private _token = forge_server_common_EventBus call ["on", [
-    "cad.assignment.acknowledged",
+    "cad.contract.accepted",
     {
         params ["_event"];
-        private _taskID = _event getOrDefault ["taskID", ""];
-        private _assignment = _event getOrDefault ["assignment", createHashMap];
+        private _entry = _event getOrDefault ["entry", createHashMap];
         diag_log format [
-            "[CustomGenerator] Task %1 acknowledged by group %2",
-            _taskID,
-            _assignment getOrDefault ["groupId", ""]
+            "[CustomGenerator] Task %1 accepted by group %2",
+            _event getOrDefault ["taskId", ""],
+            _entry getOrDefault ["assignedGroupCallsign", _event getOrDefault ["groupId", ""]]
         ];
     },
     "custom_generator.assignment"
@@ -344,13 +345,21 @@ Useful CAD events:
 
 | Event | When it fires |
 | --- | --- |
-| `cad.assignment.assigned` | Dispatcher assigns a task or order. |
-| `cad.assignment.acknowledged` | Group leader accepts an assignment. |
-| `cad.assignment.declined` | Group leader declines an assignment. |
-| `cad.assignment.closed` | Dispatch order is closed. |
-| `cad.request.submitted` | Support request is submitted. |
-| `cad.request.closed` | Support request is closed. |
+| `cad.contract.assigned` | Dispatcher assigns a task or order to a group. |
+| `cad.contract.accepted` | Group leader accepts the assignment. |
+| `cad.contract.declined` | Group leader declines the assignment. |
 | `cad.group.updated` | Group status or role changes. |
+
+Contract events carry `taskId`, `groupId` and the updated catalog `entry`.
+
+Useful dispatch events (when `forge_server_dispatch` is loaded):
+
+| Event | When it fires |
+| --- | --- |
+| `dispatch.order.created` | Dispatch order is created and assigned. |
+| `dispatch.order.closed` | Dispatch order is closed. |
+| `dispatch.request.submitted` | Support request is submitted. |
+| `dispatch.request.closed` | Support request is closed. |
 
 Useful task events:
 
@@ -365,8 +374,8 @@ Useful task events:
 | `task.rating.applied` | Rating/earnings outcome succeeds. |
 | `task.notification.requested` | Task participant notification is requested. |
 
-CAD already listens to task and CAD events and globally invalidates CAD state
-when relevant changes occur. Custom generators usually only need to emit task
+CAD already listens to task events and globally invalidates CAD state when
+relevant changes occur. Custom generators usually only need to emit task
 status changes through TaskStore or extension commands; CAD refresh follows
 from the existing listeners.
 
@@ -408,7 +417,7 @@ For each custom generator:
 4. Set task status to `available`.
 5. Confirm the task appears in CAD.
 6. Assign it to a group from CAD.
-7. Acknowledge and decline from the group leader UI.
+7. Accept and decline from the group leader UI.
 8. Confirm custom logic waits for `active` if needed.
 9. Set `succeeded` or `failed` when the objective resolves.
 10. Confirm CAD refreshes and rewards or cleanup behave as expected.

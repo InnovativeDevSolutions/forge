@@ -89,6 +89,15 @@ GVAR(TaskStore) = createHashMapObject [[
     ["acceptTask", compileFinal {
         GVAR(TaskCatalogStore) call ["acceptTask", _this]
     }],
+    ["assignTaskToGroup", compileFinal {
+        GVAR(TaskCatalogStore) call ["assignTaskToGroup", _this]
+    }],
+    ["acceptTaskForGroup", compileFinal {
+        GVAR(TaskCatalogStore) call ["acceptTaskForGroup", _this]
+    }],
+    ["declineTaskForGroup", compileFinal {
+        GVAR(TaskCatalogStore) call ["declineTaskForGroup", _this]
+    }],
     ["ensureBisTaskCreated", compileFinal {
         GVAR(TaskCatalogStore) call ["ensureBisTaskCreated", _this]
     }],

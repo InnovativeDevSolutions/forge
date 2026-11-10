@@ -18,6 +18,7 @@ window.cadDispatcher = {
     groups: [],
     activity: [],
     session: {},
+    dispatchEnabled: false,
     editingGroupId: "",
     viewingRequestId: "",
     convertingRequestId: "",
@@ -134,6 +135,7 @@ window.cadDispatcher = {
         this.requests = Array.isArray(payload.requests) ? payload.requests : [];
         this.groups = Array.isArray(payload.groups) ? payload.groups : [];
         this.activity = Array.isArray(payload.activity) ? payload.activity : [];
+        this.dispatchEnabled = !!payload.dispatchEnabled;
         if (Array.isArray(payload.generatedTaskTypes)) {
             this.taskTypes = payload.generatedTaskTypes
                 .map((entry) => ({

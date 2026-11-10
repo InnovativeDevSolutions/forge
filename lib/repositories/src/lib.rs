@@ -1,6 +1,6 @@
 pub mod actor;
 pub mod bank;
-pub mod cad;
+pub mod dispatch;
 pub mod garage;
 pub mod locker;
 pub mod org;
@@ -11,7 +11,7 @@ pub mod v_locker;
 
 pub use actor::{ActorHotRepository, ActorRepository, InMemoryActorHotRepository};
 pub use bank::{BankHotRepository, BankRepository, InMemoryBankHotRepository};
-pub use cad::{CadRepository, InMemoryCadRepository};
+pub use dispatch::{DispatchRepository, InMemoryDispatchRepository};
 pub use garage::{GarageHotRepository, GarageRepository, InMemoryGarageHotRepository};
 pub use locker::{InMemoryLockerHotRepository, LockerHotRepository, LockerRepository};
 pub use org::{InMemoryOrgHotRepository, OrgHotRepository, OrgRepository};

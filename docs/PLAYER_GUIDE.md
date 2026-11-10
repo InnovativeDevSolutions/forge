@@ -33,8 +33,8 @@ Player workflow:
 1. Open CAD from the available interaction path.
 2. Review available or assigned tasks.
 3. If a dispatcher assigns a task to your group, the group leader must
-   acknowledge or decline it.
-4. Once acknowledged, the task becomes active for the assigned group.
+   accept or decline it.
+4. Once accepted, the task becomes active for the assigned group.
 5. Complete the task objective shown by CAD, map task state, and mission
    instructions.
 
@@ -55,7 +55,7 @@ Dispatch workflow:
 2. Use dispatch mode to review groups, open contracts, assigned contracts, and
    support requests.
 3. Assign available contracts to active groups.
-4. Send dispatch orders or close completed orders as needed.
+4. Send dispatch orders or close completed orders as needed (requires the dispatch addon).
 5. Track group status and recent CAD activity.
 
 Dispatch access:
@@ -70,9 +70,9 @@ Dispatch access:
 Important task behavior:
 
 - CAD assignment reserves a task for a group.
-- The task starts after the assigned group leader acknowledges it.
+- The task starts after the assigned group leader accepts it.
 - If the leader declines, the task returns to the open contract board.
-- Some task timers wait for group-leader acknowledgment before counting down.
+- Some task timers wait for group-leader acceptance before counting down.
 
 ## Phone
 
@@ -336,7 +336,7 @@ If a system does not appear or does not work:
 
 - Move closer to the interaction object.
 - Confirm you are using the correct object type, such as ATM vs bank.
-- Confirm your group leader has acknowledged an assigned CAD task.
+- Confirm your group leader has accepted an assigned CAD task.
 - Confirm the needed store unlock has been purchased before checking VA or VG.
 - Confirm the garage spawn point is clear before using the virtual garage.
 - Confirm your player, cash, bank, or organization funds can cover the service.

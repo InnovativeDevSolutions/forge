@@ -7,13 +7,13 @@
  * Public: Yes
  *
  * Description:
- * Initializes the CAD store as a coordinator over activity, group,
- * assignment, and permission domain objects.
+ * Initializes the CAD store: contracts (task catalog entries), which group
+ * each is assigned to, accept/decline by the group leader, and live groups
+ * with their role, status and members.
  *
- * CAD operational state is extension-backed but intentionally transient.
- * Orders, requests, assignments, hydrate state, and recent activity are
- * scoped to the active server/mission lifecycle and start fresh after a
- * restart.
+ * CAD keeps no contract state of its own; TaskStore is the single source of
+ * truth. Other addons (e.g. forge_server_dispatch) extend the hydrate payload
+ * through `registerHydrateContributor`.
  *
  * Arguments:
  * None
@@ -29,39 +29,37 @@
 GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
     ["#type", "CadStoreBaseClass"],
     ["#create", compileFinal {
-        private _activityRepository = call FUNC(initActivityRepository);
         private _permissionService = call FUNC(initPermissionService);
         private _groupRepository = call FUNC(initGroupRepository);
-        private _assignmentRepository = call FUNC(initAssignmentRepository);
-        private _persistenceService = call FUNC(initPersistenceService);
-        private _requestRepository = call FUNC(initRequestRepository);
+        private _contractService = call FUNC(initContractService);
 
-        _groupRepository set ["activityRepository", _activityRepository];
-        _groupRepository set ["assignmentRepository", _assignmentRepository];
         _groupRepository set ["permissionService", _permissionService];
-        _groupRepository set ["persistenceService", _persistenceService];
+        _contractService set ["permissionService", _permissionService];
+        _contractService set ["groupRepository", _groupRepository];
 
-        _assignmentRepository set ["activityRepository", _activityRepository];
-        _assignmentRepository set ["groupRepository", _groupRepository];
-        _assignmentRepository set ["permissionService", _permissionService];
-        _assignmentRepository set ["persistenceService", _persistenceService];
-
-        _requestRepository set ["activityRepository", _activityRepository];
-        _requestRepository set ["groupRepository", _groupRepository];
-        _requestRepository set ["permissionService", _permissionService];
-        _requestRepository set ["persistenceService", _persistenceService];
-
-        _activityRepository set ["persistenceService", _persistenceService];
-
-        _self set ["ActivityRepository", _activityRepository];
         _self set ["PermissionService", _permissionService];
         _self set ["GroupRepository", _groupRepository];
-        _self set ["AssignmentRepository", _assignmentRepository];
-        _self set ["PersistenceService", _persistenceService];
-        _self set ["RequestRepository", _requestRepository];
+        _self set ["ContractService", _contractService];
+        _self set ["hydrateContributors", createHashMap];
 
         ["INFO", "CAD Store Initialized!"] call EFUNC(common,log);
     }],
+
+    // --- Extension point -------------------------------------------------
+
+    ["registerHydrateContributor", compileFinal {
+        // _code receives [uid, session, payload] and returns a hashmap whose
+        // keys are merged into the hydrate payload (overwriting defaults).
+        params [["_key", "", [""]], ["_code", {}, [{}]]];
+
+        if (_key isEqualTo "") exitWith { false };
+        (_self get "hydrateContributors") set [_key, _code];
+        ["INFO", format ["CAD hydrate contributor registered: %1", _key]] call EFUNC(common,log);
+        true
+    }],
+
+    // --- Messaging helpers -----------------------------------------------
+
     ["notifyPlayer", compileFinal {
         params [
             ["_uid", "", [""]],
@@ -73,7 +71,7 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         if (_uid isEqualTo "" || { _message isEqualTo "" }) exitWith { false };
         if (isNil QEGVAR(common,EventBus)) exitWith {
             private _player = [_uid] call EFUNC(common,getPlayer);
-            if (_player isEqualTo objNull) exitWith { false };
+            if (isNull _player) exitWith { false };
 
             [CRPC(notifications,recieveNotification), [_type, _title, _message], _player] call CFUNC(targetEvent);
             true
@@ -91,11 +89,18 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         ]];
         true
     }],
+    ["emitEvent", compileFinal {
+        params [["_eventName", "", [""]], ["_payload", createHashMap, [createHashMap]]];
+
+        if (_eventName isEqualTo "" || { isNil QEGVAR(common,EventBus) }) exitWith { false };
+        EGVAR(common,EventBus) call ["emit", [_eventName, _payload, createHashMapFromArray [["source", "cad"]]]];
+        true
+    }],
+    ["invalidateClients", compileFinal {
+        [CRPC(cad,invalidateCadState), []] call CFUNC(globalEvent);
+    }],
     ["resolveRequestPlayer", compileFinal {
-        params [
-            ["_uid", "", [""]],
-            ["_warning", "Invalid CAD payload.", [""]]
-        ];
+        params [["_uid", "", [""]], ["_warning", "Invalid CAD payload.", [""]]];
 
         if (_uid isEqualTo "") exitWith {
             ["WARNING", _warning] call EFUNC(common,log);
@@ -104,247 +109,176 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
 
         [_uid] call EFUNC(common,getPlayer)
     }],
-    ["sendRpcResult", compileFinal {
-        params [
-            ["_player", objNull, [objNull]],
-            ["_responseRpc", "", [""]],
-            ["_result", createHashMap, [createHashMap]],
-            ["_invalidateOnSuccess", false, [false]],
-            ["_requireChanged", false, [false]]
-        ];
-
-        if (_player isEqualTo objNull || { _responseRpc isEqualTo "" }) exitWith {};
-
-        [_responseRpc, [_result], _player] call CFUNC(targetEvent);
-
-        if (
-            _invalidateOnSuccess
-            && { _result getOrDefault ["success", false] }
-            && { !_requireChanged || { _result getOrDefault ["changed", true] } }
-        ) then {
-            [CRPC(cad,invalidateCadState), []] call CFUNC(globalEvent);
-        };
-    }],
-    ["dispatchRpcMutation", compileFinal {
+    ["handleRpc", compileFinal {
+        // Runs a store method for a client RPC, sends the result back, and
+        // refreshes every open CAD when the state changed.
         params [
             ["_uid", "", [""]],
-            ["_warning", "Invalid CAD payload.", [""]],
             ["_responseRpc", "", [""]],
             ["_method", "", [""]],
-            ["_arguments", [], [[]]],
-            ["_invalidateOnSuccess", false, [false]],
-            ["_requireChanged", false, [false]]
+            ["_arguments", [], [[]]]
         ];
 
-        private _player = _self call ["resolveRequestPlayer", [_uid, _warning]];
-        if (_player isEqualTo objNull || { _method isEqualTo "" }) exitWith { createHashMap };
+        private _player = _self call ["resolveRequestPlayer", [_uid, format ["CAD %1 request received with empty UID.", _method]]];
+        if (isNull _player) exitWith { createHashMap };
 
         private _result = _self call [_method, _arguments];
-        _self call ["sendRpcResult", [_player, _responseRpc, _result, _invalidateOnSuccess, _requireChanged]];
+        [_responseRpc, [_result], _player] call CFUNC(targetEvent);
+
+        if ((_result getOrDefault ["success", false]) && { _result getOrDefault ["changed", true] }) then {
+            _self call ["invalidateClients", []];
+        };
         _result
     }],
-    ["emitAssignmentEvent", compileFinal {
-        params [["_eventName", "", [""]], ["_result", createHashMap, [createHashMap]]];
 
-        if (_eventName isEqualTo "" || { !(_result getOrDefault ["success", false]) }) exitWith { createHashMap };
-        if (isNil QEGVAR(common,EventBus)) exitWith { createHashMap };
+    // --- Contracts -------------------------------------------------------
 
-        private _assignment = +(_result getOrDefault ["assignment", createHashMap]);
-        private _payload = createHashMapFromArray [
-            ["taskID", _assignment getOrDefault ["taskId", ""]],
-            ["assignment", _assignment],
-            ["leaderUid", _result getOrDefault ["leaderUid", ""]],
-            ["isDispatchOrder", _result getOrDefault ["isDispatchOrder", false]],
-            ["message", _result getOrDefault ["message", ""]]
-        ];
+    ["assignContract", compileFinal {
+        params [["_uid", "", [""]], ["_taskID", "", [""]], ["_groupID", "", [""]], ["_note", "", [""]]];
 
-        if (_result getOrDefault ["isDispatchOrder", false]) then {
-            _payload set ["order", +(_result getOrDefault ["order", createHashMap])];
-        };
+        private _result = (_self get "ContractService") call ["assign", [_uid, _taskID, _groupID, _note]];
+        if !(_result getOrDefault ["success", false]) exitWith { _result };
 
-        EGVAR(common,EventBus) call ["emit", [
-            _eventName,
-            _payload,
-            createHashMapFromArray [["source", "cad"]]
-        ]]
-    }],
-    ["emitRequestEvent", compileFinal {
-        params [["_eventName", "", [""]], ["_result", createHashMap, [createHashMap]]];
-
-        if (_eventName isEqualTo "" || { !(_result getOrDefault ["success", false]) }) exitWith { createHashMap };
-        if (isNil QEGVAR(common,EventBus)) exitWith { createHashMap };
-
-        private _request = +(_result getOrDefault ["request", createHashMap]);
-        EGVAR(common,EventBus) call ["emit", [
-            _eventName,
-            createHashMapFromArray [
-                ["requestID", _request getOrDefault ["requestId", ""]],
-                ["groupID", _request getOrDefault ["groupId", ""]],
-                ["request", _request],
-                ["message", _result getOrDefault ["message", ""]]
-            ],
-            createHashMapFromArray [["source", "cad"]]
-        ]]
-    }],
-    ["emitGroupEvent", compileFinal {
-        params [["_eventName", "", [""]], ["_result", createHashMap, [createHashMap]]];
-
-        if (
-            _eventName isEqualTo ""
-            || { !(_result getOrDefault ["success", false]) }
-            || { !(_result getOrDefault ["changed", true]) }
-        ) exitWith { createHashMap };
-        if (isNil QEGVAR(common,EventBus)) exitWith { createHashMap };
-
-        private _group = +(_result getOrDefault ["group", createHashMap]);
-        EGVAR(common,EventBus) call ["emit", [
-            _eventName,
-            createHashMapFromArray [
-                ["groupID", _group getOrDefault ["groupId", ""]],
-                ["group", _group],
-                ["message", _result getOrDefault ["message", ""]],
-                ["changed", _result getOrDefault ["changed", true]]
-            ],
-            createHashMapFromArray [["source", "cad"]]
-        ]]
-    }],
-    ["notifyAssignmentLeader", compileFinal {
-        params [["_result", createHashMap, [createHashMap]]];
-
-        if !(_result getOrDefault ["success", false]) exitWith { false };
-
-        private _leaderUid = _result getOrDefault ["leaderUid", ""];
-        if (_leaderUid isEqualTo "") exitWith { false };
-
-        private _assignmentRepository = _self get "AssignmentRepository";
-        private _message = if (_result getOrDefault ["isDispatchOrder", false]) then {
-            private _order = _result getOrDefault ["order", createHashMap];
-            if (_order isEqualTo createHashMap) then {
-                private _assignment = _result getOrDefault ["assignment", createHashMap];
-                private _taskID = _assignment getOrDefault ["taskId", ""];
-                _order = _assignmentRepository call ["buildDispatchOrderEntryForTask", [_taskID, _self get "GroupRepository"]];
-            };
-
-            format ["Dispatch order assigned: %1. Open CAD to review and acknowledge.", _order getOrDefault ["title", "Dispatch Order"]]
-        } else {
-            private _assignment = _result getOrDefault ["assignment", createHashMap];
-            format ["Contract assigned: %1. Open CAD to review and acknowledge.", _assignment getOrDefault ["taskId", "Task"]]
-        };
-
+        private _title = (_result getOrDefault ["entry", createHashMap]) getOrDefault ["title", _taskID];
         _self call ["notifyPlayer", [
-            _leaderUid,
+            _result getOrDefault ["leaderUid", ""],
             "info",
-            "Tasks",
-            _message
-        ]]
+            "CAD",
+            format ["Contract assigned: %1. Open CAD to accept or decline.", _title]
+        ]];
+        _self call ["emitEvent", ["cad.contract.assigned", _result]];
+        _result
     }],
-    ["assignTaskToGroup", compileFinal {
-        private _result = (_self get "AssignmentRepository") call ["assignTaskToGroup", _this];
+    ["acceptContract", compileFinal {
+        params [["_uid", "", [""]], ["_taskID", "", [""]]];
+
+        private _result = (_self get "ContractService") call ["accept", [_uid, _taskID]];
         if !(_result getOrDefault ["success", false]) exitWith { _result };
 
-        _self call ["notifyAssignmentLeader", [_result]];
-        _self call ["emitAssignmentEvent", ["cad.assignment.assigned", _result]];
+        private _entry = _result getOrDefault ["entry", createHashMap];
+        _self call ["notifyPlayer", [
+            _result getOrDefault ["dispatcherUid", ""],
+            "success",
+            "CAD",
+            format ["%1 accepted %2.", _entry getOrDefault ["assignedGroupCallsign", "Group"], _entry getOrDefault ["title", _taskID]]
+        ]];
+        _self call ["emitEvent", ["cad.contract.accepted", _result]];
         _result
     }],
-    ["createDispatchOrder", compileFinal {
-        private _result = (_self get "AssignmentRepository") call ["createDispatchOrder", _this];
+    ["declineContract", compileFinal {
+        params [["_uid", "", [""]], ["_taskID", "", [""]]];
+
+        private _result = (_self get "ContractService") call ["decline", [_uid, _taskID]];
         if !(_result getOrDefault ["success", false]) exitWith { _result };
 
-        _self call ["notifyAssignmentLeader", [_result]];
-        _self call ["emitAssignmentEvent", ["cad.assignment.created", _result]];
+        private _entry = _result getOrDefault ["entry", createHashMap];
+        _self call ["notifyPlayer", [
+            _result getOrDefault ["dispatcherUid", ""],
+            "warning",
+            "CAD",
+            format ["%1 declined %2.", _entry getOrDefault ["lastDeclinedGroupCallsign", "Group"], _entry getOrDefault ["title", _taskID]]
+        ]];
+        _self call ["emitEvent", ["cad.contract.declined", _result]];
         _result
     }],
-    ["closeDispatchOrder", compileFinal {
-        private _result = (_self get "AssignmentRepository") call ["closeDispatchOrder", _this];
-        _self call ["emitAssignmentEvent", ["cad.assignment.closed", _result]];
-        _result
-    }],
-    ["submitSupportRequest", compileFinal {
-        private _result = (_self get "RequestRepository") call ["submitRequest", _this];
-        _self call ["emitRequestEvent", ["cad.request.submitted", _result]];
-        _result
-    }],
-    ["closeSupportRequest", compileFinal {
-        private _result = (_self get "RequestRepository") call ["closeRequest", _this];
-        _self call ["emitRequestEvent", ["cad.request.closed", _result]];
-        _result
-    }],
-    ["acknowledgeTask", compileFinal {
-        private _result = (_self get "AssignmentRepository") call ["acknowledgeTask", _this];
-        _self call ["emitAssignmentEvent", ["cad.assignment.acknowledged", _result]];
-        _result
-    }],
-    ["declineTask", compileFinal {
-        private _result = (_self get "AssignmentRepository") call ["declineTask", _this];
-        _self call ["emitAssignmentEvent", ["cad.assignment.declined", _result]];
-        _result
-    }],
-    ["updateGroupStatus", compileFinal {
-        private _result = (_self get "GroupRepository") call ["updateGroupStatus", _this];
-        _self call ["emitGroupEvent", ["cad.group.updated", _result]];
-        _result
-    }],
-    ["updateGroupRole", compileFinal {
-        private _result = (_self get "GroupRepository") call ["updateGroupRole", _this];
-        _self call ["emitGroupEvent", ["cad.group.updated", _result]];
-        _result
-    }],
+
+    // --- Groups ----------------------------------------------------------
+
     ["updateGroupProfile", compileFinal {
-        private _result = (_self get "GroupRepository") call ["updateGroupProfile", _this];
-        _self call ["emitGroupEvent", ["cad.group.updated", _result]];
+        params [["_uid", "", [""]], ["_groupID", "", [""]], ["_status", "", [""]], ["_role", "", [""]]];
+
+        private _result = (_self get "GroupRepository") call ["updateProfile", [_uid, _groupID, _status, _role]];
+        if ((_result getOrDefault ["success", false]) && { _result getOrDefault ["changed", false] }) then {
+            _self call ["emitEvent", ["cad.group.updated", _result]];
+        };
         _result
+    }],
+
+    // --- Hydrate ---------------------------------------------------------
+
+    ["toContractEntry", compileFinal {
+        params [["_entry", createHashMap, [createHashMap]]];
+
+        private _contract = +_entry;
+        private _taskID = _entry getOrDefault ["taskId", _entry getOrDefault ["taskID", ""]];
+        private _groupID = _entry getOrDefault ["assignedGroupId", ""];
+        private _assignmentState = switch (toLowerANSI (_entry getOrDefault ["status", ""])) do {
+            case "assigned": { "assigned" };
+            case "active": { ["active", "accepted"] select (_groupID isNotEqualTo "") };
+            default { "unassigned" };
+        };
+
+        _contract set ["taskId", _taskID];
+        _contract set ["taskID", _taskID];
+        _contract set ["assignedGroupId", _groupID];
+        _contract set ["assignmentState", _assignmentState];
+        _contract set ["isDispatchOrder", (_entry getOrDefault ["source", ""]) isEqualTo "dispatch"];
+        _contract
+    }],
+    ["buildSession", compileFinal {
+        params [["_uid", "", [""]]];
+
+        private _groupRepository = _self get "GroupRepository";
+        private _groupID = _groupRepository call ["getPlayerGroupId", [_uid]];
+
+        createHashMapFromArray [
+            ["uid", _uid],
+            ["orgId", EGVAR(actor,ActorStore) call ["getOrganization", [_uid]]],
+            ["isDispatcher", (_self get "PermissionService") call ["canDispatch", [_uid]]],
+            ["groupId", _groupID],
+            ["isLeader", _groupRepository call ["isGroupLeader", [_uid, _groupID]]]
+        ]
     }],
     ["buildHydratePayload", compileFinal {
         params [["_uid", "", [""]]];
 
-        private _permissionService = _self get "PermissionService";
-        private _groupRepository = _self get "GroupRepository";
-        private _generatedTaskTypes = [];
-        if !(isNil QEGVAR(task,MissionGeneratorProviderRegistry)) then {
-            _generatedTaskTypes = EGVAR(task,MissionGeneratorProviderRegistry) call ["getGeneratedTaskTypes", []];
-        } else {
-            ["INFO", "CAD hydrate generated task types unavailable because the task provider registry is not ready."] call EFUNC(common,log);
-        };
+        private _session = _self call ["buildSession", [_uid]];
+        private _isDispatcher = _session get "isDispatcher";
+        private _sessionGroupID = _session get "groupId";
 
-        private _groupID = _groupRepository call ["getPlayerGroupId", [_uid]];
-        private _session = createHashMapFromArray [
-            ["uid", _uid],
-            ["orgId", EGVAR(actor,ActorStore) call ["getOrganization", [_uid]]],
-            ["isDispatcher", _permissionService call ["canDispatch", [_uid]]],
-            ["groupId", _groupID],
-            ["isLeader", _groupRepository call ["isGroupLeader", [_uid, _groupID]]]
-        ];
-        private _seed = createHashMapFromArray [
-            ["groups", _groupRepository call ["buildGroups", []]],
-            ["activeTasks", EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []]],
-            ["generatedTaskTypes", _generatedTaskTypes],
-            ["session", _session]
-        ];
-        private _emptyPayload = createHashMapFromArray [
-            ["groups", _seed get "groups"],
-            ["contracts", []],
+        // One catalog read per hydrate; groups reuse it for their current task.
+        private _catalog = EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []];
+        private _taskByGroup = createHashMap;
+        private _contracts = [];
+        {
+            private _contract = _self call ["toContractEntry", [_x]];
+            private _groupID = _contract get "assignedGroupId";
+
+            if (_groupID isNotEqualTo "") then {
+                _taskByGroup set [_groupID, createHashMapFromArray [
+                    ["taskId", _contract get "taskId"],
+                    ["title", _contract getOrDefault ["title", _contract get "taskId"]]
+                ]];
+            };
+
+            if (_isDispatcher || { _groupID isNotEqualTo "" && { _groupID isEqualTo _sessionGroupID } }) then {
+                _contracts pushBack _contract;
+            };
+        } forEach _catalog;
+
+        private _payload = createHashMapFromArray [
+            ["groups", (_self get "GroupRepository") call ["buildGroups", [_taskByGroup]]],
+            ["contracts", _contracts],
             ["requests", []],
-            ["assignments", []],
             ["activity", []],
-            ["generatedTaskTypes", _generatedTaskTypes],
+            ["generatedTaskTypes", []],
+            ["dispatchEnabled", false],
             ["session", _session]
         ];
-        private _persistenceService = _self getOrDefault ["PersistenceService", createHashMap];
 
-        if (_persistenceService isEqualTo createHashMap) exitWith {
-            ["WARNING", "CAD hydrate extension state is unavailable; returning seed-only payload."] call EFUNC(common,log);
-            _emptyPayload
-        };
+        // Contributors get [uid, session, payload] and return a hashmap of
+        // sections to merge. They may also decorate payload entries in place.
+        {
+            private _key = _x;
+            private _section = [_uid, _session, _payload] call _y;
+            if (_section isEqualType createHashMap) then {
+                _payload merge [_section, true];
+            } else {
+                ["WARNING", format ["CAD hydrate contributor '%1' returned a non-hashmap result.", _key]] call EFUNC(common,log);
+            };
+        } forEach (_self get "hydrateContributors");
 
-        private _hydrateResult = _persistenceService call ["buildHydratePayload", [_seed]];
-        if (_hydrateResult getOrDefault ["success", false]) exitWith {
-            private _data = _hydrateResult getOrDefault ["data", createHashMap];
-            _data set ["generatedTaskTypes", _generatedTaskTypes];
-            _data
-        };
-
-        ["WARNING", "CAD hydrate failed in the extension; returning seed-only payload."] call EFUNC(common,log);
-        _emptyPayload
+        _payload
     }]
 ];
 

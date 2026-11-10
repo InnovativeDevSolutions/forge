@@ -69,7 +69,7 @@ if (_taskID isNotEqualTo "") then {
         };
     } else {
         ["INFO", format [
-            "Skipped automatic ownership bind for %1 from source '%2' so it remains unaccepted until CAD acknowledgement.",
+            "Skipped automatic ownership bind for %1 from source '%2' so it remains unaccepted until a CAD group accepts it.",
             _taskID,
             _source
         ]] call EFUNC(common,log);
@@ -91,7 +91,7 @@ if (_taskID isNotEqualTo "") then {
     };
 
     if (_shouldStartTaskLogic && { _source in ["eden", "mission_manager"] }) then {
-        ["INFO", format ["Task %1 from source '%2' is waiting for dispatcher assignment acknowledgement before task logic starts.", _taskID, _source]] call EFUNC(common,log);
+        ["INFO", format ["Task %1 from source '%2' is waiting for a CAD group to accept it before task logic starts.", _taskID, _source]] call EFUNC(common,log);
         waitUntil {
             sleep 2;
             private _status = GVAR(TaskStore) call ["getTaskStatus", [_taskID]];

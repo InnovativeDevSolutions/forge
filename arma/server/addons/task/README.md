@@ -104,8 +104,11 @@ CAD hydrates assignable tasks from `TaskStore.getActiveTaskCatalog`. A task must
 have a catalog entry and a task status of `available`, `assigned`, or `active`
 before CAD can show it.
 CAD assignment reserves a task for a group, but task logic waits until the
-assigned group leader acknowledges the assignment. Declined assignments return
-to the open CAD board.
+assigned group leader accepts the assignment. Declined assignments return to
+the open CAD board. The group lifecycle is owned here: `TaskStore` exposes
+`assignTaskToGroup`, `acceptTaskForGroup` and `declineTaskForGroup`, backed by
+the `task:group:*` extension commands, which enforce
+`available -> assigned -> active` and only allow declining while `assigned`.
 
 CAD-compatible creation paths:
 - Eden modules: compatible because they delegate to `fnc_startTask.sqf`
@@ -246,7 +249,7 @@ Task module emits the following events to the event bus:
 
 ## Notes
 - the dynamic mission manager in `fnc_missionManager.sqf` is initialized during task post-init; timer-based mission generation only runs when the `forge_server_task_enableGenerator` CBA setting is enabled
-- CAD hydrates generated mission types and requests generated missions through `MissionGeneratorProviderRegistry`
+- the dispatch addon (`forge_server_dispatch`) hydrates generated mission types into CAD and requests generated missions through `MissionGeneratorProviderRegistry`
 - custom generated mission providers register through the `forge_server_task_registerMissionGeneratorProvider` CBA server event
 - it starts server-owned tasks through `fnc_handler.sqf` and binds them to the `default` org
 - task lifecycle for the mission manager is tracked through `TaskStore` status entries

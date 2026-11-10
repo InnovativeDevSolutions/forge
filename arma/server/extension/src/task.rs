@@ -42,6 +42,13 @@ pub fn group() -> Group {
                 .command("clear", clear_status),
         )
         .group(
+            "group",
+            Group::new()
+                .command("assign", assign_group)
+                .command("accept", accept_group)
+                .command("decline", decline_group),
+        )
+        .group(
             "defuse",
             Group::new()
                 .command("increment", increment_defuse_count)
@@ -96,6 +103,18 @@ pub(crate) fn get_status(entry_id: String) -> String {
 
 pub(crate) fn clear_status(entry_id: String) -> String {
     serialize_json(TASK_SERVICE.clear_status(entry_id))
+}
+
+pub(crate) fn assign_group(entry_id: String, json_data: String) -> String {
+    serialize_json(TASK_SERVICE.assign_group(entry_id, json_data))
+}
+
+pub(crate) fn accept_group(entry_id: String, json_data: String) -> String {
+    serialize_json(TASK_SERVICE.accept_group(entry_id, json_data))
+}
+
+pub(crate) fn decline_group(entry_id: String, json_data: String) -> String {
+    serialize_json(TASK_SERVICE.decline_group(entry_id, json_data))
 }
 
 pub(crate) fn increment_defuse_count(entry_id: String) -> String {

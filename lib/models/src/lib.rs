@@ -1,6 +1,6 @@
 pub mod actor;
 pub mod bank;
-pub mod cad;
+pub mod dispatch;
 pub mod garage;
 pub mod locker;
 pub mod org;
@@ -15,11 +15,8 @@ pub use bank::{
     Bank, BankCheckoutContext, BankMutationResult, BankOperationContext, BankPinContext,
     BankTransferContext, BankTransferResult,
 };
-pub use cad::{
-    CadActivityEntry, CadAssignmentMutationResult, CadDispatchOrderContextSeed,
-    CadDispatchOrderCreateSeed, CadDispatchOrderMutationResult, CadGroupBuildSeed,
-    CadGroupProfileMutationResult, CadGroupProfileUpdateSeed, CadHydratePayload, CadHydrateSeed,
-    CadJsonMap, CadRecord, CadRequestMutationResult, CadSession, CadSupportRequestSubmitSeed,
+pub use dispatch::{
+    DispatchJsonMap, DispatchRecord, DispatchRequestMutationResult, DispatchRequestSubmitSeed,
 };
 pub use garage::{Garage, HitPoints, Vehicle};
 pub use locker::{Item, Locker};
@@ -38,7 +35,8 @@ pub use store::{
     StoreCheckoutVehicleSeed, StoreGrantedItem, StoreGrantedUnit, StoreGrantedVehicle,
 };
 pub use task::{
-    TaskJsonMap, TaskOwnershipContext, TaskOwnershipMutationResult, TaskRecord, TaskRewardContext,
+    TaskGroupContext, TaskGroupMutationResult, TaskJsonMap, TaskOwnershipContext,
+    TaskOwnershipMutationResult, TaskRecord, TaskRewardContext,
 };
 pub use v_garage::{VGarage, VehicleCategory};
 pub use v_locker::{EquipmentCategory, VLocker};

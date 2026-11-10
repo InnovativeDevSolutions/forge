@@ -7,8 +7,15 @@
  * Public: No
  *
  * Description:
- * Initializes the CAD group repository for live group state, roles,
- * and dispatcher/leader-managed group profiles.
+ * Initializes the CAD group repository: live player groups, their members,
+ * and the role/status profile set by the group leader or a dispatcher.
+ *
+ * Each tracked group gets a stable CAD ID stored on the group itself, so the
+ * ID and the role/status profile survive leader changes. Profiles live on the
+ * group object and are lost only when the group is deleted.
+ *
+ * Tracked sides default to [west] and can be overridden by the mission with
+ * `missionNamespace setVariable ["forge_server_cad_sides", [west, independent]]`.
  *
  * Arguments:
  * None
@@ -24,130 +31,62 @@
 GVAR(GroupRepositoryBaseClass) = compileFinal createHashMapFromArray [
     ["#type", "CadGroupRepositoryBaseClass"],
     ["#create", compileFinal {
-        _self set ["validStatuses", [
-            "available",
-            "en_route",
-            "on_task",
-            "holding",
-            "danger",
-            "unavailable"
-        ]];
-        _self set ["validRoles", [
-            "infantry",
-            "recon",
-            "armor",
-            "air",
-            "logistics",
-            "support"
-        ]];
+        _self set ["validStatuses", ["available", "en_route", "on_task", "holding", "danger", "unavailable"]];
+        _self set ["validRoles", ["infantry", "recon", "armor", "air", "logistics", "support"]];
+        _self set ["groupSequence", 0];
     }],
-    ["resolveGroupId", compileFinal {
+    ["getTrackedSides", compileFinal {
+        private _sides = missionNamespace getVariable [QGVAR(sides), [west]];
+        if !(_sides isEqualType []) then { _sides = [west]; };
+        _sides
+    }],
+    ["getPlayerMembers", compileFinal {
+        params [["_group", grpNull, [grpNull]]];
+
+        if (isNull _group) exitWith { [] };
+        (units _group) select { isPlayer _x }
+    }],
+    ["isTrackedGroup", compileFinal {
+        params [["_group", grpNull, [grpNull]]];
+
+        if (isNull _group) exitWith { false };
+        if !((side _group) in (_self call ["getTrackedSides", []])) exitWith { false };
+        (_self call ["getPlayerMembers", [_group]]) isNotEqualTo []
+    }],
+    ["ensureGroupId", compileFinal {
         params [["_group", grpNull, [grpNull]]];
 
         if (isNull _group) exitWith { "" };
 
+        private _groupID = _group getVariable [QGVAR(groupId), ""];
+        if (_groupID isNotEqualTo "") exitWith { _groupID };
+
+        private _sequence = (_self getOrDefault ["groupSequence", 0]) + 1;
+        _self set ["groupSequence", _sequence];
+        _groupID = format ["grp:%1", _sequence];
+        _group setVariable [QGVAR(groupId), _groupID];
+        _groupID
+    }],
+    ["findGroup", compileFinal {
+        params [["_groupID", "", [""]]];
+
+        if (_groupID isEqualTo "") exitWith { grpNull };
+
+        private _index = allGroups findIf { (_x getVariable [QGVAR(groupId), ""]) isEqualTo _groupID };
+        if (_index < 0) exitWith { grpNull };
+        allGroups # _index
+    }],
+    ["resolveLeader", compileFinal {
+        params [["_group", grpNull, [grpNull]]];
+
+        if (isNull _group) exitWith { objNull };
+
         private _leader = leader _group;
-        private _leaderUid = if (isNull _leader) then { "" } else { getPlayerUID _leader };
-        if (_leaderUid isNotEqualTo "") exitWith { format ["group:%1", _leaderUid] };
+        if (!isNull _leader && { isPlayer _leader }) exitWith { _leader };
 
-        private _groupLabel = groupId _group;
-        if (_groupLabel isNotEqualTo "") exitWith { format ["group:%1", _groupLabel] };
-
-        str _group
-    }],
-    ["getCurrentTaskIdForGroup", compileFinal {
-        params [["_groupID", "", [""]]];
-
-        if (_groupID isEqualTo "") exitWith { "" };
-
-        private _assignmentRepository = _self getOrDefault ["assignmentRepository", createHashMap];
-        if (_assignmentRepository isEqualTo createHashMap) exitWith { "" };
-
-        _assignmentRepository call ["getCurrentTaskIdForGroup", [_groupID]]
-    }],
-    ["syncGroups", compileFinal {
-        private _liveGroups = [];
-
-        {
-            private _group = _x;
-            if (side _group isNotEqualTo west) then { continue; };
-
-            private _members = allPlayers select { group _x isEqualTo _group };
-            if (_members isEqualTo []) then { continue; };
-
-            private _leader = leader _group;
-            if (isNull _leader || { !isPlayer _leader }) then {
-                _leader = _members # 0;
-            };
-
-            private _groupID = _self call ["resolveGroupId", [_group]];
-            if (_groupID isEqualTo "") then { continue; };
-
-            private _leaderUid = getPlayerUID _leader;
-            private _orgID = EGVAR(actor,ActorStore) call ["getOrganization", [_leaderUid]];
-            private _memberUids = [];
-            private _memberRoster = [];
-            {
-                private _memberUid = getPlayerUID _x;
-                private _memberState = toLowerANSI (lifeState _x);
-
-                if (_memberUid isNotEqualTo "") then {
-                    _memberUids pushBack _memberUid;
-                };
-
-                _memberRoster pushBack (createHashMapFromArray [
-                    ["uid", _memberUid],
-                    ["name", name _x],
-                    ["lifeState", _memberState],
-                    ["isLeader", _x isEqualTo _leader],
-                    ["position", getPosATL _x]
-                ]);
-            } forEach _members;
-
-            _liveGroups pushBack (createHashMapFromArray [
-                ["groupId", _groupID],
-                ["callsign", [groupId _group, _groupID] select ((groupId _group) isEqualTo "")],
-                ["leaderUid", _leaderUid],
-                ["leaderName", name _leader],
-                ["memberUids", _memberUids],
-                ["members", _memberRoster],
-                ["orgId", _orgID],
-                ["role", "infantry"],
-                ["status", "available"],
-                ["position", getPosATL _leader],
-                ["currentTaskId", _self call ["getCurrentTaskIdForGroup", [_groupID]]],
-                ["lastUpdate", serverTime]
-            ]);
-        } forEach allGroups;
-
-        private _mergedGroups = _liveGroups;
-        private _persistenceService = _self getOrDefault ["persistenceService", createHashMap];
-        if (_persistenceService isNotEqualTo createHashMap) then {
-            private _buildResult = _persistenceService call ["buildGroups", [_liveGroups]];
-            if (_buildResult getOrDefault ["success", false]) then {
-                _mergedGroups = +(_buildResult getOrDefault ["data", _liveGroups]);
-            };
-        };
-
-        private _nextRegistry = createHashMap;
-        {
-            if !(_x isEqualType createHashMap) then { continue; };
-            private _groupID = _x getOrDefault ["groupId", ""];
-            if (_groupID isEqualTo "") then { continue; };
-
-            private _groupRecord = +_x;
-            _nextRegistry set [_groupID, _groupRecord];
-        } forEach _mergedGroups;
-
-        _nextRegistry
-    }],
-    ["getGroupRecord", compileFinal {
-        params [["_groupID", "", [""]]];
-
-        if (_groupID isEqualTo "") exitWith { createHashMap };
-
-        private _groupRegistry = _self call ["syncGroups", []];
-        +(_groupRegistry getOrDefault [_groupID, createHashMap])
+        private _members = _self call ["getPlayerMembers", [_group]];
+        if (_members isEqualTo []) exitWith { objNull };
+        _members # 0
     }],
     ["getPlayerGroupId", compileFinal {
         params [["_uid", "", [""]]];
@@ -155,35 +94,81 @@ GVAR(GroupRepositoryBaseClass) = compileFinal createHashMapFromArray [
         if (_uid isEqualTo "") exitWith { "" };
 
         private _player = [_uid] call EFUNC(common,getPlayer);
-        if (_player isEqualTo objNull) exitWith { "" };
+        if (isNull _player) exitWith { "" };
 
-        _self call ["resolveGroupId", [group _player]]
+        private _group = group _player;
+        if !(_self call ["isTrackedGroup", [_group]]) exitWith { "" };
+        _self call ["ensureGroupId", [_group]]
     }],
     ["isGroupLeader", compileFinal {
         params [["_uid", "", [""]], ["_groupID", "", [""]]];
 
         if (_uid isEqualTo "" || { _groupID isEqualTo "" }) exitWith { false };
 
-        private _groupRecord = _self call ["getGroupRecord", [_groupID]];
-        (_groupRecord getOrDefault ["leaderUid", ""]) isEqualTo _uid
+        private _leader = _self call ["resolveLeader", [_self call ["findGroup", [_groupID]]]];
+        !isNull _leader && { (getPlayerUID _leader) isEqualTo _uid }
+    }],
+    ["buildGroupRecord", compileFinal {
+        params [
+            ["_group", grpNull, [grpNull]],
+            ["_taskByGroup", createHashMap, [createHashMap]]
+        ];
+
+        if !(_self call ["isTrackedGroup", [_group]]) exitWith { createHashMap };
+
+        private _groupID = _self call ["ensureGroupId", [_group]];
+        private _leader = _self call ["resolveLeader", [_group]];
+        private _leaderUid = getPlayerUID _leader;
+        private _members = _self call ["getPlayerMembers", [_group]];
+        private _task = _taskByGroup getOrDefault [_groupID, createHashMap];
+
+        createHashMapFromArray [
+            ["groupId", _groupID],
+            ["callsign", [groupId _group, _groupID] select ((groupId _group) isEqualTo "")],
+            ["side", str side _group],
+            ["leaderUid", _leaderUid],
+            ["leaderName", name _leader],
+            ["memberUids", _members apply { getPlayerUID _x }],
+            ["members", _members apply {
+                createHashMapFromArray [
+                    ["uid", getPlayerUID _x],
+                    ["name", name _x],
+                    ["lifeState", toLowerANSI (lifeState _x)],
+                    ["isLeader", _x isEqualTo _leader],
+                    ["position", getPosATL _x]
+                ]
+            }],
+            ["orgId", EGVAR(actor,ActorStore) call ["getOrganization", [_leaderUid]]],
+            ["role", _group getVariable [QGVAR(role), "infantry"]],
+            ["status", _group getVariable [QGVAR(status), "available"]],
+            ["position", getPosATL _leader],
+            ["currentTaskId", _task getOrDefault ["taskId", ""]],
+            ["currentTaskTitle", _task getOrDefault ["title", ""]],
+            ["lastUpdate", serverTime]
+        ]
     }],
     ["buildGroups", compileFinal {
-        private _groupRegistry = _self call ["syncGroups", []];
-        private _groups = [];
+        params [["_taskByGroup", createHashMap, [createHashMap]]];
 
+        private _groups = [];
         {
-            _groups pushBack +_y;
-        } forEach _groupRegistry;
+            private _record = _self call ["buildGroupRecord", [_x, _taskByGroup]];
+            if (_record isNotEqualTo createHashMap) then { _groups pushBack _record; };
+        } forEach allGroups;
 
         _groups
     }],
-    ["applyGroupProfileUpdate", compileFinal {
+    ["getGroupRecord", compileFinal {
+        params [["_groupID", "", [""]]];
+
+        _self call ["buildGroupRecord", [_self call ["findGroup", [_groupID]], createHashMap]]
+    }],
+    ["updateProfile", compileFinal {
         params [
             ["_requesterUid", "", [""]],
             ["_groupID", "", [""]],
             ["_status", "", [""]],
-            ["_role", "", [""]],
-            ["_mode", "profile", [""]]
+            ["_role", "", [""]]
         ];
 
         private _result = createHashMapFromArray [
@@ -195,104 +180,49 @@ GVAR(GroupRepositoryBaseClass) = compileFinal createHashMapFromArray [
 
         private _finalStatus = toLowerANSI _status;
         private _finalRole = toLowerANSI _role;
-        private _hasStatus = _finalStatus isNotEqualTo "";
-        private _hasRole = _finalRole isNotEqualTo "";
 
-        if (_mode isEqualTo "status" && !_hasStatus) exitWith {
-            _result set ["message", "Invalid group status."];
-            _result
-        };
-
-        if (_mode isEqualTo "role" && !_hasRole) exitWith {
-            _result set ["message", "Invalid group role."];
-            _result
-        };
-
-        if (_mode isEqualTo "profile" && !(_hasStatus || _hasRole)) exitWith {
+        if (_finalStatus isEqualTo "" && { _finalRole isEqualTo "" }) exitWith {
             _result set ["message", "No group changes were provided."];
             _result
         };
-
-        if (_hasStatus && !(_finalStatus in (_self getOrDefault ["validStatuses", []]))) exitWith {
+        if (_finalStatus isNotEqualTo "" && { !(_finalStatus in (_self get "validStatuses")) }) exitWith {
             _result set ["message", "Invalid group status."];
             _result
         };
-
-        if (_hasRole && !(_finalRole in (_self getOrDefault ["validRoles", []]))) exitWith {
+        if (_finalRole isNotEqualTo "" && { !(_finalRole in (_self get "validRoles")) }) exitWith {
             _result set ["message", "Invalid group role."];
+            _result
+        };
+
+        private _group = _self call ["findGroup", [_groupID]];
+        if !(_self call ["isTrackedGroup", [_group]]) exitWith {
+            _result set ["message", "Group could not be resolved."];
             _result
         };
 
         private _permissionService = _self getOrDefault ["permissionService", createHashMap];
-        private _isAuthorized = (_self call ["isGroupLeader", [_requesterUid, _groupID]]) || { _permissionService call ["canDispatch", [_requesterUid]] };
+        private _isAuthorized = (_self call ["isGroupLeader", [_requesterUid, _groupID]])
+            || { _permissionService call ["canDispatch", [_requesterUid]] };
         if !_isAuthorized exitWith {
             _result set ["message", "You are not authorized to update that group."];
             _result
         };
 
-        private _groupRegistry = _self call ["syncGroups", []];
-        private _groupRecord = +(_groupRegistry getOrDefault [_groupID, createHashMap]);
-        if (_groupRecord isEqualTo createHashMap) exitWith {
-            _result set ["message", "Group could not be resolved."];
-            _result
+        private _changed = false;
+        if (_finalStatus isNotEqualTo "" && { (_group getVariable [QGVAR(status), "available"]) isNotEqualTo _finalStatus }) then {
+            _group setVariable [QGVAR(status), _finalStatus];
+            _changed = true;
         };
-
-        private _didChangeStatus = _hasStatus && { (_groupRecord getOrDefault ["status", ""]) isNotEqualTo _finalStatus };
-        private _didChangeRole = _hasRole && { (_groupRecord getOrDefault ["role", ""]) isNotEqualTo _finalRole };
-        private _persistenceService = _self getOrDefault ["persistenceService", createHashMap];
-        if (_persistenceService isEqualTo createHashMap) exitWith {
-            _result set ["message", "CAD extension state is unavailable."];
-            _result
-        };
-
-        private _updateContext = createHashMapFromArray [
-            ["groupId", _groupID],
-            ["groupCallsign", _groupRecord getOrDefault ["callsign", _groupID]],
-            ["requesterUid", _requesterUid],
-            ["currentRole", _groupRecord getOrDefault ["role", "infantry"]],
-            ["currentStatus", _groupRecord getOrDefault ["status", "available"]],
-            ["role", [_finalRole, ""] select !_hasRole],
-            ["status", [_finalStatus, ""] select !_hasStatus],
-            ["mode", _mode]
-        ];
-
-        private _profileResult = _persistenceService call ["updateGroupProfileFromContext", [_updateContext]];
-        if !(_profileResult getOrDefault ["success", false]) exitWith {
-            _result set ["message", "CAD extension rejected the group profile update."];
-            _result
-        };
-
-        private _profileData = +(_profileResult getOrDefault ["data", createHashMap]);
-        private _profile = +(_profileData getOrDefault ["profile", createHashMap]);
-        if (_profile isEqualTo createHashMap) exitWith {
-            _result set ["message", "CAD extension returned an invalid group profile."];
-            _result
-        };
-
-        _groupRecord set ["role", _profile getOrDefault ["role", _groupRecord getOrDefault ["role", "infantry"]]];
-        _groupRecord set ["status", _profile getOrDefault ["status", _groupRecord getOrDefault ["status", "available"]]];
-        _groupRecord set ["lastUpdate", serverTime];
-
-        private _activityEntry = +(_profileData getOrDefault ["activity", createHashMap]);
-        if (_activityEntry isNotEqualTo createHashMap) then {
-            private _activityRepository = _self getOrDefault ["activityRepository", createHashMap];
-            _activityRepository call ["appendEntry", [_activityEntry]];
+        if (_finalRole isNotEqualTo "" && { (_group getVariable [QGVAR(role), "infantry"]) isNotEqualTo _finalRole }) then {
+            _group setVariable [QGVAR(role), _finalRole];
+            _changed = true;
         };
 
         _result set ["success", true];
-        _result set ["message", _profileData getOrDefault ["message", "Group profile updated."]];
-        _result set ["changed", _profileData getOrDefault ["changed", (_didChangeStatus || _didChangeRole)]];
-        _result set ["group", _groupRecord];
+        _result set ["changed", _changed];
+        _result set ["message", ["Group profile already up to date.", "Group profile updated."] select _changed];
+        _result set ["group", _self call ["buildGroupRecord", [_group, createHashMap]]];
         _result
-    }],
-    ["updateGroupStatus", compileFinal {
-        _self call ["applyGroupProfileUpdate", [_this # 0, _this # 1, _this # 2, "", "status"]]
-    }],
-    ["updateGroupRole", compileFinal {
-        _self call ["applyGroupProfileUpdate", [_this # 0, _this # 1, "", _this # 2, "role"]]
-    }],
-    ["updateGroupProfile", compileFinal {
-        _self call ["applyGroupProfileUpdate", [_this # 0, _this # 1, _this # 2, _this # 3, "profile"]]
     }]
 ];
 

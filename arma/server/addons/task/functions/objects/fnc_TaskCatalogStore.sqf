@@ -420,29 +420,160 @@ GVAR(TaskCatalogStore) = createHashMapObject [[
         private _statusResult = _envelope getOrDefault ["success", false];
 
         if (_statusResult) then {
-            private _eventName = GVAR(TaskLifecycleReporter) call ["recordTaskStatus", [_taskID, _normalizedStatus]];
-
-            if (_eventName isNotEqualTo "") then {
-                GVAR(TaskLifecycleReporter) call ["emitTaskLifecycleEvent", [_eventName, _taskID, _normalizedStatus, createHashMap]];
-            };
-
-            if (_normalizedStatus isEqualTo "succeeded") then {
-                _self call ["markTaskCompleted", [_taskID]];
-                _self call ["unlockDependentTasks", [_taskID]];
-            };
+            _self call ["applyStatusSideEffects", [_taskID, _normalizedStatus]];
         } else {
             ["WARNING", format [
                 "Task status backend update failed for %1 -> %2; runtime status was retained for CAD visibility.",
                 _taskID,
                 _normalizedStatus
             ]] call EFUNC(common,log);
-        };
 
-        if (_normalizedStatus isEqualTo "active") then {
-            _self call ["ensureBisTaskCreated", [_taskID]];
+            if (_normalizedStatus isEqualTo "active") then {
+                _self call ["ensureBisTaskCreated", [_taskID]];
+            };
         };
 
         _statusResult
+    }],
+    ["applyStatusSideEffects", compileFinal {
+        params [["_taskID", "", [""]], ["_status", "", [""]]];
+
+        if (_taskID isEqualTo "" || { _status isEqualTo "" }) exitWith { false };
+
+        private _eventName = GVAR(TaskLifecycleReporter) call ["recordTaskStatus", [_taskID, _status]];
+        if (_eventName isNotEqualTo "") then {
+            GVAR(TaskLifecycleReporter) call ["emitTaskLifecycleEvent", [_eventName, _taskID, _status, createHashMap]];
+        };
+
+        if (_status isEqualTo "succeeded") then {
+            _self call ["markTaskCompleted", [_taskID]];
+            _self call ["unlockDependentTasks", [_taskID]];
+        };
+
+        if (_status isEqualTo "active") then {
+            _self call ["ensureBisTaskCreated", [_taskID]];
+        };
+
+        true
+    }],
+    ["callGroupTransition", compileFinal {
+        params [
+            ["_route", "", [""]],
+            ["_taskID", "", [""]],
+            ["_context", createHashMap, [createHashMap]],
+            ["_fallbackMessage", "Task update failed.", [""]]
+        ];
+
+        private _result = createHashMapFromArray [
+            ["success", false],
+            ["message", _fallbackMessage],
+            ["entry", createHashMap],
+            ["status", ""]
+        ];
+
+        if (_taskID isEqualTo "") exitWith {
+            _result set ["message", "Missing task ID."];
+            _result
+        };
+
+        _context set ["timestamp", serverTime];
+        private _envelope = GVAR(TaskStateGateway) call ["callTaskStateEnvelope", [_route, [_taskID, toJSON _context]]];
+        if !(_envelope getOrDefault ["success", false]) exitWith {
+            _result set ["message", _envelope getOrDefault ["error", _fallbackMessage]];
+            _result
+        };
+
+        private _data = _envelope getOrDefault ["data", createHashMap];
+        private _entry = _data getOrDefault ["entry", createHashMap];
+        if !(_entry isEqualType createHashMap) then { _entry = createHashMap; };
+        private _status = toLowerANSI (_data getOrDefault ["status", ""]);
+
+        // Keep the SQF runtime fallback catalog in step with the backend.
+        if (_entry isNotEqualTo createHashMap) then {
+            private _runtimeCatalogRegistry = _self getOrDefault ["runtimeCatalogRegistry", createHashMap];
+            if (_taskID in _runtimeCatalogRegistry) then {
+                _runtimeCatalogRegistry set [_taskID, +_entry];
+                _self set ["runtimeCatalogRegistry", _runtimeCatalogRegistry];
+            };
+        };
+
+        _self call ["applyStatusSideEffects", [_taskID, _status]];
+
+        _result set ["success", true];
+        _result set ["message", _data getOrDefault ["message", "Task updated."]];
+        _result set ["entry", _entry];
+        _result set ["status", _status];
+        _result
+    }],
+    ["assignTaskToGroup", compileFinal {
+        params [
+            ["_taskID", "", [""]],
+            ["_groupID", "", [""]],
+            ["_groupCallsign", "", [""]],
+            ["_requesterUid", "", [""]],
+            ["_requesterName", "", [""]],
+            ["_note", "", [""]]
+        ];
+
+        _self call ["callGroupTransition", [
+            "task:group:assign",
+            _taskID,
+            createHashMapFromArray [
+                ["groupId", _groupID],
+                ["groupCallsign", _groupCallsign],
+                ["requesterUid", _requesterUid],
+                ["requesterName", _requesterName],
+                ["note", _note]
+            ],
+            "Unable to assign task."
+        ]]
+    }],
+    ["acceptTaskForGroup", compileFinal {
+        params [
+            ["_taskID", "", [""]],
+            ["_groupID", "", [""]],
+            ["_requesterUid", "", [""]],
+            ["_requesterName", "", [""]]
+        ];
+
+        private _orgID = "default";
+        if (_requesterUid isNotEqualTo "") then {
+            private _actor = EGVAR(actor,ActorStore) call ["load", [_requesterUid]];
+            if (_actor isNotEqualTo createHashMap) then {
+                _orgID = EGVAR(actor,ActorStore) call ["getOrganization", [_requesterUid]];
+            };
+        };
+
+        _self call ["callGroupTransition", [
+            "task:group:accept",
+            _taskID,
+            createHashMapFromArray [
+                ["groupId", _groupID],
+                ["requesterUid", _requesterUid],
+                ["requesterName", _requesterName],
+                ["orgId", _orgID]
+            ],
+            "Unable to accept task."
+        ]]
+    }],
+    ["declineTaskForGroup", compileFinal {
+        params [
+            ["_taskID", "", [""]],
+            ["_groupID", "", [""]],
+            ["_requesterUid", "", [""]],
+            ["_requesterName", "", [""]]
+        ];
+
+        _self call ["callGroupTransition", [
+            "task:group:decline",
+            _taskID,
+            createHashMapFromArray [
+                ["groupId", _groupID],
+                ["requesterUid", _requesterUid],
+                ["requesterName", _requesterName]
+            ],
+            "Unable to decline task."
+        ]]
     }],
     ["getTaskStatus", compileFinal {
         params [["_taskID", "", [""]]];

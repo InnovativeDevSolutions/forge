@@ -41,9 +41,12 @@ window.cadDispatcherFormatters = {
         });
     },
     isDispatchOrder(entry) {
-        return (
-            !!entry.isDispatchOrder || (entry.type || "") === "dispatch_order"
-        );
+        return !!entry.isDispatchOrder;
+    },
+    describeOpenContract(task) {
+        return task.lastDeclinedGroupCallsign
+            ? `Declined by ${task.lastDeclinedGroupCallsign}`
+            : "Unassigned";
     },
     formatTypeLabel(entry) {
         const typeLabel = (entry.type || "task").replaceAll("_", " ");
