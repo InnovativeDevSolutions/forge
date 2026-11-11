@@ -213,7 +213,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_taskID isEqualTo "" || { _groupID isEqualTo "" }) exitWith { false };
 
-        [SRPC(cad,requestAssignCadTask), [getPlayerUID player, _taskID, _groupID, _note]] call CFUNC(serverEvent);
+        [SRPC(cad,requestAssignCadContract), [getPlayerUID player, _taskID, _groupID, _note]] call CFUNC(serverEvent);
         true
     }],
     ["requestCreateDispatchOrder", compileFinal {
@@ -227,7 +227,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_assigneeGroupID isEqualTo "" || { _targetGroupID isEqualTo "" }) exitWith { false };
 
-        [SRPC(cad,requestCreateCadDispatchOrder), [getPlayerUID player, _assigneeGroupID, _targetGroupID, _note, _priority, _request]] call CFUNC(serverEvent);
+        [SRPC(dispatch,requestCreateOrder), [getPlayerUID player, _assigneeGroupID, _targetGroupID, _note, _priority, _request]] call CFUNC(serverEvent);
         true
     }],
     ["requestGeneratedMissionTask", compileFinal {
@@ -238,7 +238,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_taskType isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestGenerateCadMissionTask), [getPlayerUID player, _taskType, _metadata]] call CFUNC(serverEvent);
+        [SRPC(dispatch,requestGeneratedMission), [getPlayerUID player, _taskType, _metadata]] call CFUNC(serverEvent);
         true
     }],
     ["requestSubmitSupportRequest", compileFinal {
@@ -250,7 +250,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_type isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestSubmitCadSupportRequest), [getPlayerUID player, _type, _fields, _priority]] call CFUNC(serverEvent);
+        [SRPC(dispatch,requestSubmitSupportRequest), [getPlayerUID player, _type, _fields, _priority]] call CFUNC(serverEvent);
         true
     }],
     ["requestCloseDispatchOrder", compileFinal {
@@ -258,7 +258,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_taskID isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestCloseCadDispatchOrder), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
+        [SRPC(dispatch,requestCloseOrder), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
         true
     }],
     ["requestCloseSupportRequest", compileFinal {
@@ -266,15 +266,15 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_requestID isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestCloseCadSupportRequest), [getPlayerUID player, _requestID]] call CFUNC(serverEvent);
+        [SRPC(dispatch,requestCloseSupportRequest), [getPlayerUID player, _requestID]] call CFUNC(serverEvent);
         true
     }],
-    ["requestAcknowledgeTask", compileFinal {
+    ["requestAcceptTask", compileFinal {
         params [["_taskID", "", [""]]];
 
         if (_taskID isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestAcknowledgeCadTask), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
+        [SRPC(cad,requestAcceptCadContract), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
         true
     }],
     ["requestDeclineTask", compileFinal {
@@ -282,7 +282,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_taskID isEqualTo "") exitWith { false };
 
-        [SRPC(cad,requestDeclineCadTask), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
+        [SRPC(cad,requestDeclineCadContract), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
         true
     }],
     ["requestGroupStatus", compileFinal {
@@ -290,7 +290,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_groupID isEqualTo "" || { _status isEqualTo "" }) exitWith { false };
 
-        [SRPC(cad,requestUpdateCadGroupStatus), [getPlayerUID player, _groupID, _status]] call CFUNC(serverEvent);
+        [SRPC(cad,requestUpdateCadGroupProfile), [getPlayerUID player, _groupID, _status, ""]] call CFUNC(serverEvent);
         true
     }],
     ["requestGroupRole", compileFinal {
@@ -298,7 +298,7 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
 
         if (_groupID isEqualTo "" || { _role isEqualTo "" }) exitWith { false };
 
-        [SRPC(cad,requestUpdateCadGroupRole), [getPlayerUID player, _groupID, _role]] call CFUNC(serverEvent);
+        [SRPC(cad,requestUpdateCadGroupProfile), [getPlayerUID player, _groupID, "", _role]] call CFUNC(serverEvent);
         true
     }],
     ["requestGroupProfile", compileFinal {

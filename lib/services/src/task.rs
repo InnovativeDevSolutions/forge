@@ -1,8 +1,20 @@
 use forge_models::{
-    TaskOwnershipContext, TaskOwnershipMutationResult, TaskRecord, TaskRewardContext,
+    TaskGroupContext, TaskGroupMutationResult, TaskOwnershipContext, TaskOwnershipMutationResult,
+    TaskRecord, TaskRewardContext,
 };
 use forge_repositories::TaskRepository;
 use serde_json::Value;
+
+/// Catalog fields describing the group a task is currently assigned to.
+const ASSIGNMENT_FIELDS: [&str; 7] = [
+    "assignedGroupId",
+    "assignedGroupCallsign",
+    "assignedByUid",
+    "assignedByName",
+    "assignedAt",
+    "assignmentNote",
+    "acceptedAt",
+];
 
 pub struct TaskStateService<R: TaskRepository> {
     repository: R,
@@ -217,6 +229,198 @@ impl<R: TaskRepository> TaskStateService<R> {
         self.repository.delete_completed_status(&entry_id)?;
         self.repository.clear_defuse_count(&entry_id)?;
         Ok(true)
+    }
+
+    /// Assigns an `available` task to a group and moves it to `assigned`.
+    pub fn assign_group(
+        &self,
+        entry_id: String,
+        json_data: String,
+    ) -> Result<TaskGroupMutationResult, String> {
+        let entry_id = Self::validate_entry_id(entry_id)?;
+        let context = Self::parse_group_context(&json_data)?;
+        if context.group_id.trim().is_empty() {
+            return Err("Group ID is required.".to_string());
+        }
+
+        let mut entry = self.require_catalog_entry(&entry_id)?;
+        let status = self.get_status(entry_id.clone())?;
+        if status != "available" {
+            return Err(format!("Task is not available (status: {status})."));
+        }
+
+        let callsign = Self::fallback(&context.group_callsign, &context.group_id);
+        let fields = &mut entry.fields;
+        fields.insert("assignedGroupId".into(), Value::String(context.group_id));
+        fields.insert(
+            "assignedGroupCallsign".into(),
+            Value::String(callsign.clone()),
+        );
+        fields.insert("assignedByUid".into(), Value::String(context.requester_uid));
+        fields.insert(
+            "assignedByName".into(),
+            Value::String(context.requester_name),
+        );
+        fields.insert("assignedAt".into(), Value::from(context.timestamp));
+        fields.insert("assignmentNote".into(), Value::String(context.note));
+        fields.remove("acceptedAt");
+
+        self.save_with_status(
+            &entry_id,
+            entry,
+            "assigned",
+            format!("Task assigned to {callsign}."),
+        )
+    }
+
+    /// The assigned group accepts its task: ownership is bound to the accepting
+    /// leader and the task moves from `assigned` to `active`.
+    pub fn accept_group(
+        &self,
+        entry_id: String,
+        json_data: String,
+    ) -> Result<TaskGroupMutationResult, String> {
+        let entry_id = Self::validate_entry_id(entry_id)?;
+        let context = Self::parse_group_context(&json_data)?;
+        if context.requester_uid.trim().is_empty() {
+            return Err("Requester UID is required.".to_string());
+        }
+
+        let entry = self.require_assigned_to(&entry_id, &context.group_id)?;
+        let ownership = TaskOwnershipContext {
+            requester_uid: context.requester_uid.clone(),
+            org_id: Self::fallback(&context.org_id, "default"),
+        };
+        self.repository
+            .save_ownership(entry_id.clone(), ownership.clone())?;
+
+        let mut entry = entry;
+        let fields = &mut entry.fields;
+        fields.insert("accepted".into(), Value::Bool(true));
+        fields.insert(
+            "requesterUid".into(),
+            Value::String(ownership.requester_uid),
+        );
+        fields.insert("orgID".into(), Value::String(ownership.org_id));
+        fields.insert("acceptedAt".into(), Value::from(context.timestamp));
+
+        self.save_with_status(&entry_id, entry, "active", "Task accepted.".to_string())
+    }
+
+    /// The assigned group declines its task: the assignment is cleared, the
+    /// decline is recorded on the entry, and the task returns to `available`.
+    /// Only allowed while `assigned`; an accepted (`active`) task cannot be declined.
+    pub fn decline_group(
+        &self,
+        entry_id: String,
+        json_data: String,
+    ) -> Result<TaskGroupMutationResult, String> {
+        let entry_id = Self::validate_entry_id(entry_id)?;
+        let context = Self::parse_group_context(&json_data)?;
+
+        let mut entry = self.require_assigned_to(&entry_id, &context.group_id)?;
+        let callsign = entry
+            .fields
+            .get("assignedGroupCallsign")
+            .and_then(Value::as_str)
+            .map(ToString::to_string)
+            .unwrap_or_else(|| context.group_id.clone());
+
+        self.repository.delete_ownership(&entry_id)?;
+        let fields = &mut entry.fields;
+        for field in ASSIGNMENT_FIELDS {
+            fields.remove(field);
+        }
+        fields.insert("accepted".into(), Value::Bool(false));
+        fields.insert("requesterUid".into(), Value::String(String::new()));
+        fields.insert("orgID".into(), Value::String("default".to_string()));
+        fields.insert(
+            "lastDeclinedGroupId".into(),
+            Value::String(context.group_id),
+        );
+        fields.insert(
+            "lastDeclinedGroupCallsign".into(),
+            Value::String(callsign.clone()),
+        );
+        fields.insert(
+            "lastDeclinedByUid".into(),
+            Value::String(context.requester_uid),
+        );
+        fields.insert(
+            "lastDeclinedByName".into(),
+            Value::String(context.requester_name),
+        );
+        fields.insert("lastDeclinedAt".into(), Value::from(context.timestamp));
+
+        self.save_with_status(
+            &entry_id,
+            entry,
+            "available",
+            format!("{callsign} declined the task. It is back on the board."),
+        )
+    }
+
+    fn require_catalog_entry(&self, entry_id: &str) -> Result<TaskRecord, String> {
+        self.repository
+            .get_catalog_entry(entry_id)?
+            .ok_or_else(|| "Task could not be resolved.".to_string())
+    }
+
+    fn require_assigned_to(&self, entry_id: &str, group_id: &str) -> Result<TaskRecord, String> {
+        let entry = self.require_catalog_entry(entry_id)?;
+        let status = self.get_status(entry_id.to_string())?;
+        if status != "assigned" {
+            return Err(format!(
+                "Task is not awaiting acceptance (status: {status})."
+            ));
+        }
+
+        let assigned_group = entry
+            .fields
+            .get("assignedGroupId")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        if group_id.trim().is_empty() || assigned_group != group_id {
+            return Err("Task is not assigned to this group.".to_string());
+        }
+
+        Ok(entry)
+    }
+
+    fn save_with_status(
+        &self,
+        entry_id: &str,
+        mut entry: TaskRecord,
+        status: &str,
+        message: String,
+    ) -> Result<TaskGroupMutationResult, String> {
+        entry
+            .fields
+            .insert("status".into(), Value::String(status.to_string()));
+        Self::normalize_catalog_entry(&mut entry, entry_id);
+        self.repository
+            .save_catalog_entry(entry_id.to_string(), entry.clone())?;
+        self.set_status(entry_id.to_string(), status.to_string())?;
+
+        Ok(TaskGroupMutationResult {
+            task_id: entry_id.to_string(),
+            status: status.to_string(),
+            entry: entry.into_value(),
+            message,
+        })
+    }
+
+    fn fallback(value: &str, fallback: &str) -> String {
+        if value.trim().is_empty() {
+            fallback.to_string()
+        } else {
+            value.to_string()
+        }
+    }
+
+    fn parse_group_context(json_data: &str) -> Result<TaskGroupContext, String> {
+        serde_json::from_str::<TaskGroupContext>(json_data)
+            .map_err(|error| format!("Invalid task group JSON: {error}"))
     }
 
     fn patch_catalog_ownership(
@@ -488,6 +692,135 @@ mod tests {
         assert!(task_ids.contains(&"task-available"));
         assert!(task_ids.contains(&"task-assigned"));
         assert!(task_ids.contains(&"task-active"));
+    }
+
+    fn group_service() -> TaskStateService<InMemoryTaskRepository> {
+        let service = TaskStateService::new(InMemoryTaskRepository::new());
+        service
+            .upsert_catalog_entry("task-1".to_string(), r#"{"title":"Attack"}"#.to_string())
+            .expect("catalog upsert should succeed");
+        service
+            .set_status("task-1".to_string(), "available".to_string())
+            .expect("status update should succeed");
+        service
+    }
+
+    fn assign(service: &TaskStateService<InMemoryTaskRepository>) {
+        service
+            .assign_group(
+                "task-1".to_string(),
+                r#"{"groupId":"grp:1","groupCallsign":"Alpha","requesterUid":"disp"}"#.to_string(),
+            )
+            .expect("assign should succeed");
+    }
+
+    fn status(service: &TaskStateService<InMemoryTaskRepository>) -> String {
+        service
+            .get_status("task-1".to_string())
+            .expect("status lookup should succeed")
+    }
+
+    #[test]
+    fn assign_group_moves_available_task_to_assigned() {
+        let service = group_service();
+        assign(&service);
+
+        assert_eq!(status(&service), "assigned");
+        let entry = service
+            .get_catalog_entry("task-1".to_string())
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            entry.get("assignedGroupId").and_then(Value::as_str),
+            Some("grp:1")
+        );
+        assert_eq!(entry.get("accepted").and_then(Value::as_bool), Some(false));
+    }
+
+    #[test]
+    fn assign_group_rejects_task_that_is_not_available() {
+        let service = group_service();
+        assign(&service);
+
+        let result =
+            service.assign_group("task-1".to_string(), r#"{"groupId":"grp:2"}"#.to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn accept_group_binds_ownership_and_activates_task() {
+        let service = group_service();
+        assign(&service);
+
+        service
+            .accept_group(
+                "task-1".to_string(),
+                r#"{"groupId":"grp:1","requesterUid":"lead","orgId":"org-1"}"#.to_string(),
+            )
+            .expect("accept should succeed");
+
+        assert_eq!(status(&service), "active");
+        let reward = service.get_reward_context("task-1".to_string()).unwrap();
+        assert_eq!(reward.requester_uid, "lead");
+        assert_eq!(reward.org_id, "org-1");
+    }
+
+    #[test]
+    fn accept_group_rejects_other_group() {
+        let service = group_service();
+        assign(&service);
+
+        let result = service.accept_group(
+            "task-1".to_string(),
+            r#"{"groupId":"grp:2","requesterUid":"lead"}"#.to_string(),
+        );
+        assert!(result.is_err());
+        assert_eq!(status(&service), "assigned");
+    }
+
+    #[test]
+    fn decline_group_returns_task_and_records_decline() {
+        let service = group_service();
+        assign(&service);
+
+        service
+            .decline_group(
+                "task-1".to_string(),
+                r#"{"groupId":"grp:1","requesterUid":"lead"}"#.to_string(),
+            )
+            .expect("decline should succeed");
+
+        assert_eq!(status(&service), "available");
+        let entry = service
+            .get_catalog_entry("task-1".to_string())
+            .unwrap()
+            .unwrap();
+        assert!(entry.get("assignedGroupId").is_none());
+        assert_eq!(
+            entry
+                .get("lastDeclinedGroupCallsign")
+                .and_then(Value::as_str),
+            Some("Alpha")
+        );
+    }
+
+    #[test]
+    fn decline_group_rejects_accepted_task() {
+        let service = group_service();
+        assign(&service);
+        service
+            .accept_group(
+                "task-1".to_string(),
+                r#"{"groupId":"grp:1","requesterUid":"lead"}"#.to_string(),
+            )
+            .expect("accept should succeed");
+
+        let result = service.decline_group(
+            "task-1".to_string(),
+            r#"{"groupId":"grp:1","requesterUid":"lead"}"#.to_string(),
+        );
+        assert!(result.is_err());
+        assert_eq!(status(&service), "active");
     }
 
     #[test]

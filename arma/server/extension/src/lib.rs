@@ -13,8 +13,8 @@ use tokio::sync::RwLock as TokioRwLock;
 
 pub mod actor;
 pub mod bank;
-pub mod cad;
 pub mod config;
+pub mod dispatch;
 pub mod garage;
 pub mod helpers;
 pub mod icom;
@@ -71,7 +71,7 @@ fn init() -> Extension {
         .group("surreal", surreal::group())
         .group("actor", actor::group())
         .group("bank", bank::group())
-        .group("cad", cad::group())
+        .group("dispatch", dispatch::group())
         .group("garage", garage::group())
         .group("icom", icom::group())
         .group("locker", locker::group())

@@ -32,11 +32,11 @@ event is emitted.
 ### Event Naming
 Use lower-case dot-separated names:
 
-- `<domain>.<entity>.<action>` for domain events, such as `cad.assignment.assigned`
+- `<domain>.<entity>.<action>` for domain events, such as `cad.contract.assigned`
 - `<domain>.<action>` for simple lifecycle events, such as `task.started`
 
 Prefer past-tense action names for events that report completed state changes:
-`created`, `started`, `assigned`, `acknowledged`, `declined`, `completed`,
+`created`, `started`, `assigned`, `accepted`, `declined`, `completed`,
 `failed`, `cleared`, `updated`, `closed`.
 
 Payloads should be hash maps and should include stable identifiers first:
@@ -61,14 +61,16 @@ Task rewards and notifications:
 - `task.reward.notification.requested`
 
 CAD state:
-- `cad.assignment.assigned`
-- `cad.assignment.created`
-- `cad.assignment.acknowledged`
-- `cad.assignment.declined`
-- `cad.assignment.closed`
-- `cad.request.submitted`
-- `cad.request.closed`
+- `cad.contract.assigned`
+- `cad.contract.accepted`
+- `cad.contract.declined`
 - `cad.group.updated`
+
+Dispatch state (`forge_server_dispatch`):
+- `dispatch.order.created`
+- `dispatch.order.closed`
+- `dispatch.request.submitted`
+- `dispatch.request.closed`
 
 Client sync and notification requests:
 - `notification.requested`

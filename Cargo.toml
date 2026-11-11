@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "arma/server/extension",
+    "bin/host/src-tauri",
     "bin/icom",
     "lib/models",
     "lib/repositories",

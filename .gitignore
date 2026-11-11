@@ -27,6 +27,7 @@ docus/.nuxt/
 docus/.output/
 docus/.data/
 docus/.nitro/
+bin/launcher/
 
 # OS
 .DS_Store
@@ -34,5 +35,7 @@ Thumbs.db
 
 # Arma
 arma/ui/map-viewer/
+arma/mod/.hemttout/
 arma/server/surrealdb/forge.db/
+arma/temp/
 promo/

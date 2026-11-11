@@ -8,7 +8,7 @@ depend on extension configuration and the SurrealDB runtime client.
 
 ## Contents
 
-- Actor, bank, garage, locker, org, phone, task, CAD, owned garage, and owned
+- Actor, bank, garage, locker, org, phone, task, dispatch, owned garage, and owned
   locker repository traits.
 - In-memory stores for unit tests and hot-state services.
 

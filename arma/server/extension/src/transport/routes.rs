@@ -2,7 +2,7 @@ use arma_rs::CallContext;
 
 mod actor;
 mod bank;
-mod cad;
+mod dispatch;
 mod garage;
 mod locker;
 mod org;
@@ -42,8 +42,8 @@ pub(super) fn route_command(
     if function_name.starts_with("owned:locker:") {
         return v_locker::route(call_context, function_name, arguments);
     }
-    if function_name.starts_with("cad:") {
-        return cad::route(call_context, function_name, arguments);
+    if function_name.starts_with("dispatch:") {
+        return dispatch::route(call_context, function_name, arguments);
     }
     if function_name.starts_with("phone:") {
         return phone::route(call_context, function_name, arguments);

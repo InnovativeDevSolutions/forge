@@ -10,7 +10,7 @@ repository traits, services, and shared helpers.
 - `forge-repositories`: repository traits plus in-memory implementations used
   by tests and transient hot-state stores.
 - `forge-services`: business logic for actor, bank, garage, locker, org,
-  phone, store, task, and CAD workflows.
+  phone, store, task, and dispatch workflows.
 - `forge-shared`: validation and cross-crate helpers.
 
 Durable persistence is implemented in the server extension with SurrealDB

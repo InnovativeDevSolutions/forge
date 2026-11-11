@@ -156,7 +156,7 @@ window.cadDispatcherRender = {
                         </header>
                         <p class="dispatch-description">${task.description || ""}</p>
                         <div class="dispatch-meta">
-                            <span>Unassigned</span>
+                            <span>${this.describeOpenContract(task)}</span>
                             <span>${window.mapUI.formatPosition(position)}</span>
                         </div>
                         <div class="dispatch-meta">
@@ -250,7 +250,7 @@ window.cadDispatcherRender = {
                         </div>
                         <div class="dispatch-meta">
                             <span>Org: ${group.orgId || "default"}</span>
-                            <span>Task: ${group.currentTaskId || "None"}</span>
+                            <span>Task: ${group.currentTaskTitle || group.currentTaskId || "None"}</span>
                         </div>
                     </article>
                 `;
@@ -313,7 +313,23 @@ window.cadDispatcherRender = {
             </div>
         `;
     },
+    // Orders, generated tasks, requests and activity come from the optional
+    // dispatch addon; hide their controls when the server does not run it.
+    applyDispatchGating() {
+        const display = this.dispatchEnabled ? "" : "none";
+        [
+            document.getElementById("dispatcherRequestTaskBtn"),
+            document.getElementById("dispatcherCreateOrderBtn"),
+            document.getElementById("metricOpenRequestsCard"),
+            document.querySelector(".dispatch-panel-activity"),
+        ]
+            .filter(Boolean)
+            .forEach((element) => {
+                element.style.display = display;
+            });
+    },
     render() {
+        this.applyDispatchGating();
         this.updateDangerAlert();
         this.updateRequestAlert();
         this.renderMetrics();

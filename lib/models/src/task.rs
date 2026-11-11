@@ -47,6 +47,42 @@ pub struct TaskOwnershipMutationResult {
     pub message: String,
 }
 
+/// Context for assigning a task to a group, or for a group accepting or
+/// declining the task it was assigned.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskGroupContext {
+    #[serde(default)]
+    pub group_id: String,
+    #[serde(default)]
+    pub group_callsign: String,
+    /// Dispatcher (assign) or group leader (accept/decline) performing the action.
+    #[serde(default)]
+    pub requester_uid: String,
+    #[serde(default)]
+    pub requester_name: String,
+    /// Organization of the accepting leader. Only used on accept.
+    #[serde(default)]
+    pub org_id: String,
+    #[serde(default)]
+    pub note: String,
+    #[serde(default)]
+    pub timestamp: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskGroupMutationResult {
+    #[serde(default)]
+    pub task_id: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub entry: Value,
+    #[serde(default)]
+    pub message: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskRewardContext {

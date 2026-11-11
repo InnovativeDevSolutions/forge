@@ -4,6 +4,7 @@ window.cadTasks = {
     groups: [],
     activity: [],
     session: {},
+    dispatchEnabled: false,
     mode: "operations",
     dispatchView: "board",
     activeTab: "contracts",
@@ -395,6 +396,47 @@ window.cadTasks = {
             contractsHeader.textContent = "Contracts";
         }
     },
+    // Requests and activity come from the optional dispatch addon; hide their
+    // tabs entirely when the server does not run it.
+    applyDispatchGating() {
+        if (this.dispatchEnabled) {
+            return;
+        }
+
+        ["tabRequestsBtn", "tabActivityBtn", "requestsPanel", "activityPanel"]
+            .map((id) => document.getElementById(id))
+            .filter(Boolean)
+            .forEach((element) => {
+                element.style.display = "none";
+                element.classList.remove("is-active");
+            });
+
+        const tabsEl = document.querySelector(".cad-tabs");
+        if (tabsEl) {
+            tabsEl.classList.remove("is-three-col");
+            tabsEl.classList.add("is-two-col");
+        }
+
+        if (["requests", "activity"].includes(this.activeTab)) {
+            this.activeTab = "contracts";
+        }
+    },
+    describeAssignment(task) {
+        const state = task.assignmentState || "unassigned";
+        if (state === "unassigned") {
+            return task.lastDeclinedGroupCallsign
+                ? `Declined by ${task.lastDeclinedGroupCallsign}`
+                : "Unassigned";
+        }
+
+        const assignedGroup = this.groups.find(
+            (group) => group.groupId === (task.assignedGroupId || ""),
+        );
+        const callsign = assignedGroup
+            ? assignedGroup.callsign
+            : task.assignedGroupCallsign || task.assignedGroupId || "Unknown";
+        return `${state}: ${callsign}`;
+    },
     setHydratePayload(payload) {
         this.contracts = Array.isArray(payload.contracts)
             ? payload.contracts
@@ -402,6 +444,7 @@ window.cadTasks = {
         this.requests = Array.isArray(payload.requests) ? payload.requests : [];
         this.groups = Array.isArray(payload.groups) ? payload.groups : [];
         this.activity = Array.isArray(payload.activity) ? payload.activity : [];
+        this.dispatchEnabled = !!payload.dispatchEnabled;
         this.session =
             payload.session && typeof payload.session === "object"
                 ? payload.session
@@ -534,9 +577,7 @@ window.cadTasks = {
         });
     },
     isDispatchOrder(entry) {
-        return (
-            !!entry.isDispatchOrder || (entry.type || "") === "dispatch_order"
-        );
+        return !!entry.isDispatchOrder;
     },
     formatTypeLabel(entry) {
         const typeLabel = (entry.type || "task").replaceAll("_", " ");
@@ -867,9 +908,9 @@ window.cadTasks = {
             success ? "success" : "error",
         );
     },
-    acknowledgeTask(taskID) {
-        this.setStatus("Acknowledging contract...", "info");
-        window.mapUI.sendEvent("cad::tasks::acknowledge", { taskID: taskID });
+    acceptTask(taskID) {
+        this.setStatus("Accepting contract...", "info");
+        window.mapUI.sendEvent("cad::tasks::accept", { taskID: taskID });
     },
     declineTask(taskID) {
         this.setStatus("Declining contract...", "info");
@@ -1080,17 +1121,8 @@ window.cadTasks = {
                     const position = Array.isArray(task.position)
                         ? task.position
                         : [0, 0, 0];
-                    const assignedGroupId = task.assignedGroupId || "";
-                    const assignmentState =
-                        task.assignmentState || "unassigned";
-                    const assignedGroup = this.groups.find(
-                        (group) => group.groupId === assignedGroupId,
-                    );
                     const isSelected = taskId === this.selectedDispatchTaskId;
-                    const stateLabel =
-                        assignmentState === "unassigned"
-                            ? "Unassigned"
-                            : `${assignmentState}: ${assignedGroup ? assignedGroup.callsign : assignedGroupId || "Unknown"}`;
+                    const stateLabel = this.describeAssignment(task);
 
                     return `
                         <button
@@ -1134,9 +1166,6 @@ window.cadTasks = {
                     : [0, 0, 0];
                 const assignedGroupId = task.assignedGroupId || "";
                 const assignmentState = task.assignmentState || "unassigned";
-                const assignedGroup = this.groups.find(
-                    (group) => group.groupId === assignedGroupId,
-                );
                 const isAssignedToLeader =
                     this.isLeader() && assignedGroupId === currentGroupId;
                 const isSelected = taskId === this.selectedDispatchTaskId;
@@ -1156,13 +1185,13 @@ window.cadTasks = {
                         </div>
                         <p class="task-description">${task.description || ""}</p>
                         <div class="task-meta">
-                            <span>${assignmentState === "unassigned" ? "Available" : `${assignmentState}: ${assignedGroup ? assignedGroup.callsign : assignedGroupId}`}</span>
+                            <span>${this.describeAssignment(task)}</span>
                             <span>${window.mapUI.formatPosition(position)}</span>
                         </div>
                         ${
                             isAssignedToLeader && assignmentState === "assigned"
                                 ? `<div class="task-action-row">
-                                    <button type="button" class="task-accept-btn" onclick="event.stopPropagation(); window.cadTasks.acknowledgeTask('${taskId}')">Acknowledge</button>
+                                    <button type="button" class="task-accept-btn" onclick="event.stopPropagation(); window.cadTasks.acceptTask('${taskId}')">Accept</button>
                                     <button type="button" class="task-secondary-btn" onclick="event.stopPropagation(); window.cadTasks.declineTask('${taskId}')">Decline</button>
                                 </div>`
                                 : ""
@@ -1208,7 +1237,7 @@ window.cadTasks = {
                             </div>
                             <div class="task-meta">
                                 <span>Members: ${this.normalizeCollection(group.members).length}</span>
-                                <span>Task: ${group.currentTaskId || "None"}</span>
+                                <span>Task: ${group.currentTaskTitle || group.currentTaskId || "None"}</span>
                             </div>
                         </button>
                     `;
@@ -1246,7 +1275,7 @@ window.cadTasks = {
                 </div>
                 <div class="task-meta">
                     <span>Role: ${currentGroup.role || "unassigned"}</span>
-                    <span>Task: ${currentGroup.currentTaskId || "None"}</span>
+                    <span>Task: ${currentGroup.currentTaskTitle || currentGroup.currentTaskId || "None"}</span>
                 </div>
             </div>
             ${roster
@@ -1317,6 +1346,7 @@ window.cadTasks = {
         this.updateDangerAlert();
         this.updateRequestAlert();
         this.syncLayoutState();
+        this.applyDispatchGating();
         this.renderContracts();
         this.renderRoster();
         this.renderRequests();

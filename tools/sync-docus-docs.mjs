@@ -104,6 +104,10 @@ const generatedPages = [
     target: '3.server-modules/12.transport-service.md'
   },
   {
+    source: 'docs/DISPATCH_USAGE_GUIDE.md',
+    target: '3.server-modules/13.dispatch.md'
+  },
+  {
     source: 'docs/CLIENT_USAGE_GUIDE.md',
     target: '4.client-addons/0.index.md'
   },

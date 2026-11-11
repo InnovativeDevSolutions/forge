@@ -72,6 +72,7 @@ Players also load `@forge_client` for player-facing UI. See
 - [Bank Usage Guide](./BANK_USAGE_GUIDE.md)
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
 - [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md)
+- [Dispatch Usage Guide](./DISPATCH_USAGE_GUIDE.md)
 - [Economy Usage Guide](./ECONOMY_USAGE_GUIDE.md)
 - [Garage Usage Guide](./GARAGE_USAGE_GUIDE.md)
 - [ICOM Usage Guide](./ICOM_USAGE_GUIDE.md)

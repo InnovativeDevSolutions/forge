@@ -25,7 +25,7 @@ normal gameplay.
 ## Responsibilities
 
 - Register extension command groups for actor, bank, garage, locker, org,
-  phone, store, task, CAD, terrain, and transport systems.
+  phone, store, task, dispatch, terrain, and transport systems.
 - Load extension configuration from `@forge_server/config.toml`, `config.toml`
   in the working directory, or `config.toml` beside the extension DLL.
 - Connect to SurrealDB and apply schema modules on startup.

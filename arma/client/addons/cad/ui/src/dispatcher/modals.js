@@ -254,7 +254,7 @@ window.cadDispatcherModals = {
         document.getElementById("dispatcherModalGroupLeader").textContent =
             group.leaderName || "Unknown";
         document.getElementById("dispatcherModalGroupTask").textContent =
-            group.currentTaskId || "None";
+            group.currentTaskTitle || group.currentTaskId || "None";
         document.getElementById("dispatcherModalGroupOrg").textContent =
             group.orgId || "default";
         document.getElementById("dispatcherModalRoleSelect").innerHTML =
@@ -300,7 +300,7 @@ window.cadDispatcherModals = {
         document.getElementById("dispatcherModalGroupLeader").textContent =
             group.leaderName || "Unknown";
         document.getElementById("dispatcherModalGroupTask").textContent =
-            group.currentTaskId || "None";
+            group.currentTaskTitle || group.currentTaskId || "None";
         document.getElementById("dispatcherModalGroupOrg").textContent =
             group.orgId || "default";
     },

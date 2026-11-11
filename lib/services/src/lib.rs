@@ -1,6 +1,6 @@
 pub mod actor;
 pub mod bank;
-pub mod cad;
+pub mod dispatch;
 pub mod garage;
 pub mod locker;
 pub mod org;
@@ -12,7 +12,7 @@ pub mod v_locker;
 
 pub use actor::{ActorHotStateService, ActorService};
 pub use bank::{BankHotStateService, BankService};
-pub use cad::{CadStateService, CadViewService};
+pub use dispatch::DispatchStateService;
 pub use garage::{GarageHotStateService, GarageService};
 pub use locker::{LockerHotStateService, LockerService};
 pub use org::{OrgHotStateService, OrgService};

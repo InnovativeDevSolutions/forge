@@ -300,9 +300,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
             };
         } else {
             switch (_mode) do {
-                case "allowlist": {
-                    _filteredItems = [];
-                };
+                case "allowlist": { _filteredItems = []; };
                 case "denylist": {
                     _filteredItems = _filteredItems select {
                         !((toLowerANSI (_x getOrDefault ["className", ""])) in _classNames)
@@ -339,7 +337,6 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         params [["_player", objNull, [objNull]]];
 
         if (isNull _player) exitWith { "" };
-
         switch (side group _player) do {
             case west: { "west" };
             case east: { "east" };
@@ -363,7 +360,6 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
         params [["_category", "", [""]], ["_items", [], [[]]], ["_player", objNull, [objNull]]];
 
         if !(_self call ["isUnitCategory", [_category]]) exitWith { +_items };
-
         _items select { _self call ["doesItemMatchPlayerSide", [_x, _player]] }
     }],
     ["formatCurrency", compileFinal {
@@ -774,6 +770,7 @@ GVAR(StoreCatalogServiceBaseClass) = compileFinal createHashMapFromArray [
 
         _response set ["success", true];
         _response set ["message", ""];
+
         private _items = _self call ["buildCategoryItems", [_categoryKey]];
         _items = _self call ["applyPlayerSideFilter", [_categoryKey, _items, _player]];
         _response set ["items", _items];

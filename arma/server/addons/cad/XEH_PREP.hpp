@@ -1,8 +1,5 @@
-PREP(initActivityRepository);
-PREP(initAssignmentRepository);
 PREP(initCadStore);
+PREP(initContractService);
 PREP(initGroupRepository);
 PREP(initPermissionService);
-PREP(initPersistenceService);
-PREP(initRequestRepository);
 PREP(registerEventListeners);

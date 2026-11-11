@@ -1,63 +1,68 @@
 # Forge Server CAD
 
 ## Overview
-The CAD addon coordinates dispatch-facing operational state: groups,
-assignments, dispatch orders, support requests, task assignment, permissions,
-hydrate payloads, and recent activity.
+CAD answers four questions: which contracts exist, which group each is
+assigned to, whether that group accepted or declined it, and what each group's
+role, status and members are.
 
-CAD state is extension-backed but intentionally transient. It is scoped to the
-active server or mission lifecycle and starts fresh after restart.
+CAD keeps no contract state of its own. Contracts are task catalog entries and
+`TaskStore` owns their lifecycle; CAD checks who may act and calls it.
+
+```
+available --assign (dispatcher)--> assigned --accept (group leader)--> active
+                                   assigned --decline (group leader)--> available
+```
+
+An accepted (`active`) contract cannot be declined. A declined contract returns
+to the board with `lastDeclinedGroupId`, `lastDeclinedGroupCallsign` and
+`lastDeclinedAt` set on its catalog entry.
 
 ## Dependencies
-- `forge_server_main`
-- `forge_server_common`
-- `forge_server_actor`
-- `forge_server_org`
-- `forge_server_task`
-- `forge_server_extension` at runtime for CAD extension calls
+- `forge_server_main`, `forge_server_common`, `forge_server_actor`,
+  `forge_server_org`, `forge_server_task`
 - `forge_client_cad` and `forge_client_notifications` for response RPCs
 
 ## Main Components
-- `fnc_initCadStore.sqf` coordinates repositories and request handling.
-- `fnc_initActivityRepository.sqf` records recent CAD activity.
-- `fnc_initAssignmentRepository.sqf` manages task assignments and dispatch
-  orders.
-- `fnc_initGroupRepository.sqf` manages group membership, role, and status.
-- `fnc_initPermissionService.sqf` resolves dispatch permissions.
-- `fnc_initPersistenceService.sqf` bridges SQF state to extension hot CAD
-  storage.
-- `fnc_initRequestRepository.sqf` manages support requests.
+- `fnc_initCadStore.sqf` coordinates services, handles RPCs, builds the hydrate
+  payload and hosts the hydrate contributor registry.
+- `fnc_initContractService.sqf` assigns, accepts and declines contracts.
+- `fnc_initGroupRepository.sqf` builds live groups (members, leader, role,
+  status) and updates group profiles.
+- `fnc_initPermissionService.sqf` resolves dispatcher permission.
 
-## Event Surface
-The addon listens to and emits events through the event bus:
+## Groups
+Every tracked group gets a stable ID (`grp:<n>`) stored on the group object,
+so the ID and its role/status survive leader changes. Tracked sides default to
+`[west]`; a mission can override them:
 
-**Listens to:**
-- Task lifecycle events (`task.started`, `task.completed`, `task.failed`)
-- Task reward events to sync assignments
-- Client notification/sync request events
+```sqf
+missionNamespace setVariable ["forge_server_cad_sides", [west, independent]];
+```
 
-**Emits:**
-- `cad.assignment.assigned` - task assigned to group
-- `cad.assignment.created` - new assignment created
-- `cad.assignment.acknowledged` - assignment acknowledged
-- `cad.assignment.declined` - assignment declined
-- `cad.assignment.closed` - assignment completed
-- `cad.request.submitted` - support request submitted
-- `cad.request.closed` - support request resolved
-- `cad.group.updated` - group status updated
+## RPCs
+| Server event | Purpose |
+| --- | --- |
+| `forge_server_cad_requestHydrateCad` | Build the CAD payload for a player |
+| `forge_server_cad_requestAssignCadContract` | Dispatcher assigns a contract to a group |
+| `forge_server_cad_requestAcceptCadContract` | Group leader accepts the assigned contract |
+| `forge_server_cad_requestDeclineCadContract` | Group leader declines the assigned contract |
+| `forge_server_cad_requestUpdateCadGroupProfile` | Leader or dispatcher sets role and/or status |
 
-Successful mutations may invalidate CAD state globally so clients refresh their views.
+## Events
+Emits `cad.contract.assigned`, `cad.contract.accepted`,
+`cad.contract.declined` and `cad.group.updated` on the event bus. Listens to
+`task.*` lifecycle events to refresh open CAD views.
 
-## Contract Lifecycle
-CAD assignment and task acceptance are intentionally separate. Dispatch
-assignment reserves a contract for a group and marks the CAD assignment
-`assigned`; it does not start task logic. The assigned group leader must
-acknowledge the assignment before the task is accepted and ownership is bound.
-If the leader declines, CAD removes the assignment and the contract returns to
-the open board. Task status follows the same lifecycle: `available` on
-creation, `assigned` after dispatch assignment, and `active` after
-acknowledgement.
+## Extending the hydrate payload
+Other addons add sections to the CAD payload with a contributor. The code gets
+`[uid, session, payload]` and returns a hashmap that is merged into the payload:
 
-## Notes
-CAD hydrate payloads include assignable task catalog entries from `TaskStore` and
-organization context from `ActorStore`.
+```sqf
+forge_server_cad_CadStore call ["registerHydrateContributor", ["myAddon", {
+    params ["_uid", "_session", "_payload"];
+    createHashMapFromArray [["mySection", []]]
+}]];
+```
+
+`forge_server_dispatch` uses this for support requests, the activity feed and
+generated task types.
