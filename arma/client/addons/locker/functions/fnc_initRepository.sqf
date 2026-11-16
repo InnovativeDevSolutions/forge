@@ -27,6 +27,7 @@ GVAR(LockerRepositoryBaseClass) = compileFinal createHashMapFromArray [
         _self set ["isLoaded", false];
         _self set ["lastSave", time];
         _self set ["locker", createHashMap];
+        _self set ["localLockers", []];
     }],
     ["init", compileFinal {
         private _uid = _self get "uid";
@@ -196,55 +197,90 @@ GVAR(LockerRepositoryBaseClass) = compileFinal createHashMapFromArray [
 
         _self set ["lastSave", time];
     }],
+    ["warnIfOverCapacity", compileFinal {
+        params [["_locker", createHashMap, [createHashMap]]];
+
+        if (count _locker <= 25) exitWith { false };
+        if (isNil QEGVAR(notifications,NotificationService)) exitWith { false };
+
+        EGVAR(notifications,NotificationService) call ["create", [
+            "warning", "Over Capacity", "Locker has more then 25 items, please remove some items", 3000
+        ]];
+        true
+    }],
+    ["fillContainer", compileFinal {
+        // Replaces the box's cargo with the saved locker contents.
+        params [["_container", objNull, [objNull]]];
+
+        if (isNull _container) exitWith { false };
+
+        private _index = _self get "locker";
+
+        clearBackpackCargo _container;
+        clearItemCargo _container;
+        clearMagazineCargo _container;
+        clearWeaponCargo _container;
+
+        {
+            private _amount = _y get "amount";
+            private _category = _y get "category";
+            private _className = _y get "classname";
+
+            switch (_category) do {
+                case "backpack": { _container addBackpackCargo [_className, _amount]; };
+                case "item": { _container addItemCargo [_className, _amount]; };
+                case "magazine": { _container addMagazineCargo [_className, _amount]; };
+                case "weapon": { _container addWeaponCargo [_className, _amount]; };
+                default { _container addItemCargo [_className, _amount]; };
+            };
+        } forEach _index;
+
+        _self call ["warnIfOverCapacity", [_index]];
+        true
+    }],
+    ["readContainer", compileFinal {
+        // Reads everything in the box, including nested containers and weapon attachments.
+        params [["_container", objNull, [objNull]]];
+
+        private _contents = createHashMap;
+        if (isNull _container) exitWith { _contents };
+
+        _contents = _self call ["getCargo", [_container, _contents]];
+        _contents = _self call ["getContainerItems", [_container, _contents]];
+        _self call ["getAttachments", [_container, _contents]]
+    }],
+    ["commitContainer", compileFinal {
+        // Saves the box's current contents to the server and the local repository.
+        params [["_container", objNull, [objNull]], ["_unit", player, [objNull]]];
+
+        if (isNull _container) exitWith { createHashMap };
+
+        private _newLocker = _self call ["readContainer", [_container]];
+        [SRPC(locker,requestOverrideLocker), [getPlayerUID _unit, _newLocker]] call CFUNC(serverEvent);
+        _self set ["locker", _newLocker];
+        _self set ["lastSave", time];
+
+        _self call ["warnIfOverCapacity", [_newLocker]];
+        _newLocker
+    }],
     ["setEventHandlers", compileFinal {
         params [["_locker", objNull, [objNull]]];
 
+        // A compat addon that runs its own fill/save cycle sets
+        // forge_client_locker_externallyManaged on the box; the vanilla
+        // container events then leave it alone.
         _locker addEventHandler ["ContainerOpened", {
             params ["_container", "_unit"];
 
-            private _index = GVAR(LockerRepository) get "locker";
-
-            clearBackpackCargo _container;
-            clearItemCargo _container;
-            clearMagazineCargo _container;
-            clearWeaponCargo _container;
-
-            {
-                private _amount = _y get "amount";
-                private _category = _y get "category";
-                private _className = _y get "classname";
-
-                switch (_category) do {
-                    case "backpack": { _container addBackpackCargo [_className, _amount]; };
-                    case "item": { _container addItemCargo [_className, _amount]; };
-                    case "magazine": { _container addMagazineCargo [_className, _amount]; };
-                    case "weapon": { _container addWeaponCargo [_className, _amount]; };
-                    default { _container addItemCargo [_className, _amount]; };
-                };
-            } forEach _index;
-
-            if (count _index > 25) then {
-                private _params = ["warning", "Over Capacity", "Locker has more then 25 items, please remove some items", 3000];
-                GVAR(NotificationService) call ["create", _params];
-            };
+            if (_container getVariable [QGVAR(externallyManaged), false]) exitWith {};
+            GVAR(LockerRepository) call ["fillContainer", [_container]];
         }];
 
         _locker addEventHandler ["ContainerClosed", {
             params ["_container", "_unit"];
 
-            private _newLocker = createHashMap;
-            _newLocker = GVAR(LockerRepository) call ["getCargo", [_container, _newLocker]];
-            _newLocker = GVAR(LockerRepository) call ["getContainerItems", [_container, _newLocker]];
-            _newLocker = GVAR(LockerRepository) call ["getAttachments", [_container, _newLocker]];
-
-            private _uid = getPlayerUID _unit;
-            [SRPC(locker,requestOverrideLocker), [_uid, _newLocker]] call CFUNC(serverEvent);
-            GVAR(LockerRepository) set ["locker", _newLocker];
-
-            if (count _newLocker > 25) then {
-                private _params = ["warning", "Over Capacity", "Locker has more then 25 items, please remove some items", 3000];
-                GVAR(NotificationService) call ["create", _params];
-            };
+            if (_container getVariable [QGVAR(externallyManaged), false]) exitWith {};
+            GVAR(LockerRepository) call ["commitContainer", [_container, _unit]];
         }];
     }],
     ["setup", compileFinal {
@@ -255,6 +291,7 @@ GVAR(LockerRepositoryBaseClass) = compileFinal createHashMapFromArray [
 
         if (_lockers isEqualTo []) exitWith { diag_log "[FORGE:Client:Locker] No lockers found in missionNamespace."; };
 
+        private _localLockers = [];
         {
             private _globalLocker = missionNamespace getVariable _x;
             private _pos = getPosASL _globalLocker;
@@ -281,7 +318,13 @@ GVAR(LockerRepositoryBaseClass) = compileFinal createHashMapFromArray [
             missionNamespace setVariable [_localVarName, _localLocker];
 
             _self call ["setEventHandlers", [_localLocker]];
+            _localLockers pushBack _localLocker;
         } forEach _lockers;
+
+        _self set ["localLockers", _localLockers];
+
+        // Extension point for compat addons (e.g. forge_client_compat_aio).
+        [QGVAR(lockersCreated), [_localLockers]] call CFUNC(localEvent);
     }],
     ["sync", compileFinal {
         params [["_data", createHashMap, [createHashMap]]];
@@ -293,6 +336,8 @@ GVAR(LockerRepositoryBaseClass) = compileFinal createHashMapFromArray [
         _self set ["locker", _locker];
 
         if !(_isLoaded) then { _self set ["isLoaded", true]; _self call ["setup", []]; };
+
+        [QGVAR(synced), []] call CFUNC(localEvent);
         diag_log "[FORGE:Client:Locker] Sync completed";
     }]
 ];

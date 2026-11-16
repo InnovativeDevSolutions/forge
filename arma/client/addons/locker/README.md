@@ -22,6 +22,22 @@ behavior.
   closed.
 - Hides selected ACE Arsenal controls when the arsenal display opens.
 
+## Extension Points
+Compat addons can take over a locker's fill/save cycle without patching this
+addon:
+
+- `forge_client_locker_lockersCreated [lockers]` (local CBA event) is raised
+  once the local locker boxes exist. The array is also kept as
+  `forge_client_locker_LockerRepository get "localLockers"`.
+- `forge_client_locker_synced []` (local CBA event) is raised after each server
+  sync of locker contents.
+- Setting `forge_client_locker_externallyManaged = true` on a box makes the
+  vanilla `ContainerOpened` / `ContainerClosed` handlers skip it.
+- Repository methods: `fillContainer [box]`, `readContainer [box]` and
+  `commitContainer [box, unit]` (saves to the server).
+
+`forge_client_compat_aio` uses these to support AIO - Arma Inventory Overhaul.
+
 ## Notes
 The client repository is display/input state. The server locker addon and
 extension own saved locker and virtual arsenal data.
