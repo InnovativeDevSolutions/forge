@@ -6,5 +6,5 @@ private _units = units group player select { isPlayer _x };
 private _machineIDs = _units apply { owner _x };
 
 {
-    [_ip, _port, _password] remoteExecCall ["forge_server_misc_fnc_redirectClient2Server", _x];
+    [_ip, _port, _password] remoteExecCall [QFUNC(redirectClient2Server), _x];
 } forEach _machineIDs;

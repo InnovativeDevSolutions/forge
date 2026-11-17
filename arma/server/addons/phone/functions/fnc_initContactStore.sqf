@@ -162,9 +162,7 @@ GVAR(ContactStore) = createHashMapObject [[
             ["canEmail", false]
         ];
         private _contactUids = _self call ["getContacts", [_uid]];
-        if !(_fieldCommanderUid in _contactUids) then {
-            _contactUids pushBack _fieldCommanderUid;
-        };
+        _contactUids pushBackUnique _fieldCommanderUid;
 
         {
             private _contactUid = _x;

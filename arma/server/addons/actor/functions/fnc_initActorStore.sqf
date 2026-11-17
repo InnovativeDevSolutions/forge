@@ -274,11 +274,6 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
             false
         };
 
-        private _createdActor = fromJSON _createResult;
-        if !(_createdActor isEqualType createHashMap) then {
-            _createdActor = +_actor;
-        };
-        _createdActor = GVAR(ActorModel) call ["migrate", [_createdActor]];
         true
     }],
     ["hydrateActorIfNeeded", compileFinal {
