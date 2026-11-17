@@ -269,6 +269,14 @@ GVAR(CADUIBridgeBaseClass) = compileFinal ([
         [SRPC(dispatch,requestCloseSupportRequest), [getPlayerUID player, _requestID]] call CFUNC(serverEvent);
         true
     }],
+    ["requestClaimTask", compileFinal {
+        params [["_taskID", "", [""]]];
+
+        if (_taskID isEqualTo "") exitWith { false };
+
+        [SRPC(cad,requestClaimCadContract), [getPlayerUID player, _taskID]] call CFUNC(serverEvent);
+        true
+    }],
     ["requestAcceptTask", compileFinal {
         params [["_taskID", "", [""]]];
 

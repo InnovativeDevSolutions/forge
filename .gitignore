@@ -39,3 +39,6 @@ arma/mod/.hemttout/
 arma/server/surrealdb/forge.db/
 arma/temp/
 promo/
+
+# Extension logs written when running cargo test
+arma/server/extension/@forge_server/

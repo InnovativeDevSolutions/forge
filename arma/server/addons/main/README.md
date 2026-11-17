@@ -24,6 +24,25 @@ own state in pre-init or post-init when they are intentionally independent of
 the main bootstrap flow.
 
 ## Hot State Flush
-On player disconnect, mission ended, and MP ended events, `saveHotState`
-persists actor, bank, locker, virtual arsenal, garage, virtual garage, and
-organization hot state for the relevant UID or all known UIDs.
+`saveHotState [uid, unit, waitForWrites]` snapshots the actor and saves actor,
+bank, locker, virtual arsenal, garage, virtual garage and organization hot
+state for one UID (or every known UID with `""`). Each store's save queues its
+database write in the background.
+
+| When | What runs |
+| --- | --- |
+| `HandleDisconnect` | Save that player, with the actor snapshot taken from the unit they controlled (position, loadout, stance). Returns `false`, so the engine handles the unit as usual. |
+| `PlayerDisconnected` | Fallback 2 s later for a player who left without a unit; skipped when `HandleDisconnect` already saved them. |
+| Autosave | Every `forge_server_main_autosaveInterval` minutes (CBA server setting, default 5, 0 = off), each connected player. |
+| `Ended` / `MPEnded` | Once per mission: every known UID, then waits for the database writes to finish (`persistence:flush`, up to `forge_server_main_flushTimeout` ms, default 10000). |
+
+To force a save from server code:
+
+```sqf
+[_uid] call forge_server_main_fnc_saveHotState;            // one player
+["", objNull, true] call forge_server_main_fnc_saveHotState; // everyone, and wait for the writes
+```
+
+The extension exposes `persistence:pending` (number of writes not finished)
+and `persistence:flush [timeout_ms]` (`OK`, or `Error: ...` with the count
+still pending).

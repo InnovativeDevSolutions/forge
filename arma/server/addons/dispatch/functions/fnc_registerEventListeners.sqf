@@ -41,6 +41,15 @@ private _listeners = [
             _event getOrDefault ["taskId", ""], _event getOrDefault ["groupId", ""], _entry getOrDefault ["requesterUid", ""]
         ]];
     }],
+    ["cad.contract.claimed", {
+        params ["_event"];
+        private _entry = _event getOrDefault ["entry", createHashMap];
+        (GVAR(DispatchStore) get "ActivityLog") call ["append", [
+            "contract_claimed",
+            format ["%1 claimed %2 (no dispatcher on duty).", _entry getOrDefault ["assignedGroupCallsign", "A group"], _entry getOrDefault ["title", "a contract"]],
+            _event getOrDefault ["taskId", ""], _event getOrDefault ["groupId", ""], _entry getOrDefault ["requesterUid", ""]
+        ]];
+    }],
     ["cad.contract.declined", {
         params ["_event"];
         private _entry = _event getOrDefault ["entry", createHashMap];

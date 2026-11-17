@@ -908,6 +908,10 @@ window.cadTasks = {
             success ? "success" : "error",
         );
     },
+    claimTask(taskID) {
+        this.setStatus("Claiming contract...", "info");
+        window.mapUI.sendEvent("cad::tasks::claim", { taskID: taskID });
+    },
     acceptTask(taskID) {
         this.setStatus("Accepting contract...", "info");
         window.mapUI.sendEvent("cad::tasks::accept", { taskID: taskID });
@@ -1148,29 +1152,51 @@ window.cadTasks = {
         }
 
         const currentGroupId = this.getPlayerGroupId();
-        const visibleContracts = this.contracts.filter(
-            (task) => (task.assignedGroupId || "") === currentGroupId,
-        );
+        // With no dispatcher online the server also sends the open board,
+        // so group leaders can claim a contract themselves.
+        const openBoard = !this.session.dispatcherOnline;
+        const visibleContracts = this.contracts
+            .filter(
+                (task) =>
+                    (task.assignedGroupId || "") === currentGroupId ||
+                    (openBoard &&
+                        (task.assignmentState || "unassigned") ===
+                            "unassigned"),
+            )
+            .sort((left, right) => {
+                const leftOwn = (left.assignedGroupId || "") === currentGroupId;
+                const rightOwn =
+                    (right.assignedGroupId || "") === currentGroupId;
+                return Number(rightOwn) - Number(leftOwn);
+            });
+
+        const boardNotice = openBoard
+            ? `<div class="placeholder-message"><p>No dispatcher on duty. ${this.isLeader() ? "As group leader you can claim one contract for your group." : "Your group leader can claim a contract."}</p></div>`
+            : "";
 
         if (!visibleContracts.length) {
-            listEl.innerHTML =
-                '<div class="placeholder-message"><p>No contract is currently assigned to your group.</p></div>';
+            listEl.innerHTML = openBoard
+                ? `${boardNotice}<div class="placeholder-message"><p>No contracts are currently available.</p></div>`
+                : '<div class="placeholder-message"><p>No contract is currently assigned to your group.</p></div>';
             return;
         }
 
-        listEl.innerHTML = visibleContracts
-            .map((task) => {
-                const taskId = task.taskId || task.taskID || "";
-                const position = Array.isArray(task.position)
-                    ? task.position
-                    : [0, 0, 0];
-                const assignedGroupId = task.assignedGroupId || "";
-                const assignmentState = task.assignmentState || "unassigned";
-                const isAssignedToLeader =
-                    this.isLeader() && assignedGroupId === currentGroupId;
-                const isSelected = taskId === this.selectedDispatchTaskId;
+        listEl.innerHTML =
+            boardNotice +
+            visibleContracts
+                .map((task) => {
+                    const taskId = task.taskId || task.taskID || "";
+                    const position = Array.isArray(task.position)
+                        ? task.position
+                        : [0, 0, 0];
+                    const assignedGroupId = task.assignedGroupId || "";
+                    const assignmentState =
+                        task.assignmentState || "unassigned";
+                    const isAssignedToLeader =
+                        this.isLeader() && assignedGroupId === currentGroupId;
+                    const isSelected = taskId === this.selectedDispatchTaskId;
 
-                return `
+                    return `
                     <div
                         class="task-card dispatch-map-card ${isSelected ? "is-selected" : ""}"
                         data-task-id="${taskId}"
@@ -1196,10 +1222,18 @@ window.cadTasks = {
                                 </div>`
                                 : ""
                         }
+                        ${
+                            this.session.canClaim &&
+                            assignmentState === "unassigned"
+                                ? `<div class="task-action-row">
+                                    <button type="button" class="task-accept-btn" onclick="event.stopPropagation(); window.cadTasks.claimTask('${taskId}')">Claim</button>
+                                </div>`
+                                : ""
+                        }
                     </div>
                 `;
-            })
-            .join("");
+                })
+                .join("");
     },
     renderRoster() {
         const listEl = document.getElementById("rosterList");

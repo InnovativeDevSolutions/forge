@@ -11,12 +11,16 @@
  *
  * Arguments:
  * 0: UID to flush. Empty string flushes all known players. <STRING>
+ * 1: The player's unit, when it is no longer a player (HandleDisconnect). Only
+ *    used with a single UID. <OBJECT> (default: objNull)
+ * 2: Wait for the database writes to finish before returning (mission end,
+ *    server shutdown). Blocks for at most forge_server_main_flushTimeout ms. <BOOL> (default: false)
  *
  * Return Value:
- * True if the flush routine completed. <BOOL>
+ * True if the flush routine completed (and, when waiting, every write landed). <BOOL>
  */
 
-params [["_uid", "", [""]]];
+params [["_uid", "", [""]], ["_unit", objNull, [objNull]], ["_waitForWrites", false, [false]]];
 
 private _uids = [];
 if (_uid isEqualTo "") then {
@@ -52,7 +56,7 @@ if (_uid isEqualTo "") then {
     };
 
     if !(isNil QEGVAR(actor,ActorStore)) then {
-        EGVAR(actor,ActorStore) call ["snapshot", [_flushUid]];
+        EGVAR(actor,ActorStore) call ["snapshot", [_flushUid, [objNull, _unit] select (_uid isNotEqualTo "")]];
         EGVAR(actor,ActorStore) call ["save", [_flushUid]];
     };
 
@@ -81,4 +85,18 @@ if (_uid isEqualTo "") then {
     };
 } forEach _uids;
 
-true
+if !(_waitForWrites) exitWith { true };
+
+// The stores queue their database writes in the background; wait for them so
+// a shutdown right after this does not drop them.
+private _timeout = missionNamespace getVariable [QGVAR(flushTimeout), 10000];
+["persistence:flush", [str _timeout]] call EFUNC(extension,extCall) params ["_result", "_isSuccess"];
+private _flushed = _isSuccess && { _result isEqualTo "OK" };
+
+["INFO", format [
+    "Hot state flushed for %1 UID(s); database writes %2.",
+    count _uids,
+    ["did not all finish: " + str _result, "finished"] select _flushed
+]] call EFUNC(common,log);
+
+_flushed

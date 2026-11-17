@@ -63,6 +63,7 @@ focus uses the member position included in the hydrated group roster.
 | `cad::refresh` | Request fresh CAD hydrate data. |
 | `cad::generatedTask::request` | Request a server-generated mission task from the selected generator type. |
 | `cad::tasks::assign` | Assign a contract to a group. |
+| `cad::tasks::claim` | Claim an available contract for your group (no dispatcher online). |
 | `cad::tasks::accept` | Accept the contract assigned to your group. |
 | `cad::tasks::decline` | Decline the contract assigned to your group. |
 | `cad::dispatchOrder::create` | Create dispatch order. |
@@ -125,6 +126,14 @@ activity controls.
 
 Contracts that were declined show "Declined by <group>" until they are
 reassigned.
+
+## Claiming Without a Dispatcher
+
+When the session has `dispatcherOnline = false`, the ops side lists every
+available contract under a "No dispatcher on duty" notice. If
+`session.canClaim` is true (the player leads a group with no contract), each
+available contract shows a **Claim** button, which assigns and accepts it for
+the group in one step.
 
 ## Authorization Notes
 

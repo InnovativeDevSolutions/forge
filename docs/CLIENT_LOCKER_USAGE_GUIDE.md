@@ -20,8 +20,9 @@ GVAR(VARepository) call ["init", []];
 
 The repository searches mission namespace variables whose names contain
 `locker` and refer to objects. For each server/mission locker object, it creates
-a local `Box_NATO_Equip_F` at the same position and attaches container event
-handlers.
+a local box of the same class (`Box_NATO_Equip_F` if it has none) at the same
+position and attaches container event handlers. The server hides the placed
+locker objects, so players only interact with their own local box.
 
 On container open:
 
@@ -34,6 +35,36 @@ On container close:
 - cargo, nested container items, and weapon attachments are read back
 - the new locker map is sent to the server with the override request
 - the local repository cache is updated
+
+The override only updates the server's in-memory state. It reaches the
+database on autosave, disconnect or mission end; see
+[When Player Data Is Saved](./surrealdb-setup.md#when-player-data-is-saved).
+
+Backpacks cannot be put into a local-only box in multiplayer (the engine logs
+"Tried to create local-only container with backpacks"), so stored backpacks do
+not appear in the locker.
+
+### Compatibility hooks
+
+Compat addons can take over a box's fill/save cycle:
+
+- `forge_client_locker_lockersCreated [lockers]` and `forge_client_locker_synced []`
+  (local CBA events)
+- `forge_client_locker_externallyManaged = true` on a box makes the vanilla
+  container handlers skip it
+- repository methods `fillContainer`, `readContainer`, `commitContainer`
+
+### AIO - Arma Inventory Overhaul
+
+AIO replaces the vanilla inventory, so the container events above no longer
+drive the locker. The optional `forge_client_compat_aio` addon loads only with
+AIO (`skipWhenMissingDependencies`) and, for each locker box:
+
+- sets `aio_storage_localOnly` (moves run on the player's machine) and
+  `aio_noSearch` (the locker is not loot)
+- fills it once when it is created
+- saves it when its contents change, checked every 2 s within 15 m
+- refills it after a server sync when it has no unsaved changes
 
 ## Virtual Arsenal Flow
 

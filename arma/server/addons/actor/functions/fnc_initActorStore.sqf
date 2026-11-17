@@ -544,9 +544,11 @@ GVAR(ActorBaseStore) = compileFinal createHashMapFromArray [
         _isSuccess && { _result isEqualTo "OK" }
     }],
     ["snapshot", compileFinal {
-        params [["_uid", "", [""]]];
+        // _unit: the player's unit when it is known but no longer a player,
+        // e.g. from HandleDisconnect. Otherwise the player is looked up by UID.
+        params [["_uid", "", [""]], ["_unit", objNull, [objNull]]];
 
-        private _player = [_uid] call EFUNC(common,getPlayer);
+        private _player = [_unit, [_uid] call EFUNC(common,getPlayer)] select (isNull _unit);
         private _finalActor = +(_self call ["get", [_uid, ""]]);
 
         if (!(_finalActor isEqualType createHashMap) || (_finalActor isEqualTo createHashMap)) then {

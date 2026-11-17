@@ -4,6 +4,9 @@ PREP_RECOMPILE_START;
 #include "XEH_PREP.hpp"
 PREP_RECOMPILE_END;
 
+private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
+#include "initSettings.inc.sqf"
+
 if (isServer) then { "forge_server" callExtension ["surreal:reconnect", []]; };
 
 GVAR(PlayerBootstrapRegistry) = createHashMap;
@@ -63,18 +66,69 @@ addMissionEventHandler ["PlayerConnected", {
     params ["_id", "_uid", "_name", "_jip", "_owner", "_idStr"];
 }];
 
+// --- Saving player data ---------------------------------------------------
+//
+// HandleDisconnect passes the unit the player controlled, so the actor
+// snapshot (position, loadout, stance) is taken from it. By PlayerDisconnected
+// the unit is no longer a player and cannot be found by UID. Returning nothing
+// (not true) lets the engine handle the unit as usual.
+GVAR(disconnectSaves) = createHashMap;
+
+addMissionEventHandler ["HandleDisconnect", {
+    params ["_unit", "_id", "_uid", "_name"];
+
+    if (_uid isEqualTo "") exitWith {};
+
+    GVAR(disconnectSaves) set [_uid, diag_tickTime];
+    [_uid, _unit] call FUNC(saveHotState);
+
+    // Returning true would keep the unit alive as AI; let the engine decide.
+    false
+}];
+
+// Fallback for players who leave without a unit (still in the lobby, unit
+// deleted): HandleDisconnect does not fire for them. Waits a moment so a
+// HandleDisconnect save of the same player is not repeated.
 addMissionEventHandler ["PlayerDisconnected", {
     params ["_id", "_uid", "_name", "_jip", "_owner", "_idStr"];
 
     if (_uid isEqualTo "") exitWith {};
 
-    [_uid] call FUNC(saveHotState);
+    [{
+        params ["_uid"];
+        private _savedAt = GVAR(disconnectSaves) getOrDefault [_uid, -1];
+        GVAR(disconnectSaves) deleteAt _uid;
+        if (_savedAt >= 0 && { diag_tickTime - _savedAt < 30 }) exitWith {};
+
+        [_uid] call FUNC(saveHotState);
+    }, [_uid], 2] call CFUNC(waitAndExecute);
 }];
 
-addMissionEventHandler ["Ended", {
-    [""] call FUNC(saveHotState);
-}];
+// Periodic autosave, so a crash or a killed server loses at most one interval.
+GVAR(lastAutosave) = diag_tickTime;
+[{
+    private _minutes = missionNamespace getVariable [QGVAR(autosaveInterval), 5];
+    if (_minutes <= 0) exitWith {};
+    if (diag_tickTime - GVAR(lastAutosave) < _minutes * 60) exitWith {};
 
-addMissionEventHandler ["MPEnded", {
-    [""] call FUNC(saveHotState);
-}];
+    GVAR(lastAutosave) = diag_tickTime;
+
+    // Connected players only: anyone who left was saved on disconnect.
+    private _uids = (allPlayers apply { getPlayerUID _x }) select { _x isNotEqualTo "" };
+    if (_uids isEqualTo []) exitWith {};
+
+    { [_x] call FUNC(saveHotState); } forEach _uids;
+    ["INFO", format ["Autosave: hot state written for %1 player(s).", count _uids]] call EFUNC(common,log);
+}, 30] call CFUNC(addPerFrameHandler);
+
+// Mission end and server shutdown: save everyone once and wait for the
+// database writes before the process can exit. Ended and MPEnded can both fire.
+GVAR(missionEndSaved) = false;
+{
+    addMissionEventHandler [_x, {
+        if (GVAR(missionEndSaved)) exitWith {};
+        GVAR(missionEndSaved) = true;
+
+        ["", objNull, true] call FUNC(saveHotState);
+    }];
+} forEach ["Ended", "MPEnded"];

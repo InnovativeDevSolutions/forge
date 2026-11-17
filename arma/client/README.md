@@ -10,16 +10,19 @@ state and persistence.
 
 ## Requirements
 - CBA A3
-- ACE3 for features that use ACE interactions, arsenal, spectator, or medical
-  integrations
+- ACE3 (required: `forge_client_main` lists `ace_main`; see `TODO.md` for the
+  planned `compat_ace` split)
 - Forge Server running the matching server-side addons
+- Optional: AIO - Arma Inventory Overhaul, supported by `compat_aio`
 
 ## Addons
 - `main`: shared client mod config and macros
 - `common`: shared browser UI bridge helpers
 - `actor`: player interaction menu and actor repository
 - `bank`: banking UI and account request bridge
-- `cad`: map/CAD UI for dispatch, groups, tasks, and support requests
+- `cad`: map/CAD UI for contracts, groups, and (with the server dispatch addon)
+  dispatch orders and support requests
+- `compat_aio`: loads only with AIO; keeps lockers working with its inventory
 - `garage`: vehicle storage and virtual garage UI
 - `locker`: locker and virtual arsenal repositories
 - `notifications`: notification HUD and sounds

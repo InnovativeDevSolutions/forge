@@ -178,6 +178,13 @@ CAD itself has no extension commands; contract assignment uses the
 `task:group:*` commands below. See [CAD Usage Guide](./CAD_USAGE_GUIDE.md) and
 [Dispatch Usage Guide](./DISPATCH_USAGE_GUIDE.md).
 
+### Persistence
+
+| Command | Purpose |
+| --- | --- |
+| `persistence:pending` | Number of queued database writes that have not finished. |
+| `persistence:flush` | `[timeout_ms]` Waits until every queued write finished (default 10000, max 30000). Returns `OK` or `Error: ...` with the pending count. Called at mission end by `forge_server_main_fnc_saveHotState`. |
+
 ### Task
 
 | Command Group | Purpose |

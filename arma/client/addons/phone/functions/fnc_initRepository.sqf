@@ -58,7 +58,7 @@ GVAR(PhoneRepository) = createHashMapObject [[
         params [["_number", 0, [0]], ["_length", 0, [0]]];
 
         private _str = str _number;
-        while { (_str select [(_length - 1), 1]) == "" } do { _str = "0" + _str };
+        while { count _str < _length } do { _str = "0" + _str };
         _str
     }],
     ["save", {

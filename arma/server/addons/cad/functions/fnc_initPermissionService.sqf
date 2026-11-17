@@ -39,6 +39,14 @@ GVAR(PermissionServiceBaseClass) = compileFinal createHashMapFromArray [
 
         private _playerVar = toLowerANSI (vehicleVarName _player);
         (_orgID isEqualTo "default") && { _playerVar in ["ceo", "dispatch"] }
+    }],
+    ["isDispatcherOnline", compileFinal {
+        // True when any connected player can dispatch. While none is, group
+        // leaders may claim contracts themselves (see ContractService.claim).
+        (allPlayers findIf {
+            private _uid = getPlayerUID _x;
+            _uid isNotEqualTo "" && { _self call ["canDispatch", [_uid]] }
+        }) >= 0
     }]
 ];
 

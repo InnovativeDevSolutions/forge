@@ -27,6 +27,19 @@ available --assign (dispatcher)--> assigned --accept (group leader)--> active
 
 An accepted (`active`) contract cannot be declined.
 
+### Claiming without a dispatcher
+
+While **no dispatcher is online**, every player sees the open board on the
+ops side, and a group leader can **claim** an available contract for their
+group. A claim assigns and accepts in one step (`available` -> `active`) and
+starts task logic. A group can hold one contract at a time. As soon as a
+dispatcher connects, claiming stops and assignment goes back to the
+dispatcher. Open CAD views refresh a few seconds after any player joins or
+leaves.
+
+Every org owner counts as a dispatcher (see Permissions), so an org owner
+being online also turns claiming off.
+
 Task logic for Eden and mission-manager tasks waits until the task is `active`,
 so nothing spawns before a group accepts.
 
@@ -62,6 +75,7 @@ first.
 | `forge_server_cad_requestAssignCadContract` | `uid`, `taskID`, `groupID`, `note` | `forge_client_cad_responseCadAssignment` |
 | `forge_server_cad_requestAcceptCadContract` | `uid`, `taskID` | `forge_client_cad_responseCadAssignment` |
 | `forge_server_cad_requestDeclineCadContract` | `uid`, `taskID` | `forge_client_cad_responseCadAssignment` |
+| `forge_server_cad_requestClaimCadContract` | `uid`, `taskID` | `forge_client_cad_responseCadAssignment` |
 | `forge_server_cad_requestUpdateCadGroupProfile` | `uid`, `groupID`, `status`, `role` | `forge_client_cad_responseCadGroupUpdate` |
 
 Pass an empty string for a status or role you are not changing. Successful
@@ -79,6 +93,9 @@ forge_server_cad_CadStore call ["assignContract", [_dispatcherUid, "task-123", _
 // The group leader accepts or declines.
 forge_server_cad_CadStore call ["acceptContract", [_leaderUid, "task-123"]];
 forge_server_cad_CadStore call ["declineContract", [_leaderUid, "task-123"]];
+
+// With no dispatcher online, a group leader claims a contract (assign + accept).
+forge_server_cad_CadStore call ["claimContract", [_leaderUid, "task-123"]];
 
 // Look up a player's group and its record.
 private _groupRepository = forge_server_cad_CadStore get "GroupRepository";
@@ -99,6 +116,7 @@ CAD emits these on the server EventBus. Contract events carry `taskId`,
 | `cad.contract.assigned` | A dispatcher assigns a contract. |
 | `cad.contract.accepted` | The assigned group leader accepts. |
 | `cad.contract.declined` | The assigned group leader declines. |
+| `cad.contract.claimed` | A group leader claims a contract while no dispatcher is online. |
 | `cad.group.updated` | A group's role or status changes. |
 
 CAD listens to `task.created`, `task.started`, `task.completed`,
@@ -111,8 +129,8 @@ CAD listens to `task.created`, `task.started`, `task.completed`,
 | Key | Contents |
 | --- | --- |
 | `groups` | Live groups: `groupId`, `callsign`, `leaderUid`, `leaderName`, `members`, `role`, `status`, `position`, `currentTaskId`, `currentTaskTitle`. |
-| `contracts` | Active task catalog entries plus `assignedGroupId` and `assignmentState` (`unassigned`, `assigned`, `accepted`, or `active` for a task with no group). Dispatchers see every contract; other players only their group's. |
-| `session` | `uid`, `orgId`, `isDispatcher`, `groupId`, `isLeader`. |
+| `contracts` | Active task catalog entries plus `assignedGroupId` and `assignmentState` (`unassigned`, `assigned`, `accepted`, or `active` for a task with no group). Dispatchers see every contract; other players see their group's, plus every unassigned one while no dispatcher is online. |
+| `session` | `uid`, `orgId`, `isDispatcher`, `dispatcherOnline`, `groupId`, `isLeader`, `canClaim` (a leader whose group has no contract, with no dispatcher online). |
 | `dispatchEnabled` | `false` unless the dispatch addon is loaded. |
 | `requests`, `activity`, `generatedTaskTypes` | Empty unless the dispatch addon is loaded. |
 

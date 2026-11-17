@@ -80,6 +80,50 @@ GVAR(ContractServiceBaseClass) = compileFinal createHashMapFromArray [
         _result set ["leaderUid", getPlayerUID _leader];
         _result
     }],
+    ["claim", compileFinal {
+        // A group leader takes an available contract for their own group while
+        // no dispatcher is online: assigned and accepted in one step.
+        params [["_requesterUid", "", [""]], ["_taskID", "", [""]]];
+
+        private _fail = { createHashMapFromArray [["success", false], ["message", _this]] };
+
+        if ((_self get "permissionService") call ["isDispatcherOnline", []]) exitWith {
+            "A dispatcher is on duty - ask dispatch to assign this contract." call _fail
+        };
+
+        private _groupRepository = _self get "groupRepository";
+        private _groupID = _groupRepository call ["getPlayerGroupId", [_requesterUid]];
+        if (_groupID isEqualTo "") exitWith { "You are not in a tracked group." call _fail };
+        if !(_groupRepository call ["isGroupLeader", [_requesterUid, _groupID]]) exitWith {
+            "Only your group leader can claim contracts." call _fail
+        };
+
+        private _busy = (EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []]) findIf {
+            (_x getOrDefault ["assignedGroupId", ""]) isEqualTo _groupID
+        };
+        if (_busy >= 0) exitWith { "Your group already has a contract." call _fail };
+
+        private _group = _groupRepository call ["findGroup", [_groupID]];
+        private _callsign = [groupId _group, _groupID] select ((groupId _group) isEqualTo "");
+        private _name = _self call ["resolvePlayerName", [_requesterUid]];
+
+        private _assign = EGVAR(task,TaskStore) call ["assignTaskToGroup", [
+            _taskID, _groupID, _callsign, _requesterUid, _name, "Claimed by the group leader."
+        ]];
+        if !(_assign getOrDefault ["success", false]) exitWith { _assign };
+
+        private _result = EGVAR(task,TaskStore) call ["acceptTaskForGroup", [_taskID, _groupID, _requesterUid, _name]];
+        if !(_result getOrDefault ["success", false]) exitWith {
+            // Put the contract back on the board rather than leave it half-claimed.
+            EGVAR(task,TaskStore) call ["declineTaskForGroup", [_taskID, _groupID, _requesterUid, _name]];
+            _result
+        };
+
+        _result set ["message", format ["%1 claimed %2.", _callsign, (_result getOrDefault ["entry", createHashMap]) getOrDefault ["title", _taskID]]];
+        _result set ["taskId", _taskID];
+        _result set ["groupId", _groupID];
+        _result
+    }],
     ["resolveAssignedGroup", compileFinal {
         params [["_requesterUid", "", [""]], ["_taskID", "", [""]], ["_action", "update", [""]]];
 

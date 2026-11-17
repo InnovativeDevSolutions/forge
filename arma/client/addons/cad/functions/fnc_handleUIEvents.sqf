@@ -126,6 +126,14 @@ switch (_event) do {
 
         GVAR(CADUIBridge) call ["requestCloseSupportRequest", [_requestID]];
     };
+    case "cad::tasks::claim": {
+        private _taskID = "";
+        if (_data isEqualType createHashMap) then {
+            _taskID = _data getOrDefault ["taskID", ""];
+        };
+
+        GVAR(CADUIBridge) call ["requestClaimTask", [_taskID]];
+    };
     case "cad::tasks::accept": {
         private _taskID = "";
         if (_data isEqualType createHashMap) then {

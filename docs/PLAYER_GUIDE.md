@@ -34,8 +34,12 @@ Player workflow:
 2. Review available or assigned tasks.
 3. If a dispatcher assigns a task to your group, the group leader must
    accept or decline it.
-4. Once accepted, the task becomes active for the assigned group.
-5. Complete the task objective shown by CAD, map task state, and mission
+4. If no dispatcher is online, CAD shows every available contract under "No
+   dispatcher on duty" and the group leader can **Claim** one for the group.
+   A claim is accepted at once. A group holds one contract at a time, and
+   claiming stops as soon as a dispatcher joins.
+5. Once accepted, the task becomes active for the assigned group.
+6. Complete the task objective shown by CAD, map task state, and mission
    instructions.
 
 Map focus behavior:

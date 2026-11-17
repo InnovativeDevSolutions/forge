@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project name="FFE">
     <Package name="Main">
+        <Key ID="STR_forge_server_main_autosaveInterval">
+            <English>Autosave Interval (minutes)</English>
+        </Key>
+        <Key ID="STR_forge_server_main_autosaveIntervalTooltip">
+            <English>How often player data (actor, bank, locker, garages, org) is written to the database while playing. 0 turns autosave off; data is then only saved on disconnect and mission end.</English>
+        </Key>
         <Key ID="STR_forge_server_main_displayName">
             <English>Main</English>
+        </Key>
+        <Key ID="STR_forge_server_main_flushTimeout">
+            <English>Shutdown Save Timeout (ms)</English>
+        </Key>
+        <Key ID="STR_forge_server_main_flushTimeoutTooltip">
+            <English>At mission end the server waits up to this long for database writes to finish before shutting down.</English>
         </Key>
         <Key ID="STR_forge_server_main_url">
             <English>https://github.com/IDSolutions/MOD_REPO</English>

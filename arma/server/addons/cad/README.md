@@ -17,6 +17,10 @@ An accepted (`active`) contract cannot be declined. A declined contract returns
 to the board with `lastDeclinedGroupId`, `lastDeclinedGroupCallsign` and
 `lastDeclinedAt` set on its catalog entry.
 
+While no dispatcher is online, every player sees the open board and a group
+leader can claim one available contract for their group, which assigns and
+accepts it in one step. Claiming stops as soon as a dispatcher connects.
+
 ## Dependencies
 - `forge_server_main`, `forge_server_common`, `forge_server_actor`,
   `forge_server_org`, `forge_server_task`
@@ -46,11 +50,12 @@ missionNamespace setVariable ["forge_server_cad_sides", [west, independent]];
 | `forge_server_cad_requestAssignCadContract` | Dispatcher assigns a contract to a group |
 | `forge_server_cad_requestAcceptCadContract` | Group leader accepts the assigned contract |
 | `forge_server_cad_requestDeclineCadContract` | Group leader declines the assigned contract |
+| `forge_server_cad_requestClaimCadContract` | Group leader claims an available contract while no dispatcher is online |
 | `forge_server_cad_requestUpdateCadGroupProfile` | Leader or dispatcher sets role and/or status |
 
 ## Events
 Emits `cad.contract.assigned`, `cad.contract.accepted`,
-`cad.contract.declined` and `cad.group.updated` on the event bus. Listens to
+`cad.contract.declined`, `cad.contract.claimed` and `cad.group.updated` on the event bus. Listens to
 `task.*` lifecycle events to refresh open CAD views.
 
 ## Extending the hydrate payload

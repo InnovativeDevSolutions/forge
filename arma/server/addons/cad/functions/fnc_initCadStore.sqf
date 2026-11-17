@@ -165,6 +165,15 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         _self call ["emitEvent", ["cad.contract.accepted", _result]];
         _result
     }],
+    ["claimContract", compileFinal {
+        params [["_uid", "", [""]], ["_taskID", "", [""]]];
+
+        private _result = (_self get "ContractService") call ["claim", [_uid, _taskID]];
+        if !(_result getOrDefault ["success", false]) exitWith { _result };
+
+        _self call ["emitEvent", ["cad.contract.claimed", _result]];
+        _result
+    }],
     ["declineContract", compileFinal {
         params [["_uid", "", [""]], ["_taskID", "", [""]]];
 
@@ -221,12 +230,16 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         private _groupRepository = _self get "GroupRepository";
         private _groupID = _groupRepository call ["getPlayerGroupId", [_uid]];
 
+        private _permissionService = _self get "PermissionService";
+
         createHashMapFromArray [
             ["uid", _uid],
             ["orgId", EGVAR(actor,ActorStore) call ["getOrganization", [_uid]]],
-            ["isDispatcher", (_self get "PermissionService") call ["canDispatch", [_uid]]],
+            ["isDispatcher", _permissionService call ["canDispatch", [_uid]]],
+            ["dispatcherOnline", _permissionService call ["isDispatcherOnline", []]],
             ["groupId", _groupID],
-            ["isLeader", _groupRepository call ["isGroupLeader", [_uid, _groupID]]]
+            ["isLeader", _groupRepository call ["isGroupLeader", [_uid, _groupID]]],
+            ["canClaim", false]
         ]
     }],
     ["buildHydratePayload", compileFinal {
@@ -235,6 +248,8 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
         private _session = _self call ["buildSession", [_uid]];
         private _isDispatcher = _session get "isDispatcher";
         private _sessionGroupID = _session get "groupId";
+        // With no dispatcher online, everyone sees the open board so leaders can claim.
+        private _showOpenBoard = !(_session get "dispatcherOnline");
 
         // One catalog read per hydrate; groups reuse it for their current task.
         private _catalog = EGVAR(task,TaskStore) call ["getActiveTaskCatalog", []];
@@ -251,10 +266,21 @@ GVAR(CadStoreBaseClass) = compileFinal createHashMapFromArray [
                 ]];
             };
 
-            if (_isDispatcher || { _groupID isNotEqualTo "" && { _groupID isEqualTo _sessionGroupID } }) then {
+            if (
+                _isDispatcher
+                || { _groupID isNotEqualTo "" && { _groupID isEqualTo _sessionGroupID } }
+                || { _showOpenBoard && { (_contract get "assignmentState") isEqualTo "unassigned" } }
+            ) then {
                 _contracts pushBack _contract;
             };
         } forEach _catalog;
+
+        _session set ["canClaim",
+            _showOpenBoard
+            && { _session get "isLeader" }
+            && { _sessionGroupID isNotEqualTo "" }
+            && { !(_sessionGroupID in _taskByGroup) }
+        ];
 
         private _payload = createHashMapFromArray [
             ["groups", (_self get "GroupRepository") call ["buildGroups", [_taskByGroup]]],

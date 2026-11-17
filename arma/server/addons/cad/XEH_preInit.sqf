@@ -7,6 +7,15 @@ PREP_RECOMPILE_END;
 call FUNC(initCadStore);
 call FUNC(registerEventListeners);
 
+// Claiming depends on whether a dispatcher is online, so refresh open CAD
+// views when players join or leave (after a delay, once the player exists
+// or is gone).
+{
+    addMissionEventHandler [_x, {
+        [{ GVAR(CadStore) call ["invalidateClients", []]; }, [], 5] call CFUNC(waitAndExecute);
+    }];
+} forEach ["PlayerConnected", "PlayerDisconnected"];
+
 [QGVAR(requestHydrateCad), {
     params [["_uid", "", [""]]];
 
@@ -35,6 +44,16 @@ call FUNC(registerEventListeners);
     };
 
     GVAR(CadStore) call ["handleRpc", [_uid, CRPC(cad,responseCadAssignment), "acceptContract", [_uid, _taskID]]];
+}] call CFUNC(addEventHandler);
+
+[QGVAR(requestClaimCadContract), {
+    params [["_uid", "", [""]], ["_taskID", "", [""]]];
+
+    if (_taskID isEqualTo "") exitWith {
+        ["WARNING", "Invalid CAD contract claim payload."] call EFUNC(common,log);
+    };
+
+    GVAR(CadStore) call ["handleRpc", [_uid, CRPC(cad,responseCadAssignment), "claimContract", [_uid, _taskID]]];
 }] call CFUNC(addEventHandler);
 
 [QGVAR(requestDeclineCadContract), {
