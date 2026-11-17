@@ -50,11 +50,42 @@ GVAR(PlayerBootstrapRegistry) = createHashMap;
 
 diag_log "[ICOM] Event handler initialized";
 
+// ICOM "transfer_players" sends players to another server. It is handled here,
+// on the extension callback, and never forwarded as forge_icom_event: any
+// client can raise a CBA server event, so the transfer must not be reachable
+// that way.
+//   data: { "uids": [...], "group_of": "<leader uid>", "address", "port", "password", "timeout" }
+GVAR(handleIcomTransfer) = compileFinal {
+    params [["_data", createHashMap, [createHashMap]]];
+
+    private _targets = +(_data getOrDefault ["uids", []]);
+    private _groupOf = _data getOrDefault ["group_of", ""];
+    if (_groupOf isNotEqualTo "") then {
+        private _leader = [_groupOf] call EFUNC(common,getPlayer);
+        if (!isNull _leader) then { _targets pushBack (group _leader); };
+    };
+
+    private _sent = [
+        _targets,
+        _data getOrDefault ["address", ""],
+        _data getOrDefault ["port", "2302"],
+        _data getOrDefault ["password", ""],
+        _data getOrDefault ["timeout", 60]
+    ] call FUNC(redirectPlayers);
+
+    diag_log format ["[ICOM] Transfer requested: %1 player(s) sent.", _sent];
+};
+
 addMissionEventHandler ["ExtensionCallback", {
     params ["_name", "_function", "_data"];
 
     if (_name isEqualTo "icom") then {
-        ["forge_icom_event", (fromJSON _data)] call CFUNC(serverEvent);
+        private _payload = fromJSON _data;
+        if (_payload isEqualType [] && { (_payload param [0, ""]) isEqualTo "transfer_players" }) exitWith {
+            [_payload param [1, createHashMap]] call GVAR(handleIcomTransfer);
+        };
+
+        ["forge_icom_event", _payload] call CFUNC(serverEvent);
     } else {
         (fromJSON _data) call (missionNamespace getVariable [_function, {
             diag_log "[FORGE:Server] Function does not exist!";

@@ -143,6 +143,51 @@ Inbound ICOM events are forwarded to SQF as the CBA server event
 }] call CBA_fnc_addEventHandler;
 ```
 
+## Transferring Players Between Servers
+
+The built-in `transfer_players` event moves players from the receiving server
+to another one. Each player's data is saved first, then their client leaves
+the mission, backs out to the main menu and connects to the new address with
+`connectToServer` (password included, so no password prompt).
+
+```sqf
+private _transfer = createHashMapFromArray [
+    ["uids", ["76561198000000001", "76561198000000002"]], // players to send
+    ["group_of", ""],          // or a leader's UID to send that whole group
+    ["address", "203.0.113.20"],
+    ["port", "2302"],
+    ["password", "secret"],    // "" when the server has none
+    ["timeout", 60]            // seconds the client keeps trying (default 60)
+];
+
+"forge_server" callExtension [
+    "icom:send_event",
+    ["server_1", "transfer_players", toJSON _transfer]
+];
+```
+
+`transfer_players` is handled on the extension callback and is **not**
+forwarded as `forge_icom_event`, because any client can raise a CBA server
+event. Mission or admin code on the server can do the same directly:
+
+```sqf
+[group _leader, "203.0.113.20", "2302", "secret"] call forge_server_main_fnc_redirectPlayers;
+```
+
+The client side (`forge_client_common_fnc_redirectToServer`) only runs when
+remote executed by the server. The client RPT logs each step with the prefix
+`[FORGE:Client:Redirect]`: `Moving to`, `Connecting to`, then `Connected to`
+once the new server's mission loads (or `Timed out`). Missions that restrict remote execution with
+`CfgRemoteExec` must allow it for clients:
+
+```cpp
+class CfgRemoteExec {
+    class Functions {
+        class forge_client_common_fnc_redirectToServer { allowedTargets = 1; };
+    };
+};
+```
+
 ## Message Protocol
 
 The hub uses newline-delimited JSON. The first message from each client is a

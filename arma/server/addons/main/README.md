@@ -14,7 +14,12 @@ and flushes hot state when players disconnect or the mission ends.
 - `fnc_saveHotState.sqf` snapshots and saves extension-backed hot state.
 - `fnc_initValidationHarness.sqf` provides targeted runtime smoke checks for
   multi-module flows.
-- `XEH_preInit.sqf` registers ICom and extension callback handlers.
+- `fnc_redirectPlayers.sqf` (public) sends players (a group, units, UIDs) to
+  another server after saving their data; the client half is
+  `forge_client_common_fnc_redirectToServer`.
+- `XEH_preInit.sqf` registers ICom and extension callback handlers, including
+  the ICOM `transfer_players` event (handled on the extension callback only,
+  never as a client-raisable CBA event).
 - `XEH_postInit.sqf` starts store initialization.
 
 ## Store Initialization
