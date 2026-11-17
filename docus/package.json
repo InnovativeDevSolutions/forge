@@ -11,10 +11,10 @@
   "dependencies": {
     "@takumi-rs/core": "^1.0.15",
     "better-sqlite3": "^12.9.0",
-    "docus": "^5.10.0",
-    "nuxt": "^4.4.2"
+    "docus": "~5.13.0",
+    "nuxt": "^4.6.4"
   },
   "overrides": {
-    "esbuild": "0.27.7"
+    "esbuild": "0.28.2"
   }
 }
