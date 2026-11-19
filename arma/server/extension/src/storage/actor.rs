@@ -7,6 +7,9 @@ pub enum ActorStorageRepository {
 
 impl ActorStorageRepository {
     pub fn configured() -> Self {
+        // TODO(bridge): actors stay on SurrealDB — the API has no actor
+        // endpoints at all yet. Once it does, this mirrors the garage /
+        // locker bridge (an Api variant on this enum, selected here).
         Self::Surreal(SurrealActorRepository)
     }
 }

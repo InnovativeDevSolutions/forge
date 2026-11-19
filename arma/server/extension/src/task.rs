@@ -5,6 +5,13 @@
 //!
 //! This state is intentionally transient and is reset during server task-store
 //! initialization so tasks start clean for each server or mission lifecycle.
+//!
+//! TODO(bridge): task/CAD state stays in-memory and is NOT bridged yet.
+//! The API has the lifecycle endpoints (assign/accept/decline/complete)
+//! but no way to seed a contract (`POST /cad/contracts`), so the API
+//! cannot hold the catalog the lifecycle calls need. Once the API gains
+//! a contract upsert, `upsert_catalog_entry` should seed it and the
+//! group/lifecycle commands should mirror to the API.
 
 use arma_rs::Group;
 use forge_repositories::InMemoryTaskRepository;

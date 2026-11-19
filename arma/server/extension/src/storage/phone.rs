@@ -7,6 +7,14 @@ pub enum PhoneStorageRepository {
 
 impl PhoneStorageRepository {
     pub fn configured() -> Self {
+        // TODO(bridge): phones stay on SurrealDB. The API generates
+        // message/email ids server-side (nanosecond timestamps) while
+        // the service pre-assigns ids from a repository sequence, so a
+        // bridged send would return a different id than the one SQF
+        // holds — and there is no DELETE /players/{uid}/phone or
+        // sequence endpoint. The API needs client-supplied ids (or an
+        // append-with-id endpoint) plus a phone delete before this can
+        // move.
         Self::Surreal(SurrealPhoneRepository)
     }
 }

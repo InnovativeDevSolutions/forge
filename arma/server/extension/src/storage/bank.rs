@@ -7,6 +7,12 @@ pub enum BankStorageRepository {
 
 impl BankStorageRepository {
     pub fn configured() -> Self {
+        // TODO(bridge): bank stays on SurrealDB. The API has no
+        // full-replace PUT /players/{uid}/bank (the hot-state save path
+        // persists a whole Bank record) and no DELETE
+        // /players/{uid}/bank, and its create drops balances and the
+        // transaction log. Until those endpoints exist, bridging any
+        // bank operation would split one account across two schemas.
         Self::Surreal(SurrealBankRepository)
     }
 }

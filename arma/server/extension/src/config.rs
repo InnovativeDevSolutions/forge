@@ -1,4 +1,5 @@
-//! Extension configuration for SurrealDB-backed persistence.
+//! Extension configuration for SurrealDB-backed persistence and the
+//! forge-webapi bridge.
 
 use serde::Deserialize;
 use std::fs;
@@ -13,6 +14,34 @@ static CONFIG_CACHE: OnceLock<Config> = OnceLock::new();
 pub struct Config {
     #[serde(default)]
     pub surreal: SurrealConfig,
+    #[serde(default)]
+    pub api: ApiConfig,
+}
+
+/// Configuration for the forge-webapi bridge (`[api]` in config.toml).
+///
+/// The bridge is opt-in: with `enabled = false` (the default) every
+/// repository keeps its current SurrealDB backend and the extension
+/// behaves exactly as before. With `enabled = true`, the repositories
+/// whose full round-trip the API covers (garages, lockers, virtual
+/// garages, virtual lockers) talk HTTP to the API instead; the rest
+/// keep SurrealDB until the API gains the endpoints they need (see the
+/// `TODO(bridge)` notes in `storage/`).
+#[derive(Debug, Clone, Deserialize)]
+pub struct ApiConfig {
+    pub enabled: bool,
+    pub base_url: String,
+    pub timeout_ms: Option<u64>,
+}
+
+impl Default for ApiConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            base_url: "http://127.0.0.1:8080".to_string(),
+            timeout_ms: Some(5000),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

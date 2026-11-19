@@ -7,6 +7,12 @@ pub enum OrgStorageRepository {
 
 impl OrgStorageRepository {
     pub fn configured() -> Self {
+        // TODO(bridge): orgs stay on SurrealDB. The API has no
+        // full-replace PUT /orgs/{id} (the hot-state save path persists
+        // a whole org record), and its asset/fleet endpoints only add —
+        // the repository's replace-semantics updates cannot be
+        // expressed. Member/invite/credit-line endpoints exist, but
+        // bridging them alone would split one org across two schemas.
         Self::Surreal(SurrealOrgRepository)
     }
 }

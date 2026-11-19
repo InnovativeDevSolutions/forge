@@ -1,3 +1,13 @@
+//! Store checkout command for the Arma 3 server extension.
+//!
+//! TODO(bridge): checkout stays local. It is a hot-state transaction
+//! over the in-memory bank/org/locker/vlocker/vgarage services, and
+//! the API's `POST /store/checkout` is a separate server-side flow
+//! that charges and grants against API-side records — which requires
+//! the bank and org domains to be bridged first. Durability of a
+//! checkout still flows through the bridged repositories when the
+//! individual hot states are saved (`save` on each domain).
+
 use arma_rs::Group;
 use forge_models::{StoreCheckoutContext, StoreCheckoutResult};
 use forge_services::StoreService;

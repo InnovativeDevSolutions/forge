@@ -1,7 +1,8 @@
 //! Entry point and runtime bootstrap for the Forge Arma server extension.
 //!
-//! Initializes a global async runtime, SurrealDB persistence, and registers
-//! all command groups. Provides status/version commands and maintains a shared
+//! Initializes a global async runtime, SurrealDB persistence (and, when
+//! configured, the forge-webapi bridge), and registers all command
+//! groups. Provides status/version commands and maintains a shared
 //! Arma `Context` for engine interop.
 //!
 #![allow(future_incompatible)] // Future-incompatible lint is triggered by arma_rs
@@ -14,6 +15,7 @@ use tokio::runtime::{Builder, Runtime};
 use tokio::sync::RwLock as TokioRwLock;
 
 pub mod actor;
+pub mod api;
 pub mod bank;
 pub mod config;
 pub mod dispatch;
@@ -132,6 +134,7 @@ fn init() -> Extension {
                 .command("flush", flush_persistence),
         )
         .group("surreal", surreal::group())
+        .group("api", api::group())
         .group("actor", actor::group())
         .group("bank", bank::group())
         .group("dispatch", dispatch::group())
