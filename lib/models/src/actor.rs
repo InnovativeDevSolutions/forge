@@ -1,6 +1,6 @@
 use arma_rs::{FromArma, IntoArma, loadout::Loadout as ArmaLoadout};
 use forge_shared::{
-    ActorValidationError, arma_value_to_json, generate_email, generate_phone_number,
+    ActorValidationError, arma_value_to_json, generate_email, generate_phone_number, is_valid_uid,
 };
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +39,7 @@ impl Actor {
             return Err(ActorValidationError::EmptyUid);
         }
 
-        if !uid_string.chars().all(|c| c.is_numeric()) || uid_string.len() != 17 {
+        if !is_valid_uid(&uid_string) {
             return Err(ActorValidationError::InvalidUid(uid_string));
         }
 
@@ -70,7 +70,7 @@ impl Actor {
             return Err(ActorValidationError::EmptyUid);
         }
 
-        if !self.uid.chars().all(|c| c.is_numeric()) || self.uid.len() != 17 {
+        if !is_valid_uid(&self.uid) {
             return Err(ActorValidationError::InvalidUid(self.uid.clone()));
         }
 
@@ -158,5 +158,41 @@ impl IntoArma for Actor {
     fn to_arma(&self) -> arma_rs::Value {
         let json_str = serde_json::to_string(self).unwrap_or_default();
         arma_rs::Value::String(json_str)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_accepts_twelve_digit_single_player_uid() {
+        // The 12-digit UID single-player hands out (from the 2026-11-24 log).
+        let actor = Actor::new("805289554520").expect("12-digit SP UID should be accepted");
+        assert_eq!(actor.uid(), "805289554520");
+        // Phone number is built from the last 6 digits of the UID.
+        assert_eq!(actor.phone_number, "0160554520");
+    }
+
+    #[test]
+    fn new_accepts_seventeen_digit_steam_id() {
+        let actor = Actor::new("76561198027566824").expect("17-digit Steam ID should be accepted");
+        assert_eq!(actor.uid(), "76561198027566824");
+        assert_eq!(actor.phone_number, "0160566824");
+    }
+
+    #[test]
+    fn new_rejects_short_non_numeric_and_long_uids() {
+        assert!(Actor::new("80528955452").is_err()); // 11 digits
+        assert!(Actor::new("765611980275668241").is_err()); // 18 digits
+        assert!(Actor::new("76561198A27566824").is_err()); // non-numeric
+        assert!(Actor::new("").is_err());
+        assert!(Actor::new("   ").is_err());
+    }
+
+    #[test]
+    fn validate_accepts_twelve_digit_uid() {
+        let actor = Actor::new("805289554520").unwrap();
+        assert!(actor.validate().is_ok());
     }
 }

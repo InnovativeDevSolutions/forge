@@ -1,5 +1,5 @@
 use arma_rs::{FromArma, IntoArma};
-use forge_shared::OrgValidationError;
+use forge_shared::{OrgValidationError, is_valid_uid};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -315,9 +315,7 @@ impl Org {
             return Err(OrgValidationError::InvalidId(self.id.clone()));
         }
 
-        if self.owner != "server"
-            && (!self.owner.chars().all(|c| c.is_numeric()) || self.owner.len() != 17)
-        {
+        if self.owner != "server" && !is_valid_uid(&self.owner) {
             return Err(OrgValidationError::InvalidOwner(self.owner.clone()));
         }
 
@@ -332,7 +330,7 @@ impl Org {
                 &credit_line.uid
             };
 
-            if !resolved_uid.chars().all(|c| c.is_numeric()) || resolved_uid.len() != 17 {
+            if !is_valid_uid(resolved_uid) {
                 return Err(OrgValidationError::InvalidCreditLineUid(
                     resolved_uid.to_string(),
                 ));

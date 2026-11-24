@@ -2,7 +2,7 @@ pub mod validation;
 
 pub use validation::{
     ActorValidationError, BankValidationError, GarageValidationError, LockerValidationError,
-    OrgValidationError,
+    OrgValidationError, is_valid_uid,
 };
 
 /// Converts an arma_rs::Value to a serde_json::Value.

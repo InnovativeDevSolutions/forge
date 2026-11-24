@@ -28,7 +28,7 @@ impl fmt::Display for ActorValidationError {
             ),
             ActorValidationError::InvalidUid(uid) => write!(
                 f,
-                "Invalid UID format '{}' - must be a 17-digit Steam ID",
+                "Invalid UID format '{}' - must be a numeric UID of 12-17 digits",
                 uid
             ),
             ActorValidationError::InvalidPosition(msg) => write!(f, "Invalid position: {}", msg),
@@ -73,6 +73,14 @@ impl fmt::Display for ActorValidationError {
 
 impl std::error::Error for ActorValidationError {}
 
+/// A player UID is valid when it is numeric and 12-17 digits long: a
+/// 17-digit Steam ID in multiplayer, or a shorter numeric single-player
+/// profile ID (single-player hands out 12-digit UIDs). Requiring exactly
+/// 17 digits rejects every single-player actor.
+pub fn is_valid_uid(uid: &str) -> bool {
+    !uid.is_empty() && uid.chars().all(|c| c.is_numeric()) && (12..=17).contains(&uid.len())
+}
+
 /// Validation errors for Organization model
 #[derive(Debug, Clone)]
 pub enum OrgValidationError {
@@ -105,7 +113,11 @@ impl fmt::Display for OrgValidationError {
                 id
             ),
             OrgValidationError::InvalidOwner(owner) => {
-                write!(f, "Invalid owner '{}' - must be a 17-digit Steam ID", owner)
+                write!(
+                    f,
+                    "Invalid owner '{}' - must be a numeric UID of 12-17 digits",
+                    owner
+                )
             }
             OrgValidationError::InvalidName(name) => write!(
                 f,
@@ -114,7 +126,7 @@ impl fmt::Display for OrgValidationError {
             ),
             OrgValidationError::InvalidCreditLineUid(uid) => write!(
                 f,
-                "Invalid credit line UID '{}' - must be a 17-digit Steam ID",
+                "Invalid credit line UID '{}' - must be a numeric UID of 12-17 digits",
                 uid
             ),
         }
