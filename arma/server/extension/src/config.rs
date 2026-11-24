@@ -27,42 +27,95 @@ pub struct Config {
 /// garages, virtual lockers) talk HTTP to the API instead; the rest
 /// keep SurrealDB until the API gains the endpoints they need (see the
 /// `TODO(bridge)` notes in `storage/`).
+///
+/// Each field has a serde default matching `Default`, so a partial `[api]`
+/// section (e.g. only `enabled = true`) cannot fail the whole config parse
+/// and silently fall back to defaults with the bridge off.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ApiConfig {
+    #[serde(default = "ApiConfig::default_enabled")]
     pub enabled: bool,
+    #[serde(default = "ApiConfig::default_base_url")]
     pub base_url: String,
+    #[serde(default = "ApiConfig::default_timeout_ms")]
     pub timeout_ms: Option<u64>,
+}
+
+impl ApiConfig {
+    fn default_enabled() -> bool {
+        false
+    }
+
+    fn default_base_url() -> String {
+        "http://127.0.0.1:8080".to_string()
+    }
+
+    fn default_timeout_ms() -> Option<u64> {
+        Some(5000)
+    }
 }
 
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
-            enabled: false,
-            base_url: "http://127.0.0.1:8080".to_string(),
-            timeout_ms: Some(5000),
+            enabled: Self::default_enabled(),
+            base_url: Self::default_base_url(),
+            timeout_ms: Self::default_timeout_ms(),
         }
     }
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SurrealConfig {
+    #[serde(default = "SurrealConfig::default_endpoint")]
     pub endpoint: String,
+    #[serde(default = "SurrealConfig::default_namespace")]
     pub namespace: String,
+    #[serde(default = "SurrealConfig::default_database")]
     pub database: String,
+    #[serde(default = "SurrealConfig::default_username")]
     pub username: Option<String>,
+    #[serde(default = "SurrealConfig::default_password")]
     pub password: Option<String>,
+    #[serde(default = "SurrealConfig::default_connect_timeout_ms")]
     pub connect_timeout_ms: Option<u64>,
+}
+
+impl SurrealConfig {
+    fn default_endpoint() -> String {
+        "127.0.0.1:8000".to_string()
+    }
+
+    fn default_namespace() -> String {
+        "forge".to_string()
+    }
+
+    fn default_database() -> String {
+        "main".to_string()
+    }
+
+    fn default_username() -> Option<String> {
+        Some("root".to_string())
+    }
+
+    fn default_password() -> Option<String> {
+        Some("root".to_string())
+    }
+
+    fn default_connect_timeout_ms() -> Option<u64> {
+        Some(5000)
+    }
 }
 
 impl Default for SurrealConfig {
     fn default() -> Self {
         Self {
-            endpoint: "127.0.0.1:8000".to_string(),
-            namespace: "forge".to_string(),
-            database: "main".to_string(),
-            username: Some("root".to_string()),
-            password: Some("root".to_string()),
-            connect_timeout_ms: Some(5000),
+            endpoint: Self::default_endpoint(),
+            namespace: Self::default_namespace(),
+            database: Self::default_database(),
+            username: Self::default_username(),
+            password: Self::default_password(),
+            connect_timeout_ms: Self::default_connect_timeout_ms(),
         }
     }
 }
@@ -119,4 +172,30 @@ fn locate_config_path() -> PathBuf {
         .into_iter()
         .find(|path| path.exists())
         .unwrap_or_else(|| PathBuf::from("@forge_server/config.toml"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn partial_api_section_fills_missing_fields_from_defaults() {
+        let config: Config =
+            toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n\n[api]\nenabled = true\n")
+                .expect("partial [api] section should parse");
+        assert!(config.api.enabled);
+        assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
+        assert_eq!(config.api.timeout_ms, Some(5000));
+        // A partial [surreal] section gets defaults too.
+        assert_eq!(config.surreal.namespace, "forge");
+        assert_eq!(config.surreal.database, "main");
+    }
+
+    #[test]
+    fn missing_api_section_uses_defaults() {
+        let config: Config = toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n")
+            .expect("missing [api] section should parse");
+        assert!(!config.api.enabled);
+        assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
+    }
 }

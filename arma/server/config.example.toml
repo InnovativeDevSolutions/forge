@@ -3,7 +3,7 @@
 # Copy this file to `config.toml` beside `forge_server_x64.dll`, or use the
 # shared config generated from `bin/host/config.example.toml`.
 #
-# The Arma extension reads the [surreal] section. Extra host/ICOM sections in a
+# The Arma extension reads the [surreal] and [api] sections. Extra host/ICOM sections in a
 # shared config are ignored by the extension.
 
 [surreal]
@@ -20,3 +20,13 @@ password = "root"
 
 # Initial connection timeout in milliseconds.
 connect_timeout_ms = 5000
+
+[api]
+# Bridge to the standalone forge-webapi (opt-in; disabled by default).
+# When enabled, garage, locker, virtual garage and virtual locker
+# persistence goes through the API instead of the extension's SurrealDB.
+# Set enabled = true and make sure the API is running first
+# (in forge-webapi: `docker compose up`, then `curl localhost:8080/health`).
+enabled = false
+base_url = "http://127.0.0.1:8080"
+timeout_ms = 5000
