@@ -17,23 +17,22 @@ use std::sync::LazyLock;
 
 use crate::enqueue_persistence_task;
 use crate::log::log;
-use crate::storage::OrgStorageRepository;
+use crate::storage::ApiOrgRepository;
 
 /// Global organization service instance.
 ///
 /// Lazily initialized singleton combining repository and service layers.
-static ORG_SERVICE: LazyLock<OrgService<OrgStorageRepository>> =
-    LazyLock::new(|| OrgService::new(OrgStorageRepository::configured()));
-static HOT_ORG_SERVICE: LazyLock<
-    OrgHotStateService<OrgStorageRepository, InMemoryOrgHotRepository>,
-> = LazyLock::new(|| {
-    let repository = OrgStorageRepository::configured();
-    let hot_repository = InMemoryOrgHotRepository::new();
-    OrgHotStateService::new(repository, hot_repository)
-});
+static ORG_SERVICE: LazyLock<OrgService<ApiOrgRepository>> =
+    LazyLock::new(|| OrgService::new(ApiOrgRepository::configured()));
+static HOT_ORG_SERVICE: LazyLock<OrgHotStateService<ApiOrgRepository, InMemoryOrgHotRepository>> =
+    LazyLock::new(|| {
+        let repository = ApiOrgRepository::configured();
+        let hot_repository = InMemoryOrgHotRepository::new();
+        OrgHotStateService::new(repository, hot_repository)
+    });
 
 pub(crate) fn hot_service()
--> &'static OrgHotStateService<OrgStorageRepository, InMemoryOrgHotRepository> {
+-> &'static OrgHotStateService<ApiOrgRepository, InMemoryOrgHotRepository> {
     &HOT_ORG_SERVICE
 }
 

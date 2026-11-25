@@ -1,4 +1,9 @@
 //! Durable repository selection for the extension.
+//!
+//! The forge-webapi is the only persistence backend: every service
+//! uses an `Api*Repository`. The `Legacy*Repository` types are
+//! migration-only — they read a legacy SurrealDB row once so it can
+//! be moved into the API, then delete it. There is no fallback.
 
 mod actor;
 mod bank;
@@ -8,18 +13,16 @@ mod locker;
 mod org;
 mod phone;
 
-pub use actor::{ActorStorageRepository, SurrealActorRepository};
-pub use bank::{BankStorageRepository, SurrealBankRepository};
+pub use actor::{ApiActorRepository, LegacyActorRepository};
+pub use bank::{ApiBankRepository, LegacyBankRepository};
 pub use garage::{
-    GarageStorageRepository, SurrealGarageRepository, SurrealVGarageRepository,
-    VGarageStorageRepository,
+    ApiGarageRepository, ApiVGarageRepository, LegacyGarageRepository, LegacyVGarageRepository,
 };
 pub use locker::{
-    LockerStorageRepository, SurrealLockerRepository, SurrealVLockerRepository,
-    VLockerStorageRepository,
+    ApiLockerRepository, ApiVLockerRepository, LegacyLockerRepository, LegacyVLockerRepository,
 };
-pub use org::{OrgStorageRepository, SurrealOrgRepository};
-pub use phone::{PhoneStorageRepository, SurrealPhoneRepository};
+pub use org::{ApiOrgRepository, LegacyOrgRepository};
+pub use phone::{ApiPhoneRepository, LegacyPhoneRepository};
 
 use forge_models::{
     Actor, Bank, CreditLineSummary, Garage, HitPoints, Item, Locker, MemberSummary, Org,

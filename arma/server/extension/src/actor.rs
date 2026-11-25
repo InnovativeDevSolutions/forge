@@ -11,24 +11,24 @@ use std::sync::LazyLock;
 use crate::enqueue_persistence_task;
 use crate::helpers::resolve_uid;
 use crate::log::log;
-use crate::storage::ActorStorageRepository;
+use crate::storage::ApiActorRepository;
 
 /// Global actor service instance.
 ///
 /// Lazily initialized singleton combining repository and service layers.
-static ACTOR_SERVICE: LazyLock<ActorService<ActorStorageRepository>> =
-    LazyLock::new(|| ActorService::new(ActorStorageRepository::configured()));
+static ACTOR_SERVICE: LazyLock<ActorService<ApiActorRepository>> =
+    LazyLock::new(|| ActorService::new(ApiActorRepository::configured()));
 static HOT_ACTOR_SERVICE: LazyLock<
-    ActorHotStateService<ActorStorageRepository, InMemoryActorHotRepository>,
+    ActorHotStateService<ApiActorRepository, InMemoryActorHotRepository>,
 > = LazyLock::new(|| {
-    let repository = ActorStorageRepository::configured();
+    let repository = ApiActorRepository::configured();
     let hot_repository = InMemoryActorHotRepository::new();
     ActorHotStateService::new(repository, hot_repository)
 });
 
 #[allow(dead_code)]
 pub(crate) fn hot_service()
--> &'static ActorHotStateService<ActorStorageRepository, InMemoryActorHotRepository> {
+-> &'static ActorHotStateService<ApiActorRepository, InMemoryActorHotRepository> {
     &HOT_ACTOR_SERVICE
 }
 

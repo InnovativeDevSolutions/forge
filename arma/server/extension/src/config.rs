@@ -1,5 +1,11 @@
-//! Extension configuration for SurrealDB-backed persistence and the
-//! forge-webapi bridge.
+//! Extension configuration: the forge-webapi connection (`[api]`)
+//! and the SurrealDB connection (`[surreal]`).
+//!
+//! The API is the extension's only persistence backend. `[surreal]`
+//! is kept only for the one-time migration of legacy data: the
+//! `Legacy*Repository` types in `storage/` read a legacy row once so
+//! it can be moved into the API, then delete it. Once migration is
+//! confirmed done, the SurrealDB connection can be removed entirely.
 
 use serde::Deserialize;
 use std::fs;
@@ -18,23 +24,21 @@ pub struct Config {
     pub api: ApiConfig,
 }
 
-/// Configuration for the forge-webapi bridge (`[api]` in config.toml).
+/// Configuration for the forge-webapi (`[api]` in config.toml).
 ///
-/// The bridge is opt-in: with `enabled = false` (the default) every
-/// repository keeps its current SurrealDB backend and the extension
-/// behaves exactly as before. With `enabled = true`, the repositories
-/// whose full round-trip the API covers (garages, lockers, virtual
-/// garages, virtual lockers) talk HTTP to the API instead; the rest
-/// keep SurrealDB until the API gains the endpoints they need (see the
-/// `TODO(bridge)` notes in `storage/`).
+/// The API is the extension's only persistence backend — there is no
+/// on/off switch and no fallback. `[api]` just holds the connection
+/// details. The API must be running before the game starts (in
+/// forge-webapi: `docker compose up`, then `curl
+/// localhost:8080/health`); if the client cannot be built, every
+/// persistence operation fails loudly instead of silently using
+/// another backend.
 ///
-/// Each field has a serde default matching `Default`, so a partial `[api]`
-/// section (e.g. only `enabled = true`) cannot fail the whole config parse
-/// and silently fall back to defaults with the bridge off.
+/// Each field has a serde default matching `Default`, so a partial
+/// `[api]` section (e.g. only `base_url`) cannot fail the whole
+/// config parse and silently fall back to defaults.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ApiConfig {
-    #[serde(default = "ApiConfig::default_enabled")]
-    pub enabled: bool,
     #[serde(default = "ApiConfig::default_base_url")]
     pub base_url: String,
     #[serde(default = "ApiConfig::default_timeout_ms")]
@@ -42,10 +46,6 @@ pub struct ApiConfig {
 }
 
 impl ApiConfig {
-    fn default_enabled() -> bool {
-        false
-    }
-
     fn default_base_url() -> String {
         "http://127.0.0.1:8080".to_string()
     }
@@ -58,13 +58,18 @@ impl ApiConfig {
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
-            enabled: Self::default_enabled(),
             base_url: Self::default_base_url(),
             timeout_ms: Self::default_timeout_ms(),
         }
     }
 }
 
+/// SurrealDB connection (`[surreal]` in config.toml).
+///
+/// Migration-only: the `Legacy*Repository` types in `storage/` read
+/// legacy rows through this connection so they can be moved into the
+/// API. Nothing else uses it — the extension no longer defines
+/// SurrealDB tables or persists through it.
 #[derive(Debug, Clone, Deserialize)]
 pub struct SurrealConfig {
     #[serde(default = "SurrealConfig::default_endpoint")]
@@ -181,9 +186,8 @@ mod tests {
     #[test]
     fn partial_api_section_fills_missing_fields_from_defaults() {
         let config: Config =
-            toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n\n[api]\nenabled = true\n")
+            toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n\n[api]\nbase_url = \"http://127.0.0.1:8080\"\n")
                 .expect("partial [api] section should parse");
-        assert!(config.api.enabled);
         assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
         assert_eq!(config.api.timeout_ms, Some(5000));
         // A partial [surreal] section gets defaults too.
@@ -195,7 +199,6 @@ mod tests {
     fn missing_api_section_uses_defaults() {
         let config: Config = toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n")
             .expect("missing [api] section should parse");
-        assert!(!config.api.enabled);
         assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
     }
 }

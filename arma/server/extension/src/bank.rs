@@ -15,23 +15,23 @@ use std::sync::LazyLock;
 use crate::enqueue_persistence_task;
 use crate::helpers::resolve_uid;
 use crate::log::log;
-use crate::storage::BankStorageRepository;
+use crate::storage::ApiBankRepository;
 
 /// Global bank service instance.
 ///
 /// Lazily initialized singleton combining repository and service layers.
-static BANK_SERVICE: LazyLock<BankService<BankStorageRepository>> =
-    LazyLock::new(|| BankService::new(BankStorageRepository::configured()));
+static BANK_SERVICE: LazyLock<BankService<ApiBankRepository>> =
+    LazyLock::new(|| BankService::new(ApiBankRepository::configured()));
 static HOT_BANK_SERVICE: LazyLock<
-    BankHotStateService<BankStorageRepository, InMemoryBankHotRepository>,
+    BankHotStateService<ApiBankRepository, InMemoryBankHotRepository>,
 > = LazyLock::new(|| {
-    let repository = BankStorageRepository::configured();
+    let repository = ApiBankRepository::configured();
     let hot_repository = InMemoryBankHotRepository::new();
     BankHotStateService::new(repository, hot_repository)
 });
 
 pub(crate) fn hot_service()
--> &'static BankHotStateService<BankStorageRepository, InMemoryBankHotRepository> {
+-> &'static BankHotStateService<ApiBankRepository, InMemoryBankHotRepository> {
     &HOT_BANK_SERVICE
 }
 

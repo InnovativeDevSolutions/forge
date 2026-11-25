@@ -3,14 +3,14 @@
 //! The extension owns phone runtime state for contacts, messages, and emails.
 //! SQF remains the event bridge and may enrich contact identity from actor state.
 
-use crate::storage::PhoneStorageRepository;
+use crate::storage::ApiPhoneRepository;
 use arma_rs::Group;
 use forge_services::PhoneStateService;
 use serde::Serialize;
 use std::sync::LazyLock;
 
-static PHONE_SERVICE: LazyLock<PhoneStateService<PhoneStorageRepository>> =
-    LazyLock::new(|| PhoneStateService::new(PhoneStorageRepository::configured()));
+static PHONE_SERVICE: LazyLock<PhoneStateService<ApiPhoneRepository>> =
+    LazyLock::new(|| PhoneStateService::new(ApiPhoneRepository::configured()));
 
 pub fn group() -> Group {
     Group::new()

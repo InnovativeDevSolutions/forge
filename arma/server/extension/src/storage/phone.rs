@@ -1,107 +1,444 @@
 use super::common::*;
 use super::*;
+use crate::api::{
+    ApiClient, encode_segment, phone_from_api_record, phone_to_api_body, require_success,
+};
+use forge_models::PhonePayload;
+use serde_json::Value as JsonValue;
 
-pub enum PhoneStorageRepository {
-    Surreal(SurrealPhoneRepository),
+/// Phone persistence through forge-webapi (`POST/GET/PUT/DELETE
+/// /players/{uid}/phone` plus the contacts/messages/emails
+/// sub-endpoints).
+///
+/// The API accepts client-supplied message/email ids and appends
+/// idempotently per phone, and it indexes a send on both sides at
+/// once — so `append_message` / `append_email` always POST to the
+/// *sender's* phone (`message.from`, falling back to the `uid` the
+/// service passed in); the service's second call for the other side
+/// is then a no-op. The sender's copy is marked read by the API,
+/// matching the legacy per-side index. `init` migrates a legacy phone
+/// on first use; the service's two seed `add_contact` calls after it
+/// are idempotent.
+pub struct ApiPhoneRepository {
+    client: ApiClient,
 }
 
-impl PhoneStorageRepository {
+impl ApiPhoneRepository {
+    pub fn new() -> Result<Self, String> {
+        Ok(Self {
+            client: ApiClient::configured()?,
+        })
+    }
+
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
     pub fn configured() -> Self {
-        // TODO(bridge): phones stay on SurrealDB. The API generates
-        // message/email ids server-side (nanosecond timestamps) while
-        // the service pre-assigns ids from a repository sequence, so a
-        // bridged send would return a different id than the one SQF
-        // holds — and there is no DELETE /players/{uid}/phone or
-        // sequence endpoint. The API needs client-supplied ids (or an
-        // append-with-id endpoint) plus a phone delete before this can
-        // move.
-        Self::Surreal(SurrealPhoneRepository)
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "phone",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, phone persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
+    fn path(uid: &str) -> String {
+        format!("/players/{}/phone", encode_segment(uid))
+    }
+
+    fn put_payload(&self, uid: &str, payload: &PhonePayload) -> Result<(), String> {
+        let path = Self::path(uid);
+        let body = phone_to_api_body(uid, payload)?;
+        let (status, response) = self.client.put(&path, Some(body))?;
+        require_success("PUT", &path, status, response)?;
+        Ok(())
+    }
+
+    /// GET the whole API payload, `None` on 404. Does not migrate.
+    fn fetch_payload(&self, uid: &str) -> Result<Option<PhonePayload>, String> {
+        let path = Self::path(uid);
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        let body = require_success("GET", &path, status, body)?;
+        Ok(Some(phone_from_api_record(body)?))
+    }
+
+    /// Move a legacy phone into the API: contacts, messages (with
+    /// their ids and read flags) and emails are read whole and PUT as
+    /// one payload. Returns `true` when a legacy phone existed and was
+    /// moved. Any legacy-read error fails open (warn, `false` — the
+    /// legacy rows are left alone, and the caller proceeds as if no
+    /// legacy phone existed); an API-write error propagates. The
+    /// legacy rows are deleted best-effort after a successful PUT via
+    /// `LegacyPhoneRepository::remove_phone`, which only removes this
+    /// uid's index rows plus orphan cleanup, so the other side's
+    /// copies of shared messages survive.
+    fn migrate(&self, uid: &str) -> Result<bool, String> {
+        let legacy = LegacyPhoneRepository;
+        let legacy_exists = match surreal_select::<PhoneUserRecord>("phone_user", uid, "phone user")
+        {
+            Ok(record) => record.is_some(),
+            Err(error) => {
+                crate::log::log(
+                    "phone",
+                    "WARN",
+                    &format!(
+                        "forge-webapi phone migration: legacy phone read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(false);
+            }
+        };
+        if !legacy_exists {
+            return Ok(false);
+        }
+        let contacts = match legacy.list_contacts(uid) {
+            Ok(contacts) => contacts,
+            Err(error) => {
+                crate::log::log(
+                    "phone",
+                    "WARN",
+                    &format!(
+                        "forge-webapi phone migration: legacy contacts read failed for {uid}, proceeding without migration: {error}"
+                    ),
+                );
+                return Ok(false);
+            }
+        };
+        let messages = match legacy.list_messages(uid) {
+            Ok(messages) => messages,
+            Err(error) => {
+                crate::log::log(
+                    "phone",
+                    "WARN",
+                    &format!(
+                        "forge-webapi phone migration: legacy messages read failed for {uid}, proceeding without migration: {error}"
+                    ),
+                );
+                return Ok(false);
+            }
+        };
+        let emails = match legacy.list_emails(uid) {
+            Ok(emails) => emails,
+            Err(error) => {
+                crate::log::log(
+                    "phone",
+                    "WARN",
+                    &format!(
+                        "forge-webapi phone migration: legacy emails read failed for {uid}, proceeding without migration: {error}"
+                    ),
+                );
+                return Ok(false);
+            }
+        };
+        let payload = PhonePayload {
+            contacts,
+            messages,
+            emails,
+        };
+        self.put_payload(uid, &payload)?;
+        if let Err(error) = legacy.remove_phone(uid) {
+            crate::log::log(
+                "phone",
+                "WARN",
+                &format!(
+                    "forge-webapi phone migration: legacy phone delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(true)
+    }
+
+    /// POST the API's init for `uid`. The API seeds the contacts with
+    /// the player themself and the Field Commander.
+    fn init_api_phone(&self, uid: &str) -> Result<(), String> {
+        let path = Self::path(uid);
+        let (status, body) = self.client.post(&path, None)?;
+        require_success("POST", &path, status, body)?;
+        Ok(())
+    }
+
+    fn parse_added(body: JsonValue) -> Result<bool, String> {
+        body.get("added")
+            .and_then(|value| value.as_bool())
+            .ok_or_else(|| "forge-webapi contact decode failed".to_string())
+    }
+
+    fn parse_removed(body: JsonValue) -> Result<bool, String> {
+        body.get("removed")
+            .and_then(|value| value.as_bool())
+            .ok_or_else(|| "forge-webapi contact decode failed".to_string())
+    }
+
+    fn parse_messages(body: JsonValue) -> Result<Vec<PhoneMessage>, String> {
+        let messages = body.get("messages").cloned().unwrap_or(JsonValue::Null);
+        serde_json::from_value(messages)
+            .map_err(|error| format!("forge-webapi phone messages decode failed: {error}"))
+    }
+
+    fn parse_emails(body: JsonValue) -> Result<Vec<PhoneEmail>, String> {
+        let emails = body.get("emails").cloned().unwrap_or(JsonValue::Null);
+        serde_json::from_value(emails)
+            .map_err(|error| format!("forge-webapi phone emails decode failed: {error}"))
+    }
+
+    /// The message/email list for `uid`, migrating a legacy phone on
+    /// 404. Used by `list_messages` / `list_emails`.
+    fn list_via_payload<F, T>(&self, uid: &str, pick: F) -> Result<T, String>
+    where
+        F: Fn(PhonePayload) -> T,
+        T: Default,
+    {
+        match self.fetch_payload(uid)? {
+            Some(payload) => Ok(pick(payload)),
+            None => {
+                if self.migrate(uid)? {
+                    return Ok(self.fetch_payload(uid)?.map(pick).unwrap_or_default());
+                }
+                Ok(T::default())
+            }
+        }
     }
 }
 
-impl PhoneRepository for PhoneStorageRepository {
+impl PhoneRepository for ApiPhoneRepository {
     fn init(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.init(uid),
+        if self.fetch_payload(uid)?.is_some() {
+            return Ok(());
         }
+        // No API phone: migrate a legacy one, else let the API seed a
+        // new phone.
+        if self.migrate(uid)? {
+            return Ok(());
+        }
+        self.init_api_phone(uid)
     }
 
     fn add_contact(&self, uid: &str, contact_uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.add_contact(uid, contact_uid),
+        let path = format!("{}/contacts", Self::path(uid));
+        let body = serde_json::json!({ "contactUid": contact_uid });
+        let (status, response) = self.client.post(&path, Some(body.clone()))?;
+        if status == reqwest::StatusCode::NOT_FOUND && self.migrate(uid)? {
+            let (status, response) = self.client.post(&path, Some(body))?;
+            let response = require_success("POST", &path, status, response)?;
+            return Self::parse_added(response);
         }
+        let response = require_success("POST", &path, status, response)?;
+        Self::parse_added(response)
     }
 
     fn remove_contact(&self, uid: &str, contact_uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.remove_contact(uid, contact_uid),
+        let path = format!(
+            "{}/contacts/{}",
+            Self::path(uid),
+            encode_segment(contact_uid)
+        );
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(uid)? {
+                let (status, body) = self.client.delete(&path)?;
+                if status == reqwest::StatusCode::NOT_FOUND {
+                    return Ok(false);
+                }
+                let body = require_success("DELETE", &path, status, body)?;
+                return Self::parse_removed(body);
+            }
+            return Ok(false);
         }
+        let body = require_success("DELETE", &path, status, body)?;
+        Self::parse_removed(body)
     }
 
     fn list_contacts(&self, uid: &str) -> Result<Vec<String>, String> {
-        match self {
-            Self::Surreal(repository) => repository.list_contacts(uid),
-        }
+        self.list_via_payload(uid, |payload| payload.contacts)
     }
 
     fn remove_phone(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.remove_phone(uid),
+        let path = Self::path(uid);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn append_message(&self, uid: &str, message: PhoneMessage) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.append_message(uid, message),
+        let from = if message.from.trim().is_empty() {
+            uid
+        } else {
+            message.from.as_str()
+        };
+        let path = format!("{}/messages", Self::path(from));
+        let mut body = serde_json::json!({
+            "to": message.to,
+            "message": message.message,
+            "timestamp": message.timestamp,
+        });
+        if !message.id.trim().is_empty() {
+            body["id"] = serde_json::json!(message.id);
         }
+        let (status, response) = self.client.post(&path, Some(body.clone()))?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(from)? {
+                let (status, response) = self.client.post(&path, Some(body))?;
+                require_success("POST", &path, status, response)?;
+                return Ok(());
+            }
+            // The legacy repository auto-creates the sender's phone on
+            // append (a Field Commander send has no phone yet); the
+            // API only auto-creates the receiver's. Init the sender,
+            // then retry once.
+            self.init_api_phone(from)?;
+            let (status, response) = self.client.post(&path, Some(body))?;
+            require_success("POST", &path, status, response)?;
+            return Ok(());
+        }
+        require_success("POST", &path, status, response)?;
+        Ok(())
     }
 
     fn list_messages(&self, uid: &str) -> Result<Vec<PhoneMessage>, String> {
-        match self {
-            Self::Surreal(repository) => repository.list_messages(uid),
+        let path = format!("{}/messages", Self::path(uid));
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(uid)? {
+                let (status, body) = self.client.get(&path)?;
+                let body = require_success("GET", &path, status, body)?;
+                return Self::parse_messages(body);
+            }
+            return Ok(Vec::new());
         }
+        let body = require_success("GET", &path, status, body)?;
+        Self::parse_messages(body)
     }
 
     fn mark_message_read(&self, uid: &str, message_id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.mark_message_read(uid, message_id),
+        let path = format!(
+            "{}/messages/{}/read",
+            Self::path(uid),
+            encode_segment(message_id)
+        );
+        let (status, body) = self.client.post(&path, None)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(false);
         }
+        require_success("POST", &path, status, body)?;
+        Ok(true)
     }
 
     fn delete_message(&self, uid: &str, message_id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.delete_message(uid, message_id),
+        let path = format!(
+            "{}/messages/{}",
+            Self::path(uid),
+            encode_segment(message_id)
+        );
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(false);
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(true)
     }
 
     fn append_email(&self, uid: &str, email: PhoneEmail) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.append_email(uid, email),
+        let from = if email.from.trim().is_empty() {
+            uid
+        } else {
+            email.from.as_str()
+        };
+        let path = format!("{}/emails", Self::path(from));
+        let mut body = serde_json::json!({
+            "to": email.to,
+            "subject": email.subject,
+            "body": email.body,
+            "timestamp": email.timestamp,
+        });
+        if !email.id.trim().is_empty() {
+            body["id"] = serde_json::json!(email.id);
         }
+        let (status, response) = self.client.post(&path, Some(body.clone()))?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(from)? {
+                let (status, response) = self.client.post(&path, Some(body))?;
+                require_success("POST", &path, status, response)?;
+                return Ok(());
+            }
+            // Same sender auto-create as `append_message`: the legacy
+            // repository creates the sender's phone on append.
+            self.init_api_phone(from)?;
+            let (status, response) = self.client.post(&path, Some(body))?;
+            require_success("POST", &path, status, response)?;
+            return Ok(());
+        }
+        require_success("POST", &path, status, response)?;
+        Ok(())
     }
 
     fn list_emails(&self, uid: &str) -> Result<Vec<PhoneEmail>, String> {
-        match self {
-            Self::Surreal(repository) => repository.list_emails(uid),
+        let path = format!("{}/emails", Self::path(uid));
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(uid)? {
+                let (status, body) = self.client.get(&path)?;
+                let body = require_success("GET", &path, status, body)?;
+                return Self::parse_emails(body);
+            }
+            return Ok(Vec::new());
         }
+        let body = require_success("GET", &path, status, body)?;
+        Self::parse_emails(body)
     }
 
     fn mark_email_read(&self, uid: &str, email_id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.mark_email_read(uid, email_id),
+        let path = format!(
+            "{}/emails/{}/read",
+            Self::path(uid),
+            encode_segment(email_id)
+        );
+        let (status, body) = self.client.post(&path, None)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(false);
         }
+        require_success("POST", &path, status, body)?;
+        Ok(true)
     }
 
     fn delete_email(&self, uid: &str, email_id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.delete_email(uid, email_id),
+        let path = format!("{}/emails/{}", Self::path(uid), encode_segment(email_id));
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(false);
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(true)
     }
 
     fn next_sequence(&self) -> Result<u64, String> {
-        match self {
-            Self::Surreal(repository) => repository.next_sequence(),
-        }
+        // Same shape/uniqueness as the API's own id generation: the
+        // current time in nanoseconds.
+        Ok(std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_nanos() as u64)
+            .unwrap_or(0))
     }
 }
 
@@ -217,9 +554,16 @@ struct PhoneSequenceRecord {
     value: u64,
 }
 
-pub struct SurrealPhoneRepository;
+/// Legacy phone rows in SurrealDB (`phone_user`, `phone_contact`,
+/// `phone_message`, `phone_message_index`, `phone_email`,
+/// `phone_email_index`, `phone_sequence`).
+///
+/// Migration-only: read once by [`ApiPhoneRepository::migrate`] so a
+/// legacy phone can be moved into the API, then deleted. Never used
+/// as a live backend — there is no fallback.
+pub struct LegacyPhoneRepository;
 
-impl SurrealPhoneRepository {
+impl LegacyPhoneRepository {
     fn save_user(&self, uid: &str) -> Result<(), String> {
         let record = PhoneUserRecord::new(uid);
         surreal_upsert("phone_user", uid, "phone user", &record)
@@ -291,7 +635,7 @@ impl SurrealPhoneRepository {
     }
 }
 
-impl PhoneRepository for SurrealPhoneRepository {
+impl PhoneRepository for LegacyPhoneRepository {
     fn init(&self, uid: &str) -> Result<(), String> {
         if surreal_select::<PhoneUserRecord>("phone_user", uid, "phone user")?.is_none() {
             self.save_user(uid)?;

@@ -7,20 +7,20 @@ use std::sync::LazyLock;
 use crate::enqueue_persistence_task;
 use crate::helpers::resolve_uid;
 use crate::log::log;
-use crate::storage::VLockerStorageRepository;
+use crate::storage::ApiVLockerRepository;
 
-static VLOCKER_SERVICE: LazyLock<VLockerService<VLockerStorageRepository>> =
-    LazyLock::new(|| VLockerService::new(VLockerStorageRepository::configured()));
+static VLOCKER_SERVICE: LazyLock<VLockerService<ApiVLockerRepository>> =
+    LazyLock::new(|| VLockerService::new(ApiVLockerRepository::configured()));
 static HOT_VLOCKER_SERVICE: LazyLock<
-    VLockerHotStateService<VLockerStorageRepository, InMemoryVLockerHotRepository>,
+    VLockerHotStateService<ApiVLockerRepository, InMemoryVLockerHotRepository>,
 > = LazyLock::new(|| {
-    let repository = VLockerStorageRepository::configured();
+    let repository = ApiVLockerRepository::configured();
     let hot_repository = InMemoryVLockerHotRepository::new();
     VLockerHotStateService::new(repository, hot_repository)
 });
 
 pub(crate) fn hot_service()
--> &'static VLockerHotStateService<VLockerStorageRepository, InMemoryVLockerHotRepository> {
+-> &'static VLockerHotStateService<ApiVLockerRepository, InMemoryVLockerHotRepository> {
     &HOT_VLOCKER_SERVICE
 }
 

@@ -1,4 +1,17 @@
-//! SurrealDB connection bootstrap for persistent storage.
+//! SurrealDB connection for the one-time migration of legacy data.
+//!
+//! This connection exists only so the `Legacy*Repository` types in
+//! `storage/` can read a legacy row once (to move it into
+//! forge-webapi) and delete it afterwards. It is NOT a persistence
+//! backend: the extension no longer defines SurrealDB tables — the
+//! schema bootstrap that re-created all 23 legacy tables on every
+//! startup was removed — and no repository persists through it.
+//! Migration reads fail open when this connection is down (the legacy
+//! row is left alone), so a failed migration connection never blocks
+//! the API path.
+//!
+//! Once migration is confirmed done, this whole module and the
+//! `[surreal]` config section can be removed.
 
 use arma_rs::Group;
 use std::sync::{
@@ -12,7 +25,6 @@ use tokio::time::{Duration, sleep, timeout};
 
 use crate::config::SurrealConfig;
 use crate::log;
-use crate::schema;
 use crate::{RUNTIME, config};
 
 pub type SurrealDb = Surreal<Client>;
@@ -102,27 +114,12 @@ pub async fn initialize(config: SurrealConfig) {
         return;
     }
 
-    log::log("surreal", "DEBUG", "Applying SurrealDB schemas");
-    if let Err(error) = apply_schemas_with_retries(&db).await {
-        if !is_current_generation(generation) {
-            return;
-        }
-        log::log(
-            "surreal",
-            "ERROR",
-            &format!("Failed to apply SurrealDB schemas: {}", error),
-        );
-        set_failure_reason(error);
-        *SURREAL_CONNECTION_STATE.write().unwrap() = SurrealConnectionState::Failed;
-        return;
-    }
-
-    if !is_current_generation(generation) {
-        return;
-    }
-
     *SURREAL_DB.write().unwrap() = Some(Arc::new(db));
-    log::log("surreal", "INFO", "Connected to SurrealDB server");
+    log::log(
+        "surreal",
+        "INFO",
+        "Connected to SurrealDB server (migration reads only)",
+    );
     *SURREAL_CONNECTION_STATE.write().unwrap() = SurrealConnectionState::Connected;
 }
 
@@ -181,34 +178,6 @@ async fn connect_with_retries(config: SurrealConfig) -> Result<SurrealDb, String
                     "WARNING",
                     &format!(
                         "SurrealDB connection attempt {} failed with retryable error: {}",
-                        attempt, last_error
-                    ),
-                );
-                sleep(init_retry_delay(attempt)).await;
-            }
-        }
-    }
-
-    Err(last_error)
-}
-
-async fn apply_schemas_with_retries(db: &SurrealDb) -> Result<(), String> {
-    let mut last_error = String::new();
-
-    for attempt in 1..=INIT_MAX_ATTEMPTS {
-        match schema::apply_all(db).await {
-            Ok(()) => return Ok(()),
-            Err(error) => {
-                if !is_retryable_surreal_error(&error) || attempt == INIT_MAX_ATTEMPTS {
-                    return Err(error);
-                }
-
-                last_error = error;
-                log::log(
-                    "surreal",
-                    "WARNING",
-                    &format!(
-                        "SurrealDB schema bootstrap attempt {} failed with retryable error: {}",
                         attempt, last_error
                     ),
                 );

@@ -5,70 +5,6 @@ use crate::api::{
     vgarage_from_api_record,
 };
 
-pub enum GarageStorageRepository {
-    Surreal(SurrealGarageRepository),
-    Api(ApiGarageRepository),
-}
-
-impl GarageStorageRepository {
-    pub fn configured() -> Self {
-        if crate::config::load().api.enabled {
-            match ApiGarageRepository::new() {
-                Ok(repository) => Self::Api(repository),
-                Err(error) => {
-                    crate::log::log(
-                        "garage",
-                        "ERROR",
-                        &format!(
-                            "forge-webapi bridge unavailable, falling back to SurrealDB: {error}"
-                        ),
-                    );
-                    Self::Surreal(SurrealGarageRepository)
-                }
-            }
-        } else {
-            Self::Surreal(SurrealGarageRepository)
-        }
-    }
-}
-
-impl GarageRepository for GarageStorageRepository {
-    fn create(&self, uid: &str, garage: &Garage) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(uid, garage),
-            Self::Api(repository) => repository.create(uid, garage),
-        }
-    }
-
-    fn update(&self, uid: &str, garage: &Garage) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(uid, garage),
-            Self::Api(repository) => repository.update(uid, garage),
-        }
-    }
-
-    fn get(&self, uid: &str) -> Result<Option<Garage>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get(uid),
-            Self::Api(repository) => repository.get(uid),
-        }
-    }
-
-    fn delete(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(uid),
-            Self::Api(repository) => repository.delete(uid),
-        }
-    }
-
-    fn exists(&self, uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(uid),
-            Self::Api(repository) => repository.exists(uid),
-        }
-    }
-}
-
 /// Garage persistence through forge-webapi (`POST/GET/PUT
 /// /players/{uid}/garage`).
 ///
@@ -86,13 +22,85 @@ impl ApiGarageRepository {
         })
     }
 
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
+    pub fn configured() -> Self {
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "garage",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, garage persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
     fn path(uid: &str) -> String {
         format!("/players/{}/garage", encode_segment(uid))
+    }
+
+    /// Move a legacy garage into the API. Returns the migrated garage
+    /// when one existed, `None` when there was no legacy record. A
+    /// legacy-read error fails open (warn, `None` — the legacy rows
+    /// are left alone); an API-write error propagates. The legacy rows
+    /// are deleted best-effort after a successful PUT, so the garage
+    /// lives in exactly one place.
+    fn migrate(&self, uid: &str) -> Result<Option<Garage>, String> {
+        let legacy = match LegacyGarageRepository.get(uid) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "garage",
+                    "WARN",
+                    &format!(
+                        "forge-webapi garage migration: legacy garage read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(garage) = legacy else {
+            return Ok(None);
+        };
+        self.update(uid, &garage)?;
+        if let Err(error) = LegacyGarageRepository.delete(uid) {
+            crate::log::log(
+                "garage",
+                "WARN",
+                &format!(
+                    "forge-webapi garage migration: legacy garage delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(garage))
     }
 }
 
 impl GarageRepository for ApiGarageRepository {
     fn create(&self, uid: &str, garage: &Garage) -> Result<(), String> {
+        // Migrate first: a POST would otherwise create an empty API
+        // record that shadows the legacy one.
+        if self.exists(uid)? {
+            if !garage.vehicles.is_empty() {
+                self.update(uid, garage)?;
+            }
+            return Ok(());
+        }
         let path = Self::path(uid);
         let (status, body) = self.client.post(&path, None)?;
         if status != reqwest::StatusCode::CONFLICT {
@@ -116,26 +124,27 @@ impl GarageRepository for ApiGarageRepository {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(None);
+            return self.migrate(uid);
         }
         let body = require_success("GET", &path, status, body)?;
         Ok(Some(garage_from_api_record(body)?))
     }
 
     fn delete(&self, uid: &str) -> Result<(), String> {
-        // TODO(bridge): the API has no DELETE /players/{uid}/garage yet,
-        // so deletes still target the legacy SurrealDB tables. Once the
-        // API gains the endpoint, delete the API record here instead —
-        // until then an API-owned garage is NOT removed by this call
-        // (the legacy record deleted here is the pre-bridge one, if any).
-        SurrealGarageRepository.delete(uid)
+        let path = Self::path(uid);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, uid: &str) -> Result<bool, String> {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(false);
+            return Ok(self.migrate(uid)?.is_some());
         }
         if status.is_success() {
             return Ok(true);
@@ -151,7 +160,12 @@ impl GarageRepository for ApiGarageRepository {
     }
 }
 
-pub struct SurrealGarageRepository;
+/// Legacy garage rows in SurrealDB (`garage`, `garage_vehicle`).
+///
+/// Migration-only: read once by [`ApiGarageRepository::migrate`] so a
+/// legacy garage can be moved into the API, then deleted. Never used
+/// as a live backend — there is no fallback.
+pub struct LegacyGarageRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct GarageOwnerRecord {
@@ -190,7 +204,7 @@ fn garage_from_vehicle_records(records: Vec<GarageVehicleRecord>) -> Garage {
     Garage { vehicles }
 }
 
-impl GarageRepository for SurrealGarageRepository {
+impl GarageRepository for LegacyGarageRepository {
     fn create(&self, uid: &str, garage: &Garage) -> Result<(), String> {
         self.update(uid, garage)
     }
@@ -248,77 +262,6 @@ impl GarageRepository for SurrealGarageRepository {
     }
 }
 
-pub enum VGarageStorageRepository {
-    Surreal(SurrealVGarageRepository),
-    Api(ApiVGarageRepository),
-}
-
-impl VGarageStorageRepository {
-    pub fn configured() -> Self {
-        if crate::config::load().api.enabled {
-            match ApiVGarageRepository::new() {
-                Ok(repository) => Self::Api(repository),
-                Err(error) => {
-                    crate::log::log(
-                        "garage",
-                        "ERROR",
-                        &format!(
-                            "forge-webapi bridge unavailable, falling back to SurrealDB: {error}"
-                        ),
-                    );
-                    Self::Surreal(SurrealVGarageRepository)
-                }
-            }
-        } else {
-            Self::Surreal(SurrealVGarageRepository)
-        }
-    }
-}
-
-impl VGarageRepository for VGarageStorageRepository {
-    fn create(&self, uid: &str, garage: &VGarage) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(uid, garage),
-            Self::Api(repository) => repository.create(uid, garage),
-        }
-    }
-
-    fn update(&self, uid: &str, garage: &VGarage) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(uid, garage),
-            Self::Api(repository) => repository.update(uid, garage),
-        }
-    }
-
-    fn fetch(&self, uid: &str) -> Result<Option<VGarage>, String> {
-        match self {
-            Self::Surreal(repository) => repository.fetch(uid),
-            Self::Api(repository) => repository.fetch(uid),
-        }
-    }
-
-    fn get(&self, uid: &str, field: &str) -> Result<Vec<String>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get(uid, field),
-            Self::Api(repository) => repository.get(uid, field),
-        }
-    }
-
-    fn delete(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(uid),
-            Self::Api(repository) => repository.delete(uid),
-        }
-    }
-
-    fn exists(&self, uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(uid),
-            Self::Api(repository) => repository.exists(uid),
-        }
-    }
-}
-
 /// Virtual-garage persistence through forge-webapi.
 ///
 /// The API has no full-replace endpoint for a virtual garage, so
@@ -352,6 +295,34 @@ impl ApiVGarageRepository {
         })
     }
 
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
+    pub fn configured() -> Self {
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "garage",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, virtual garage persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
     fn path(uid: &str) -> String {
         format!("/players/{}/vgarage", encode_segment(uid))
     }
@@ -363,10 +334,75 @@ impl ApiVGarageRepository {
             encode_segment(category)
         )
     }
+
+    /// Write a whole virtual garage with direct category adds (no
+    /// fetch/update round-trip), so this is safe to call from the
+    /// migration path inside `fetch()`. Adds auto-create the record.
+    fn write_full(&self, uid: &str, garage: &VGarage) -> Result<(), String> {
+        for category in VGARAGE_CATEGORIES {
+            let classnames = vgarage_category(garage, category);
+            if classnames.is_empty() {
+                continue;
+            }
+            let path = Self::category_path(uid, category);
+            let (status, body) = self
+                .client
+                .post(&path, Some(serde_json::json!({ "classnames": classnames })))?;
+            require_success("POST", &path, status, body)?;
+        }
+        Ok(())
+    }
+
+    /// Move a legacy virtual garage into the API. Returns the migrated
+    /// garage when one existed, `None` when there was no legacy
+    /// record. A legacy-read error fails open (warn, `None` — the
+    /// legacy rows are left alone); an API-write error propagates.
+    /// The legacy rows are deleted best-effort after a successful
+    /// write, so the garage lives in exactly one place.
+    fn migrate(&self, uid: &str) -> Result<Option<VGarage>, String> {
+        let legacy = match LegacyVGarageRepository.fetch(uid) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "garage",
+                    "WARN",
+                    &format!(
+                        "forge-webapi virtual garage migration: legacy garage read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(garage) = legacy else {
+            return Ok(None);
+        };
+        self.write_full(uid, &garage)?;
+        if let Err(error) = LegacyVGarageRepository.delete(uid) {
+            crate::log::log(
+                "garage",
+                "WARN",
+                &format!(
+                    "forge-webapi virtual garage migration: legacy garage delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(garage))
+    }
 }
 
 impl VGarageRepository for ApiVGarageRepository {
     fn create(&self, uid: &str, garage: &VGarage) -> Result<(), String> {
+        // Migrate first: a POST would otherwise create an empty API
+        // record that shadows the legacy one.
+        if self.exists(uid)? {
+            if VGARAGE_CATEGORIES
+                .iter()
+                .any(|category| !vgarage_category(garage, category).is_empty())
+            {
+                self.update(uid, garage)?;
+            }
+            return Ok(());
+        }
         let path = Self::path(uid);
         let (status, body) = self.client.post(&path, None)?;
         if status != reqwest::StatusCode::CONFLICT {
@@ -417,7 +453,7 @@ impl VGarageRepository for ApiVGarageRepository {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(None);
+            return self.migrate(uid);
         }
         let body = require_success("GET", &path, status, body)?;
         Ok(Some(vgarage_from_api_record(body)?))
@@ -430,6 +466,18 @@ impl VGarageRepository for ApiVGarageRepository {
         let path = Self::category_path(uid, field);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
+            // No API record yet: a legacy one may hold the unlocks.
+            if self.migrate(uid)?.is_some() {
+                let (status, body) = self.client.get(&path)?;
+                if status == reqwest::StatusCode::NOT_FOUND {
+                    return Ok(Vec::new());
+                }
+                let body = require_success("GET", &path, status, body)?;
+                return body
+                    .get("classnames")
+                    .and_then(|value| serde_json::from_value(value.clone()).ok())
+                    .ok_or_else(|| "forge-webapi virtual garage decode failed".to_string());
+            }
             // No record yet: the original returns the empty list.
             return Ok(Vec::new());
         }
@@ -440,17 +488,20 @@ impl VGarageRepository for ApiVGarageRepository {
     }
 
     fn delete(&self, uid: &str) -> Result<(), String> {
-        // TODO(bridge): the API has no DELETE /players/{uid}/vgarage yet,
-        // so deletes still target the legacy SurrealDB tables (see the
-        // note on `ApiGarageRepository::delete`).
-        SurrealVGarageRepository.delete(uid)
+        let path = Self::path(uid);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, uid: &str) -> Result<bool, String> {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(false);
+            return Ok(self.migrate(uid)?.is_some());
         }
         if status.is_success() {
             return Ok(true);
@@ -466,7 +517,13 @@ impl VGarageRepository for ApiVGarageRepository {
     }
 }
 
-pub struct SurrealVGarageRepository;
+/// Legacy virtual-garage rows in SurrealDB (`owned_garage`,
+/// `garage_unlock`).
+///
+/// Migration-only: read once by [`ApiVGarageRepository::migrate`] so a
+/// legacy virtual garage can be moved into the API, then deleted.
+/// Never used as a live backend — there is no fallback.
+pub struct LegacyVGarageRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct VGarageOwnerRecord {
@@ -538,7 +595,7 @@ fn upsert_garage_unlocks(uid: &str, category: &str, classnames: &[String]) -> Re
     Ok(())
 }
 
-impl VGarageRepository for SurrealVGarageRepository {
+impl VGarageRepository for LegacyVGarageRepository {
     fn create(&self, uid: &str, garage: &VGarage) -> Result<(), String> {
         self.update(uid, garage)
     }

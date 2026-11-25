@@ -5,70 +5,6 @@ use crate::api::{
     vlocker_from_api_record,
 };
 
-pub enum LockerStorageRepository {
-    Surreal(SurrealLockerRepository),
-    Api(ApiLockerRepository),
-}
-
-impl LockerStorageRepository {
-    pub fn configured() -> Self {
-        if crate::config::load().api.enabled {
-            match ApiLockerRepository::new() {
-                Ok(repository) => Self::Api(repository),
-                Err(error) => {
-                    crate::log::log(
-                        "locker",
-                        "ERROR",
-                        &format!(
-                            "forge-webapi bridge unavailable, falling back to SurrealDB: {error}"
-                        ),
-                    );
-                    Self::Surreal(SurrealLockerRepository)
-                }
-            }
-        } else {
-            Self::Surreal(SurrealLockerRepository)
-        }
-    }
-}
-
-impl LockerRepository for LockerStorageRepository {
-    fn create(&self, uid: &str, locker: &Locker) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(uid, locker),
-            Self::Api(repository) => repository.create(uid, locker),
-        }
-    }
-
-    fn update(&self, uid: &str, locker: &Locker) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(uid, locker),
-            Self::Api(repository) => repository.update(uid, locker),
-        }
-    }
-
-    fn get(&self, uid: &str) -> Result<Option<Locker>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get(uid),
-            Self::Api(repository) => repository.get(uid),
-        }
-    }
-
-    fn delete(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(uid),
-            Self::Api(repository) => repository.delete(uid),
-        }
-    }
-
-    fn exists(&self, uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(uid),
-            Self::Api(repository) => repository.exists(uid),
-        }
-    }
-}
-
 /// Locker persistence through forge-webapi (`POST/GET/PUT
 /// /players/{uid}/locker`). Same upsert-on-create semantics as the
 /// API garage repository: a 409 on create falls through to a full
@@ -84,13 +20,85 @@ impl ApiLockerRepository {
         })
     }
 
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
+    pub fn configured() -> Self {
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "locker",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, locker persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
     fn path(uid: &str) -> String {
         format!("/players/{}/locker", encode_segment(uid))
+    }
+
+    /// Move a legacy locker into the API. Returns the migrated locker
+    /// when one existed, `None` when there was no legacy record. A
+    /// legacy-read error fails open (warn, `None` — the legacy rows
+    /// are left alone); an API-write error propagates. The legacy rows
+    /// are deleted best-effort after a successful PUT, so the locker
+    /// lives in exactly one place.
+    fn migrate(&self, uid: &str) -> Result<Option<Locker>, String> {
+        let legacy = match LegacyLockerRepository.get(uid) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "locker",
+                    "WARN",
+                    &format!(
+                        "forge-webapi locker migration: legacy locker read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(locker) = legacy else {
+            return Ok(None);
+        };
+        self.update(uid, &locker)?;
+        if let Err(error) = LegacyLockerRepository.delete(uid) {
+            crate::log::log(
+                "locker",
+                "WARN",
+                &format!(
+                    "forge-webapi locker migration: legacy locker delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(locker))
     }
 }
 
 impl LockerRepository for ApiLockerRepository {
     fn create(&self, uid: &str, locker: &Locker) -> Result<(), String> {
+        // Migrate first: a POST would otherwise create an empty API
+        // record that shadows the legacy one.
+        if self.exists(uid)? {
+            if !locker.items.is_empty() {
+                self.update(uid, locker)?;
+            }
+            return Ok(());
+        }
         let path = Self::path(uid);
         let (status, body) = self.client.post(&path, None)?;
         if status != reqwest::StatusCode::CONFLICT {
@@ -114,24 +122,27 @@ impl LockerRepository for ApiLockerRepository {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(None);
+            return self.migrate(uid);
         }
         let body = require_success("GET", &path, status, body)?;
         Ok(Some(locker_from_api_record(body)?))
     }
 
     fn delete(&self, uid: &str) -> Result<(), String> {
-        // TODO(bridge): the API has no DELETE /players/{uid}/locker yet,
-        // so deletes still target the legacy SurrealDB tables (see the
-        // note on `ApiGarageRepository::delete`).
-        SurrealLockerRepository.delete(uid)
+        let path = Self::path(uid);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, uid: &str) -> Result<bool, String> {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(false);
+            return Ok(self.migrate(uid)?.is_some());
         }
         if status.is_success() {
             return Ok(true);
@@ -147,7 +158,12 @@ impl LockerRepository for ApiLockerRepository {
     }
 }
 
-pub struct SurrealLockerRepository;
+/// Legacy locker rows in SurrealDB (`locker`, `locker_item`).
+///
+/// Migration-only: read once by [`ApiLockerRepository::migrate`] so a
+/// legacy locker can be moved into the API, then deleted. Never used
+/// as a live backend — there is no fallback.
+pub struct LegacyLockerRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct LockerOwnerRecord {
@@ -182,7 +198,7 @@ fn locker_from_item_records(records: Vec<LockerItemRecord>) -> Locker {
     Locker { items }
 }
 
-impl LockerRepository for SurrealLockerRepository {
+impl LockerRepository for LegacyLockerRepository {
     fn create(&self, uid: &str, locker: &Locker) -> Result<(), String> {
         self.update(uid, locker)
     }
@@ -233,77 +249,6 @@ impl LockerRepository for SurrealLockerRepository {
     }
 }
 
-pub enum VLockerStorageRepository {
-    Surreal(SurrealVLockerRepository),
-    Api(ApiVLockerRepository),
-}
-
-impl VLockerStorageRepository {
-    pub fn configured() -> Self {
-        if crate::config::load().api.enabled {
-            match ApiVLockerRepository::new() {
-                Ok(repository) => Self::Api(repository),
-                Err(error) => {
-                    crate::log::log(
-                        "locker",
-                        "ERROR",
-                        &format!(
-                            "forge-webapi bridge unavailable, falling back to SurrealDB: {error}"
-                        ),
-                    );
-                    Self::Surreal(SurrealVLockerRepository)
-                }
-            }
-        } else {
-            Self::Surreal(SurrealVLockerRepository)
-        }
-    }
-}
-
-impl VLockerRepository for VLockerStorageRepository {
-    fn create(&self, uid: &str, locker: &VLocker) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(uid, locker),
-            Self::Api(repository) => repository.create(uid, locker),
-        }
-    }
-
-    fn update(&self, uid: &str, locker: &VLocker) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(uid, locker),
-            Self::Api(repository) => repository.update(uid, locker),
-        }
-    }
-
-    fn fetch(&self, uid: &str) -> Result<Option<VLocker>, String> {
-        match self {
-            Self::Surreal(repository) => repository.fetch(uid),
-            Self::Api(repository) => repository.fetch(uid),
-        }
-    }
-
-    fn get(&self, uid: &str, field: &str) -> Result<Vec<String>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get(uid, field),
-            Self::Api(repository) => repository.get(uid, field),
-        }
-    }
-
-    fn delete(&self, uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(uid),
-            Self::Api(repository) => repository.delete(uid),
-        }
-    }
-
-    fn exists(&self, uid: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(uid),
-            Self::Api(repository) => repository.exists(uid),
-        }
-    }
-}
-
 /// Virtual-locker persistence through forge-webapi.
 ///
 /// Same shape as the virtual-garage bridge: no full-replace endpoint,
@@ -334,6 +279,34 @@ impl ApiVLockerRepository {
         })
     }
 
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
+    pub fn configured() -> Self {
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "locker",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, virtual locker persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
     fn path(uid: &str) -> String {
         format!("/players/{}/vlocker", encode_segment(uid))
     }
@@ -345,10 +318,75 @@ impl ApiVLockerRepository {
             encode_segment(category)
         )
     }
+
+    /// Write a whole virtual locker with direct category adds (no
+    /// fetch/update round-trip), so this is safe to call from the
+    /// migration path inside `fetch()`. Adds auto-create the record.
+    fn write_full(&self, uid: &str, locker: &VLocker) -> Result<(), String> {
+        for category in VLOCKER_CATEGORIES {
+            let classnames = vlocker_category(locker, category);
+            if classnames.is_empty() {
+                continue;
+            }
+            let path = Self::category_path(uid, category);
+            let (status, body) = self
+                .client
+                .post(&path, Some(serde_json::json!({ "classnames": classnames })))?;
+            require_success("POST", &path, status, body)?;
+        }
+        Ok(())
+    }
+
+    /// Move a legacy virtual locker into the API. Returns the migrated
+    /// locker when one existed, `None` when there was no legacy
+    /// record. A legacy-read error fails open (warn, `None` — the
+    /// legacy rows are left alone); an API-write error propagates.
+    /// The legacy rows are deleted best-effort after a successful
+    /// write, so the locker lives in exactly one place.
+    fn migrate(&self, uid: &str) -> Result<Option<VLocker>, String> {
+        let legacy = match LegacyVLockerRepository.fetch(uid) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "locker",
+                    "WARN",
+                    &format!(
+                        "forge-webapi virtual locker migration: legacy locker read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(locker) = legacy else {
+            return Ok(None);
+        };
+        self.write_full(uid, &locker)?;
+        if let Err(error) = LegacyVLockerRepository.delete(uid) {
+            crate::log::log(
+                "locker",
+                "WARN",
+                &format!(
+                    "forge-webapi virtual locker migration: legacy locker delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(locker))
+    }
 }
 
 impl VLockerRepository for ApiVLockerRepository {
     fn create(&self, uid: &str, locker: &VLocker) -> Result<(), String> {
+        // Migrate first: a POST would otherwise create an empty API
+        // record that shadows the legacy one.
+        if self.exists(uid)? {
+            if VLOCKER_CATEGORIES
+                .iter()
+                .any(|category| !vlocker_category(locker, category).is_empty())
+            {
+                self.update(uid, locker)?;
+            }
+            return Ok(());
+        }
         let path = Self::path(uid);
         let (status, body) = self.client.post(&path, None)?;
         if status != reqwest::StatusCode::CONFLICT {
@@ -399,7 +437,7 @@ impl VLockerRepository for ApiVLockerRepository {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(None);
+            return self.migrate(uid);
         }
         let body = require_success("GET", &path, status, body)?;
         Ok(Some(vlocker_from_api_record(body)?))
@@ -412,6 +450,18 @@ impl VLockerRepository for ApiVLockerRepository {
         let path = Self::category_path(uid, field);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
+            // No API record yet: a legacy one may hold the unlocks.
+            if self.migrate(uid)?.is_some() {
+                let (status, body) = self.client.get(&path)?;
+                if status == reqwest::StatusCode::NOT_FOUND {
+                    return Ok(Vec::new());
+                }
+                let body = require_success("GET", &path, status, body)?;
+                return body
+                    .get("classnames")
+                    .and_then(|value| serde_json::from_value(value.clone()).ok())
+                    .ok_or_else(|| "forge-webapi virtual locker decode failed".to_string());
+            }
             // No record yet: the original returns the empty list.
             return Ok(Vec::new());
         }
@@ -422,17 +472,20 @@ impl VLockerRepository for ApiVLockerRepository {
     }
 
     fn delete(&self, uid: &str) -> Result<(), String> {
-        // TODO(bridge): the API has no DELETE /players/{uid}/vlocker yet,
-        // so deletes still target the legacy SurrealDB tables (see the
-        // note on the garage delete).
-        SurrealVLockerRepository.delete(uid)
+        let path = Self::path(uid);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, uid: &str) -> Result<bool, String> {
         let path = Self::path(uid);
         let (status, body) = self.client.get(&path)?;
         if status == reqwest::StatusCode::NOT_FOUND {
-            return Ok(false);
+            return Ok(self.migrate(uid)?.is_some());
         }
         if status.is_success() {
             return Ok(true);
@@ -448,7 +501,13 @@ impl VLockerRepository for ApiVLockerRepository {
     }
 }
 
-pub struct SurrealVLockerRepository;
+/// Legacy virtual-locker rows in SurrealDB (`owned_locker`,
+/// `locker_unlock`).
+///
+/// Migration-only: read once by [`ApiVLockerRepository::migrate`] so a
+/// legacy virtual locker can be moved into the API, then deleted.
+/// Never used as a live backend — there is no fallback.
+pub struct LegacyVLockerRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct VLockerOwnerRecord {
@@ -516,7 +575,7 @@ fn upsert_locker_unlocks(uid: &str, category: &str, classnames: &[String]) -> Re
     Ok(())
 }
 
-impl VLockerRepository for SurrealVLockerRepository {
+impl VLockerRepository for LegacyVLockerRepository {
     fn create(&self, uid: &str, locker: &VLocker) -> Result<(), String> {
         self.update(uid, locker)
     }

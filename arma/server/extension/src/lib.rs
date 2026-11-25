@@ -1,9 +1,9 @@
 //! Entry point and runtime bootstrap for the Forge Arma server extension.
 //!
-//! Initializes a global async runtime, SurrealDB persistence (and, when
-//! configured, the forge-webapi bridge), and registers all command
-//! groups. Provides status/version commands and maintains a shared
-//! Arma `Context` for engine interop.
+//! Initializes a global async runtime, registers all command groups,
+//! and asynchronously connects SurrealDB for the one-time migration
+//! of legacy data (see `surreal`). All persistence goes through the
+//! forge-webapi (`api`); there is no SurrealDB fallback.
 //!
 #![allow(future_incompatible)] // Future-incompatible lint is triggered by arma_rs
 
@@ -26,7 +26,6 @@ pub mod locker;
 mod log;
 pub mod org;
 pub mod phone;
-pub mod schema;
 pub mod storage;
 pub mod store;
 pub mod surreal;
@@ -120,8 +119,9 @@ fn wait_for_pending(timeout: Duration) -> String {
 }
 
 #[arma]
-/// Initializes the extension, registers commands/groups, and asynchronously
-/// connects SurrealDB on the global runtime.
+/// Initializes the extension, registers commands/groups, and
+/// asynchronously connects SurrealDB for the one-time legacy-data
+/// migration on the global runtime.
 fn init() -> Extension {
     let config = config::load();
     let ext = Extension::build()
@@ -164,11 +164,12 @@ fn init() -> Extension {
     ext
 }
 
-/// Returns current persistence connection state as a string: `initializing`,
-/// `connected`, or `failed`. Intended for SQF polling before issuing
-/// operations that require persistence.
+/// Returns the forge-webapi status: `connected (database: …)` or
+/// `unavailable: <reason>`. The API is the only persistence backend,
+/// so this is the persistence status. Intended for SQF polling before
+/// issuing operations that require persistence.
 fn get_status() -> String {
-    surreal::status()
+    crate::api::status()
 }
 
 /// Returns the extension version string for diagnostics and tooling.

@@ -1,55 +1,178 @@
 use super::common::*;
 use super::*;
+use crate::api::{
+    ApiClient, bank_from_api_record, bank_to_api_body, encode_segment, require_success,
+};
 
-pub enum BankStorageRepository {
-    Surreal(SurrealBankRepository),
+/// Bank persistence through forge-webapi (`POST/GET/PUT/DELETE
+/// /players/{uid}/bank`).
+///
+/// `create` keeps the original's upsert semantics: the API's create
+/// only takes `{ name, pin }` and starts every balance at zero, so a
+/// non-default create is followed by a full replace, and a 409
+/// (already exists) falls through to the replace when there is
+/// anything to write. `create` checks `exists()` first — which
+/// migrates a legacy account — so it can never create an empty API
+/// record that shadows legacy balances.
+pub struct ApiBankRepository {
+    client: ApiClient,
 }
 
-impl BankStorageRepository {
+impl ApiBankRepository {
+    pub fn new() -> Result<Self, String> {
+        Ok(Self {
+            client: ApiClient::configured()?,
+        })
+    }
+
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
     pub fn configured() -> Self {
-        // TODO(bridge): bank stays on SurrealDB. The API has no
-        // full-replace PUT /players/{uid}/bank (the hot-state save path
-        // persists a whole Bank record) and no DELETE
-        // /players/{uid}/bank, and its create drops balances and the
-        // transaction log. Until those endpoints exist, bridging any
-        // bank operation would split one account across two schemas.
-        Self::Surreal(SurrealBankRepository)
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "bank",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, bank persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
+        }
+    }
+
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
+    fn path(uid: &str) -> String {
+        format!("/players/{}/bank", encode_segment(uid))
+    }
+
+    /// A bank whose balances or transaction log differ from a fresh
+    /// account: only those need a full replace after create.
+    fn is_non_default(bank: &Bank) -> bool {
+        bank.bank != 0.0
+            || bank.cash != 0.0
+            || bank.earnings != 0.0
+            || !bank.transactions.is_empty()
+    }
+
+    fn put_full(&self, bank: &Bank) -> Result<(), String> {
+        let path = Self::path(&bank.uid);
+        let body = bank_to_api_body(bank)?;
+        let (status, response) = self.client.put(&path, Some(body))?;
+        require_success("PUT", &path, status, response)?;
+        Ok(())
+    }
+
+    /// Move a legacy bank account into the API. Returns the migrated
+    /// account when one existed, `None` when there was no legacy
+    /// record. A legacy-read error fails open (warn, `None` — the
+    /// legacy rows are left alone); an API-write error propagates.
+    /// The legacy rows are deleted best-effort after a successful PUT,
+    /// so the account lives in exactly one place.
+    fn migrate(&self, uid: &str) -> Result<Option<Bank>, String> {
+        let legacy = match LegacyBankRepository.get_by_id(uid) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "bank",
+                    "WARN",
+                    &format!(
+                        "forge-webapi bank migration: legacy bank read failed for {uid}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(bank) = legacy else {
+            return Ok(None);
+        };
+        self.put_full(&bank)?;
+        if let Err(error) = LegacyBankRepository.delete(uid) {
+            crate::log::log(
+                "bank",
+                "WARN",
+                &format!(
+                    "forge-webapi bank migration: legacy bank delete failed for {uid} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(bank))
+    }
+
+    /// GET the API record, migrating a legacy one on 404.
+    fn get_or_migrate(&self, uid: &str) -> Result<Option<Bank>, String> {
+        let path = Self::path(uid);
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return self.migrate(uid);
+        }
+        let body = require_success("GET", &path, status, body)?;
+        Ok(Some(bank_from_api_record(body)?))
     }
 }
 
-impl BankRepository for BankStorageRepository {
+impl BankRepository for ApiBankRepository {
     fn create(&self, bank: &Bank) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(bank),
+        if self.exists(&bank.uid)? {
+            if Self::is_non_default(bank) {
+                self.put_full(bank)?;
+            }
+            return Ok(());
         }
+        let path = Self::path(&bank.uid);
+        let (status, body) = self.client.post(
+            &path,
+            Some(serde_json::json!({ "name": bank.name, "pin": bank.pin })),
+        )?;
+        if status != reqwest::StatusCode::CONFLICT {
+            require_success("POST", &path, status, body)?;
+        }
+        if Self::is_non_default(bank) {
+            self.put_full(bank)?;
+        }
+        Ok(())
     }
 
     fn get_by_id(&self, id: &str) -> Result<Option<Bank>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get_by_id(id),
-        }
+        self.get_or_migrate(id)
     }
 
     fn update(&self, bank: &Bank) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(bank),
-        }
+        self.put_full(bank)
     }
 
     fn delete(&self, id: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(id),
+        let path = Self::path(id);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(id),
-        }
+        Ok(self.get_or_migrate(id)?.is_some())
     }
 }
 
-pub struct SurrealBankRepository;
+/// Legacy bank rows in SurrealDB (`bank`, `bank_transaction`).
+///
+/// Migration-only: read once by [`ApiBankRepository::migrate`] so a
+/// legacy account can be moved into the API, then deleted. Never used
+/// as a live backend — there is no fallback.
+pub struct LegacyBankRepository;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct BankAccountRecord {
@@ -107,7 +230,7 @@ fn bank_transactions_from_records(mut records: Vec<BankTransactionRecord>) -> Ve
         .collect::<Vec<_>>()
 }
 
-impl BankRepository for SurrealBankRepository {
+impl BankRepository for LegacyBankRepository {
     fn create(&self, bank: &Bank) -> Result<(), String> {
         self.update(bank)
     }

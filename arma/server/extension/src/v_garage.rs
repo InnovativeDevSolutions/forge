@@ -7,20 +7,20 @@ use std::sync::LazyLock;
 use crate::enqueue_persistence_task;
 use crate::helpers::resolve_uid;
 use crate::log::log;
-use crate::storage::VGarageStorageRepository;
+use crate::storage::ApiVGarageRepository;
 
-static VGARAGE_SERVICE: LazyLock<VGarageService<VGarageStorageRepository>> =
-    LazyLock::new(|| VGarageService::new(VGarageStorageRepository::configured()));
+static VGARAGE_SERVICE: LazyLock<VGarageService<ApiVGarageRepository>> =
+    LazyLock::new(|| VGarageService::new(ApiVGarageRepository::configured()));
 static HOT_VGARAGE_SERVICE: LazyLock<
-    VGarageHotStateService<VGarageStorageRepository, InMemoryVGarageHotRepository>,
+    VGarageHotStateService<ApiVGarageRepository, InMemoryVGarageHotRepository>,
 > = LazyLock::new(|| {
-    let repository = VGarageStorageRepository::configured();
+    let repository = ApiVGarageRepository::configured();
     let hot_repository = InMemoryVGarageHotRepository::new();
     VGarageHotStateService::new(repository, hot_repository)
 });
 
 pub(crate) fn hot_service()
--> &'static VGarageHotStateService<VGarageStorageRepository, InMemoryVGarageHotRepository> {
+-> &'static VGarageHotStateService<ApiVGarageRepository, InMemoryVGarageHotRepository> {
     &HOT_VGARAGE_SERVICE
 }
 

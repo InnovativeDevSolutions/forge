@@ -8,6 +8,8 @@
 
 [surreal]
 # SurrealDB HTTP endpoint. This must match the running SurrealDB --bind value.
+# Migration-only: the extension reads legacy rows through this connection
+# once so they can be moved into the API. Nothing persists through it.
 endpoint = "127.0.0.1:8000"
 
 # Namespace and database selected by the extension after connecting.
@@ -22,11 +24,12 @@ password = "root"
 connect_timeout_ms = 5000
 
 [api]
-# Bridge to the standalone forge-webapi (opt-in; disabled by default).
-# When enabled, garage, locker, virtual garage and virtual locker
-# persistence goes through the API instead of the extension's SurrealDB.
-# Set enabled = true and make sure the API is running first
-# (in forge-webapi: `docker compose up`, then `curl localhost:8080/health`).
-enabled = false
+# The standalone forge-webapi — the extension's only persistence
+# backend. All bank, actor, org, phone, garage, locker, virtual
+# garage and virtual locker persistence goes through the API.
+# Make sure the API is running first (in forge-webapi:
+# `docker compose up`, then `curl localhost:8080/health`). If the
+# API is down, persistence operations fail instead of silently
+# falling back to SurrealDB.
 base_url = "http://127.0.0.1:8080"
 timeout_ms = 5000

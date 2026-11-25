@@ -12,22 +12,22 @@ use std::sync::LazyLock;
 use crate::enqueue_persistence_task;
 use crate::helpers::resolve_uid;
 use crate::log::log;
-use crate::storage::GarageStorageRepository;
+use crate::storage::ApiGarageRepository;
 
 /// Global garage service instance.
-static GARAGE_SERVICE: LazyLock<GarageService<GarageStorageRepository>> =
-    LazyLock::new(|| GarageService::new(GarageStorageRepository::configured()));
+static GARAGE_SERVICE: LazyLock<GarageService<ApiGarageRepository>> =
+    LazyLock::new(|| GarageService::new(ApiGarageRepository::configured()));
 static HOT_GARAGE_SERVICE: LazyLock<
-    GarageHotStateService<GarageStorageRepository, InMemoryGarageHotRepository>,
+    GarageHotStateService<ApiGarageRepository, InMemoryGarageHotRepository>,
 > = LazyLock::new(|| {
-    let repository = GarageStorageRepository::configured();
+    let repository = ApiGarageRepository::configured();
     let hot_repository = InMemoryGarageHotRepository::new();
     GarageHotStateService::new(repository, hot_repository)
 });
 
 #[allow(dead_code)]
 pub(crate) fn hot_service()
--> &'static GarageHotStateService<GarageStorageRepository, InMemoryGarageHotRepository> {
+-> &'static GarageHotStateService<ApiGarageRepository, InMemoryGarageHotRepository> {
     &HOT_GARAGE_SERVICE
 }
 

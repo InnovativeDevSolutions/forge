@@ -1,78 +1,371 @@
 use super::common::*;
 use super::*;
+use crate::api::{
+    ApiClient, ApiOrgRecord, encode_segment, org_from_api_record, org_to_api_body, require_success,
+};
+use serde_json::Value as JsonValue;
 
-pub enum OrgStorageRepository {
-    Surreal(SurrealOrgRepository),
+/// Org persistence through forge-webapi (`POST /orgs`, `GET/PUT/DELETE
+/// /orgs/{id}`, plus the member/asset/fleet sub-endpoints).
+///
+/// The API persists one whole `OrgRecord` per org (core + members +
+/// assets + fleet + credit lines + pending invites), and `PUT
+/// /orgs/{id}` is full-replace — so every partial update here is
+/// read-merge-write: fetch the current record, replace only the
+/// collection the caller changed, and PUT the merged whole back. A
+/// caller that sent an empty collection would clear it, which is why
+/// `update_assets` / `update_fleet` never build a record from the
+/// caller's collection alone.
+///
+/// `create` registers through `POST /orgs` (the owner becomes the
+/// first member); a non-default org is then followed by a merged PUT.
+/// `create` checks `exists()` first — which migrates a legacy org —
+/// so it can never register over legacy data.
+pub struct ApiOrgRepository {
+    client: ApiClient,
 }
 
-impl OrgStorageRepository {
-    pub fn configured() -> Self {
-        // TODO(bridge): orgs stay on SurrealDB. The API has no
-        // full-replace PUT /orgs/{id} (the hot-state save path persists
-        // a whole org record), and its asset/fleet endpoints only add —
-        // the repository's replace-semantics updates cannot be
-        // expressed. Member/invite/credit-line endpoints exist, but
-        // bridging them alone would split one org across two schemas.
-        Self::Surreal(SurrealOrgRepository)
+impl ApiOrgRepository {
+    pub fn new() -> Result<Self, String> {
+        Ok(Self {
+            client: ApiClient::configured()?,
+        })
     }
-}
 
-impl OrgRepository for OrgStorageRepository {
-    fn create(&self, org: &Org) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.create(org),
+    /// The API is the only persistence backend: build the client, and
+    /// if that fails log loudly and return a repository whose every
+    /// operation fails with the construction error. There is no
+    /// fallback to SurrealDB.
+    pub fn configured() -> Self {
+        match Self::new() {
+            Ok(repository) => repository,
+            Err(error) => {
+                crate::log::log(
+                    "org",
+                    "ERROR",
+                    &format!(
+                        "forge-webapi client unavailable, org persistence disabled (no SurrealDB fallback): {error}"
+                    ),
+                );
+                Self::unavailable(error)
+            }
         }
     }
 
+    /// A repository that fails every operation with `error`: used when
+    /// the API client could not be built.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: ApiClient::unavailable(error),
+        }
+    }
+
+    fn path(id: &str) -> String {
+        format!("/orgs/{}", encode_segment(id))
+    }
+
+    /// An org whose core differs from a freshly registered one: only
+    /// those need a merged PUT after create.
+    fn is_non_default(org: &Org) -> bool {
+        org.funds != 0.0 || org.reputation != 0 || !org.credit_lines.is_empty()
+    }
+
+    /// A player's display name from the configured actor repository,
+    /// best-effort: `""` when the actor is unknown or unreadable. The
+    /// API renders an empty name as `"Unknown"`, matching the legacy
+    /// repository's fallback.
+    fn actor_name(uid: &str) -> String {
+        let repository = ApiActorRepository::configured();
+        match repository.get_by_id(uid) {
+            Ok(Some(actor)) => actor.name.unwrap_or_default(),
+            _ => String::new(),
+        }
+    }
+
+    /// GET the API record, `None` on 404. Does not migrate.
+    fn fetch_record(&self, id: &str) -> Result<Option<JsonValue>, String> {
+        let path = Self::path(id);
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        let body = require_success("GET", &path, status, body)?;
+        Ok(Some(body))
+    }
+
+    /// GET the API record, migrating a legacy one on 404.
+    fn fetch_or_migrate_record(&self, id: &str) -> Result<Option<JsonValue>, String> {
+        if let Some(record) = self.fetch_record(id)? {
+            return Ok(Some(record));
+        }
+        if self.migrate(id)?.is_some() {
+            return self.fetch_record(id);
+        }
+        Ok(None)
+    }
+
+    fn put_record(&self, body: JsonValue) -> Result<(), String> {
+        let id = body
+            .get("orgId")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let path = Self::path(&id);
+        let (status, response) = self.client.put(&path, Some(body))?;
+        require_success("PUT", &path, status, response)?;
+        Ok(())
+    }
+
+    /// Read-merge-write of a core [`Org`]: the current record's
+    /// members, assets, fleet and pending invites survive, only the
+    /// core fields (id, owner, name, funds, reputation, credit lines)
+    /// are replaced. When no API record exists yet, a legacy one is
+    /// migrated first; when there is no legacy record either, the PUT
+    /// creates the org from the core plus empty collections.
+    fn put_merged(&self, org: &Org) -> Result<(), String> {
+        let current = match self.fetch_or_migrate_record(&org.id)? {
+            Some(record) => org_from_api_record(record)?,
+            None => ApiOrgRecord {
+                org: org.clone(),
+                members: HashMap::new(),
+                assets: HashMap::new(),
+                fleet: HashMap::new(),
+                pending_invites: HashMap::new(),
+            },
+        };
+        let body = org_to_api_body(
+            org,
+            &current.members,
+            &current.assets,
+            &current.fleet,
+            &current.pending_invites,
+        )?;
+        self.put_record(body)
+    }
+
+    /// Move a legacy org into the API: the core record plus its side
+    /// tables (members, assets, fleet, credit lines) are assembled
+    /// into one `OrgRecord` and PUT. Returns the migrated core when
+    /// one existed, `None` when there was no legacy record. A
+    /// legacy-core read error fails open (warn, `None` — the legacy
+    /// rows are left alone); a side-table read error warns and
+    /// migrates that collection empty; an API-write error propagates.
+    /// The legacy rows (core + all side tables) are deleted
+    /// best-effort after a successful PUT, via
+    /// `LegacyOrgRepository::delete`. Pending invites are hot-only in
+    /// the original — no legacy invite table exists — so migration
+    /// seeds them empty.
+    fn migrate(&self, id: &str) -> Result<Option<Org>, String> {
+        let legacy = match LegacyOrgRepository.get_by_id(id) {
+            Ok(legacy) => legacy,
+            Err(error) => {
+                crate::log::log(
+                    "org",
+                    "WARN",
+                    &format!(
+                        "forge-webapi org migration: legacy org read failed for {id}, proceeding without it: {error}"
+                    ),
+                );
+                return Ok(None);
+            }
+        };
+        let Some(org) = legacy else {
+            return Ok(None);
+        };
+        let members = match LegacyOrgRepository.get_members(id) {
+            Ok(members) => members,
+            Err(error) => {
+                crate::log::log(
+                    "org",
+                    "WARN",
+                    &format!(
+                        "forge-webapi org migration: legacy org members read failed for {id}, migrating without them: {error}"
+                    ),
+                );
+                Vec::new()
+            }
+        };
+        let assets = match LegacyOrgRepository.get_assets(id) {
+            Ok(assets) => assets,
+            Err(error) => {
+                crate::log::log(
+                    "org",
+                    "WARN",
+                    &format!(
+                        "forge-webapi org migration: legacy org assets read failed for {id}, migrating without them: {error}"
+                    ),
+                );
+                HashMap::new()
+            }
+        };
+        let fleet = match LegacyOrgRepository.get_fleet(id) {
+            Ok(fleet) => fleet,
+            Err(error) => {
+                crate::log::log(
+                    "org",
+                    "WARN",
+                    &format!(
+                        "forge-webapi org migration: legacy org fleet read failed for {id}, migrating without it: {error}"
+                    ),
+                );
+                HashMap::new()
+            }
+        };
+        let members_map: HashMap<String, MemberSummary> = members
+            .into_iter()
+            .map(|member| (member.uid.clone(), member))
+            .collect();
+        let body = org_to_api_body(&org, &members_map, &assets, &fleet, &HashMap::new())?;
+        self.put_record(body)?;
+        if let Err(error) = LegacyOrgRepository.delete(id) {
+            crate::log::log(
+                "org",
+                "WARN",
+                &format!(
+                    "forge-webapi org migration: legacy org delete failed for {id} after migration: {error}"
+                ),
+            );
+        }
+        Ok(Some(org))
+    }
+
+    fn parse_members(body: JsonValue) -> Result<Vec<MemberSummary>, String> {
+        let members = body.get("members").cloned().unwrap_or(JsonValue::Null);
+        serde_json::from_value(members)
+            .map_err(|error| format!("forge-webapi org members decode failed: {error}"))
+    }
+
+    fn parse_assets(
+        body: JsonValue,
+    ) -> Result<HashMap<String, HashMap<String, OrgAssetEntry>>, String> {
+        let assets = body.get("assets").cloned().unwrap_or(JsonValue::Null);
+        serde_json::from_value(assets)
+            .map_err(|error| format!("forge-webapi org assets decode failed: {error}"))
+    }
+
+    fn parse_fleet(body: JsonValue) -> Result<HashMap<String, OrgFleetEntry>, String> {
+        let fleet = body.get("fleet").cloned().unwrap_or(JsonValue::Null);
+        serde_json::from_value(fleet)
+            .map_err(|error| format!("forge-webapi org fleet decode failed: {error}"))
+    }
+}
+
+impl OrgRepository for ApiOrgRepository {
+    fn create(&self, org: &Org) -> Result<(), String> {
+        if self.exists(&org.id)? {
+            if Self::is_non_default(org) {
+                self.put_merged(org)?;
+            }
+            return Ok(());
+        }
+        // No `existingOrgId`: the repository must not move the
+        // requester out of another org — the hot service owns that.
+        let path = "/orgs".to_string();
+        let (status, body) = self.client.post(
+            &path,
+            Some(serde_json::json!({
+                "orgId": org.id,
+                "orgName": org.name,
+                "requesterUid": org.owner,
+                "requesterName": Self::actor_name(&org.owner),
+            })),
+        )?;
+        if status != reqwest::StatusCode::CONFLICT {
+            require_success("POST", &path, status, body)?;
+        }
+        if Self::is_non_default(org) {
+            self.put_merged(org)?;
+        }
+        Ok(())
+    }
+
     fn get_by_id(&self, id: &str) -> Result<Option<Org>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get_by_id(id),
+        match self.fetch_or_migrate_record(id)? {
+            Some(record) => Ok(Some(org_from_api_record(record)?.org)),
+            None => Ok(None),
         }
     }
 
     fn update(&self, org: &Org) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update(org),
-        }
+        self.put_merged(org)
     }
 
     fn delete(&self, id: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.delete(id),
+        let path = Self::path(id);
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn exists(&self, id: &str) -> Result<bool, String> {
-        match self {
-            Self::Surreal(repository) => repository.exists(id),
-        }
+        Ok(self.fetch_or_migrate_record(id)?.is_some())
     }
 
     fn add_member(&self, org_id: &str, member_uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.add_member(org_id, member_uid),
+        let path = format!("{}/members", Self::path(org_id));
+        let body = serde_json::json!({
+            "memberUid": member_uid,
+            "memberName": Self::actor_name(member_uid),
+        });
+        let (status, response) = self.client.post(&path, Some(body.clone()))?;
+        if status == reqwest::StatusCode::NOT_FOUND && self.migrate(org_id)?.is_some() {
+            // A legacy-only org: migrate, then retry once.
+            let (status, response) = self.client.post(&path, Some(body))?;
+            require_success("POST", &path, status, response)?;
+            return Ok(());
         }
+        require_success("POST", &path, status, response)?;
+        Ok(())
     }
 
     fn get_members(&self, org_id: &str) -> Result<Vec<MemberSummary>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get_members(org_id),
+        let path = format!("{}/members", Self::path(org_id));
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(org_id)?.is_some() {
+                let (status, body) = self.client.get(&path)?;
+                let body = require_success("GET", &path, status, body)?;
+                return Self::parse_members(body);
+            }
+            return Ok(Vec::new());
         }
+        let body = require_success("GET", &path, status, body)?;
+        Self::parse_members(body)
     }
 
     fn remove_member(&self, org_id: &str, member_uid: &str) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.remove_member(org_id, member_uid),
+        let path = format!(
+            "{}/members/{}",
+            Self::path(org_id),
+            encode_segment(member_uid)
+        );
+        let (status, body) = self.client.delete(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
         }
+        require_success("DELETE", &path, status, body)?;
+        Ok(())
     }
 
     fn get_assets(
         &self,
         org_id: &str,
     ) -> Result<HashMap<String, HashMap<String, OrgAssetEntry>>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get_assets(org_id),
+        let path = format!("{}/assets", Self::path(org_id));
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(org_id)?.is_some() {
+                let (status, body) = self.client.get(&path)?;
+                let body = require_success("GET", &path, status, body)?;
+                return Self::parse_assets(body);
+            }
+            return Ok(HashMap::new());
         }
+        let body = require_success("GET", &path, status, body)?;
+        Self::parse_assets(body)
     }
 
     fn update_assets(
@@ -80,15 +373,34 @@ impl OrgRepository for OrgStorageRepository {
         org_id: &str,
         assets: &HashMap<String, HashMap<String, OrgAssetEntry>>,
     ) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update_assets(org_id, assets),
-        }
+        let Some(record) = self.fetch_or_migrate_record(org_id)? else {
+            return Err(format!("Organization {org_id} not found"));
+        };
+        let mut current = org_from_api_record(record)?;
+        current.assets = assets.clone();
+        let body = org_to_api_body(
+            &current.org,
+            &current.members,
+            &current.assets,
+            &current.fleet,
+            &current.pending_invites,
+        )?;
+        self.put_record(body)
     }
 
     fn get_fleet(&self, org_id: &str) -> Result<HashMap<String, OrgFleetEntry>, String> {
-        match self {
-            Self::Surreal(repository) => repository.get_fleet(org_id),
+        let path = format!("{}/fleet", Self::path(org_id));
+        let (status, body) = self.client.get(&path)?;
+        if status == reqwest::StatusCode::NOT_FOUND {
+            if self.migrate(org_id)?.is_some() {
+                let (status, body) = self.client.get(&path)?;
+                let body = require_success("GET", &path, status, body)?;
+                return Self::parse_fleet(body);
+            }
+            return Ok(HashMap::new());
         }
+        let body = require_success("GET", &path, status, body)?;
+        Self::parse_fleet(body)
     }
 
     fn update_fleet(
@@ -96,9 +408,19 @@ impl OrgRepository for OrgStorageRepository {
         org_id: &str,
         fleet: &HashMap<String, OrgFleetEntry>,
     ) -> Result<(), String> {
-        match self {
-            Self::Surreal(repository) => repository.update_fleet(org_id, fleet),
-        }
+        let Some(record) = self.fetch_or_migrate_record(org_id)? else {
+            return Err(format!("Organization {org_id} not found"));
+        };
+        let mut current = org_from_api_record(record)?;
+        current.fleet = fleet.clone();
+        let body = org_to_api_body(
+            &current.org,
+            &current.members,
+            &current.assets,
+            &current.fleet,
+            &current.pending_invites,
+        )?;
+        self.put_record(body)
     }
 }
 
@@ -188,7 +510,13 @@ impl From<&Org> for SurrealOrgRecord {
     }
 }
 
-pub struct SurrealOrgRepository;
+/// Legacy org rows in SurrealDB (`org`, `org_member`, `org_asset`,
+/// `org_fleet_vehicle`, `org_credit_line`).
+///
+/// Migration-only: read once by [`ApiOrgRepository::migrate`] so a
+/// legacy org can be moved into the API, then deleted. Never used
+/// as a live backend — there is no fallback.
+pub struct LegacyOrgRepository;
 
 fn org_member_id(org_id: &str, member_uid: &str) -> String {
     format!("{}:{}", org_id, member_uid)
@@ -286,7 +614,7 @@ fn org_fleet_from_rows(rows: Vec<OrgFleetRow>) -> HashMap<String, OrgFleetEntry>
         .collect()
 }
 
-impl OrgRepository for SurrealOrgRepository {
+impl OrgRepository for LegacyOrgRepository {
     fn create(&self, org: &Org) -> Result<(), String> {
         self.update(org)
     }
@@ -374,7 +702,7 @@ impl OrgRepository for SurrealOrgRepository {
     fn get_members(&self, org_id: &str) -> Result<Vec<MemberSummary>, String> {
         let member_uids = org_member_uids(org_id)?;
         let mut members = Vec::with_capacity(member_uids.len());
-        let actor_repository = SurrealActorRepository;
+        let actor_repository = LegacyActorRepository;
 
         for uid in member_uids {
             if uid.trim().is_empty() {

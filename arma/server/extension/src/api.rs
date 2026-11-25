@@ -1,11 +1,18 @@
 //! HTTP client for the forge-webapi standalone API.
 //!
-//! The bridge: repository implementations in `storage/` that talk to
-//! the API instead of SurrealDB use this client. It is a native HTTP
-//! client (reqwest) running on the extension's global Tokio runtime —
-//! no browser-style CORS preflight applies here, so the API's
-//! `arma://` Origin echo is irrelevant on this path; SQF's own
-//! `webRequest` calls are the ones that go through preflight.
+//! The API is the extension's only persistence backend: repository
+//! implementations in `storage/` talk to it instead of SurrealDB.
+//! SurrealDB remains only as a migration-only read path (see
+//! `storage/` — the `Legacy*Repository` types read a legacy row once
+//! so it can be moved into the API, then delete it). There is no
+//! fallback: if the API client cannot be built, repositories fail
+//! loudly on every operation instead of silently switching backends.
+//!
+//! It is a native HTTP client (reqwest) running on the extension's
+//! global Tokio runtime — no browser-style CORS preflight applies
+//! here, so the API's `arma://` Origin echo is irrelevant on this
+//! path; SQF's own `webRequest` calls are the ones that go through
+//! preflight.
 //!
 //! Requests are synchronous from the caller's point of view (the
 //! repository traits are sync): each method blocks on the runtime,
@@ -20,9 +27,13 @@
 //! `Authorization: Bearer <token>`.
 
 use arma_rs::Group;
-use forge_models::{Garage, Locker, VGarage, VLocker};
+use forge_models::{
+    Actor, Bank, CreditLineSummary, Garage, Locker, MemberSummary, Org, OrgAssetEntry,
+    OrgFleetEntry, OrgInviteRecord, PhonePayload, VGarage, VLocker,
+};
 use reqwest::StatusCode;
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 use std::time::Duration;
 
 use crate::RUNTIME;
@@ -163,14 +174,211 @@ pub(crate) fn vlocker_from_api_record(mut record: JsonValue) -> Result<VLocker, 
         .map_err(|error| format!("forge-webapi virtual locker decode failed: {error}"))
 }
 
+/// Serialize a model [`Bank`] into the API's `PUT /players/{uid}/bank`
+/// body. Field names are single words on both sides; no renaming.
+pub(crate) fn bank_to_api_body(bank: &Bank) -> Result<JsonValue, String> {
+    serde_json::to_value(bank)
+        .map_err(|error| format!("Failed to serialize bank for forge-webapi: {error}"))
+}
+
+/// Deserialize an API bank record into the model [`Bank`].
+pub(crate) fn bank_from_api_record(record: JsonValue) -> Result<Bank, String> {
+    serde_json::from_value(record)
+        .map_err(|error| format!("forge-webapi bank decode failed: {error}"))
+}
+
+/// Serialize a model [`Actor`] into the API's actor body: the API is
+/// camelCase, so the model's `phone_number` becomes `phoneNumber`.
+pub(crate) fn actor_to_api_body(actor: &Actor) -> Result<JsonValue, String> {
+    let mut value = serde_json::to_value(actor)
+        .map_err(|error| format!("Failed to serialize actor for forge-webapi: {error}"))?;
+    rename_key(&mut value, "phone_number", "phoneNumber");
+    Ok(value)
+}
+
+/// Deserialize an API actor record (`phoneNumber`) into the model
+/// [`Actor`] (`phone_number`).
+pub(crate) fn actor_from_api_record(mut record: JsonValue) -> Result<Actor, String> {
+    rename_key(&mut record, "phoneNumber", "phone_number");
+    serde_json::from_value(record)
+        .map_err(|error| format!("forge-webapi actor decode failed: {error}"))
+}
+
+/// Rename the snake_case fields of one credit line to the API's
+/// camelCase (`approved_amount` → `approvedAmount`, and so on).
+/// `uid`, `name` and `amount` are already identical.
+fn credit_line_to_api(value: &mut JsonValue) {
+    rename_key(value, "approved_amount", "approvedAmount");
+    rename_key(value, "available_amount", "availableAmount");
+    rename_key(value, "outstanding_principal", "outstandingPrincipal");
+    rename_key(value, "interest_rate", "interestRate");
+    rename_key(value, "amount_due", "amountDue");
+}
+
+/// Inverse of [`credit_line_to_api`].
+fn credit_line_from_api(value: &mut JsonValue) {
+    rename_key(value, "approvedAmount", "approved_amount");
+    rename_key(value, "availableAmount", "available_amount");
+    rename_key(value, "outstandingPrincipal", "outstanding_principal");
+    rename_key(value, "interestRate", "interest_rate");
+    rename_key(value, "amountDue", "amount_due");
+}
+
+/// Apply [`credit_line_to_api`] to every entry of a `creditLines` map.
+fn credit_lines_to_api(map: &mut JsonValue) {
+    if let Some(object) = map.as_object_mut() {
+        for value in object.values_mut() {
+            credit_line_to_api(value);
+        }
+    }
+}
+
+/// Apply [`credit_line_from_api`] to every entry of a `creditLines` map.
+fn credit_lines_from_api(map: &mut JsonValue) {
+    if let Some(object) = map.as_object_mut() {
+        for value in object.values_mut() {
+            credit_line_from_api(value);
+        }
+    }
+}
+
+/// An API org record split back into the extension's shapes: the core
+/// [`Org`] plus the collections the API persists alongside it.
+pub(crate) struct ApiOrgRecord {
+    pub org: Org,
+    pub members: HashMap<String, MemberSummary>,
+    pub assets: HashMap<String, HashMap<String, OrgAssetEntry>>,
+    pub fleet: HashMap<String, OrgFleetEntry>,
+    pub pending_invites: HashMap<String, OrgInviteRecord>,
+}
+
+fn object_or_empty(value: Option<&JsonValue>) -> JsonValue {
+    value
+        .cloned()
+        .unwrap_or_else(|| JsonValue::Object(serde_json::Map::new()))
+}
+
+/// Serialize a whole org record for the API's `PUT /orgs/{id}`: the
+/// core [`Org`] plus members, assets, fleet, credit lines (translated
+/// to camelCase) and pending invites. `PUT` is full-replace, so callers
+/// that only change one collection must read the current record first
+/// and pass the rest back unchanged.
+pub(crate) fn org_to_api_body(
+    org: &Org,
+    members: &HashMap<String, MemberSummary>,
+    assets: &HashMap<String, HashMap<String, OrgAssetEntry>>,
+    fleet: &HashMap<String, OrgFleetEntry>,
+    pending_invites: &HashMap<String, OrgInviteRecord>,
+) -> Result<JsonValue, String> {
+    let mut credit_lines = serde_json::to_value(&org.credit_lines).map_err(|error| {
+        format!("Failed to serialize org credit lines for forge-webapi: {error}")
+    })?;
+    credit_lines_to_api(&mut credit_lines);
+    Ok(serde_json::json!({
+        "orgId": org.id,
+        "owner": org.owner,
+        "name": org.name,
+        "funds": org.funds,
+        "reputation": org.reputation,
+        "creditLines": credit_lines,
+        "assets": assets,
+        "fleet": fleet,
+        "members": members,
+        "pendingInvites": pending_invites,
+    }))
+}
+
+/// Deserialize an API org record into an [`ApiOrgRecord`]: `orgId`
+/// back to the core [`Org`]'s `id`, camelCase `creditLines` back to
+/// snake_case, and the collections as the model types.
+pub(crate) fn org_from_api_record(record: JsonValue) -> Result<ApiOrgRecord, String> {
+    let decode_error =
+        |error: serde_json::Error| format!("forge-webapi org decode failed: {error}");
+    let mut credit_lines = object_or_empty(record.get("creditLines"));
+    credit_lines_from_api(&mut credit_lines);
+    let credit_lines: HashMap<String, CreditLineSummary> =
+        serde_json::from_value(credit_lines).map_err(decode_error)?;
+    let mut org = Org {
+        id: record
+            .get("orgId")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        owner: record
+            .get("owner")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        name: record
+            .get("name")
+            .and_then(|value| value.as_str())
+            .unwrap_or_default()
+            .to_string(),
+        funds: record
+            .get("funds")
+            .and_then(|value| value.as_f64())
+            .unwrap_or_default(),
+        reputation: record
+            .get("reputation")
+            .and_then(|value| value.as_i64())
+            .unwrap_or_default(),
+        credit_lines,
+    };
+    org.normalize_credit_lines();
+    let members: HashMap<String, MemberSummary> =
+        serde_json::from_value(object_or_empty(record.get("members"))).map_err(decode_error)?;
+    let assets: HashMap<String, HashMap<String, OrgAssetEntry>> =
+        serde_json::from_value(object_or_empty(record.get("assets"))).map_err(decode_error)?;
+    let fleet: HashMap<String, OrgFleetEntry> =
+        serde_json::from_value(object_or_empty(record.get("fleet"))).map_err(decode_error)?;
+    let pending_invites: HashMap<String, OrgInviteRecord> =
+        serde_json::from_value(object_or_empty(record.get("pendingInvites")))
+            .map_err(decode_error)?;
+    Ok(ApiOrgRecord {
+        org,
+        members,
+        assets,
+        fleet,
+        pending_invites,
+    })
+}
+
+/// Serialize a [`PhonePayload`] into the API's `PUT /players/{uid}/phone`
+/// body (`{ uid, contacts, messages, emails }`). The message/email
+/// types are already camelCase; the payload itself carries no `uid`,
+/// so it is supplied separately.
+pub(crate) fn phone_to_api_body(uid: &str, payload: &PhonePayload) -> Result<JsonValue, String> {
+    Ok(serde_json::json!({
+        "uid": uid,
+        "contacts": payload.contacts,
+        "messages": payload.messages,
+        "emails": payload.emails,
+    }))
+}
+
+/// Deserialize an API phone payload (`{ uid, contacts, messages,
+/// emails }`) into the model [`PhonePayload`]. The `uid` field is
+/// ignored — the model carries none.
+pub(crate) fn phone_from_api_record(record: JsonValue) -> Result<PhonePayload, String> {
+    serde_json::from_value(record)
+        .map_err(|error| format!("forge-webapi phone decode failed: {error}"))
+}
+
 /// Blocking HTTP client for forge-webapi.
 ///
 /// Cheap to clone (the underlying reqwest client is reference-counted);
 /// one instance is held per API repository.
+///
+/// A client built by [`ApiClient::unavailable`] carries a construction
+/// error instead of a working connection: every request fails with
+/// that error. Repositories use it when the client cannot be built, so
+/// the failure is loud on every operation instead of silently falling
+/// back to another backend. There is no fallback.
 #[derive(Debug, Clone)]
 pub struct ApiClient {
     client: reqwest::Client,
     base_url: String,
+    init_error: Option<String>,
 }
 
 impl ApiClient {
@@ -184,12 +392,29 @@ impl ApiClient {
         Ok(Self {
             client,
             base_url: config.base_url.trim_end_matches('/').to_string(),
+            init_error: None,
         })
     }
 
     /// Build a client from the loaded extension config (`[api]`).
     pub fn configured() -> Result<Self, String> {
         Self::from_config(&crate::config::load().api)
+    }
+
+    /// A client that fails every request with `error`: used when the
+    /// real client could not be built. The inner reqwest client is
+    /// never used — requests short-circuit on `init_error` first.
+    pub fn unavailable(error: String) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: String::new(),
+            init_error: Some(error),
+        }
+    }
+
+    /// The construction error, if this client was built unavailable.
+    fn init_error(&self) -> Option<String> {
+        self.init_error.clone()
     }
 
     fn url(&self, path: &str) -> String {
@@ -235,6 +460,9 @@ impl ApiClient {
 
     /// `GET <path>` → `(status, parsed JSON body)`.
     pub fn get(&self, path: &str) -> Result<(StatusCode, JsonValue), String> {
+        if let Some(error) = self.init_error() {
+            return Err(format!("forge-webapi client unavailable: {error}"));
+        }
         let request = self.with_auth(self.client.get(self.url(path)));
         RUNTIME.block_on(async move { Self::execute(request).await })
     }
@@ -245,6 +473,9 @@ impl ApiClient {
         path: &str,
         body: Option<JsonValue>,
     ) -> Result<(StatusCode, JsonValue), String> {
+        if let Some(error) = self.init_error() {
+            return Err(format!("forge-webapi client unavailable: {error}"));
+        }
         let mut request = self.with_auth(self.client.post(self.url(path)));
         if let Some(body) = body {
             request = request.json(&body);
@@ -258,6 +489,9 @@ impl ApiClient {
         path: &str,
         body: Option<JsonValue>,
     ) -> Result<(StatusCode, JsonValue), String> {
+        if let Some(error) = self.init_error() {
+            return Err(format!("forge-webapi client unavailable: {error}"));
+        }
         let mut request = self.with_auth(self.client.put(self.url(path)));
         if let Some(body) = body {
             request = request.json(&body);
@@ -267,6 +501,9 @@ impl ApiClient {
 
     /// `DELETE <path>`.
     pub fn delete(&self, path: &str) -> Result<(StatusCode, JsonValue), String> {
+        if let Some(error) = self.init_error() {
+            return Err(format!("forge-webapi client unavailable: {error}"));
+        }
         let request = self.with_auth(self.client.delete(self.url(path)));
         RUNTIME.block_on(async move { Self::execute(request).await })
     }
@@ -279,14 +516,12 @@ impl ApiClient {
     }
 }
 
-/// `api status` — reports the bridge's view of the API: `disabled`
-/// (bridge off), `connected (database: …)`, or `unavailable: <reason>`.
-/// Intended for SQF polling before issuing operations that need the API.
+/// `api status` — reports the API's view of itself: `connected
+/// (database: …)` or `unavailable: <reason>`. The API is the only
+/// persistence backend, so this is the persistence status. Intended
+/// for SQF polling before issuing operations that need the API.
 pub fn status() -> String {
     let config = crate::config::load();
-    if !config.api.enabled {
-        return "disabled".to_string();
-    }
     match ApiClient::from_config(&config.api).and_then(|client| client.health()) {
         Ok(body) => {
             let database = body
@@ -300,7 +535,7 @@ pub fn status() -> String {
     }
 }
 
-/// Creates the Arma 3 command group for forge-webapi bridge operations.
+/// Creates the Arma 3 command group for forge-webapi operations.
 ///
 /// Registers commands: `status`.
 pub fn group() -> Group {
