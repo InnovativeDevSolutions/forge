@@ -10,7 +10,7 @@ export default defineAppConfig({
   site: {
     name: 'Forge Framework',
     description:
-      'Persistent Arma 3 framework with Rust services, SurrealDB storage, and browser-backed client UIs.',
+      'Persistent Arma 3 framework with Rust services, forge-webapi storage, and browser-backed client UIs.',
     url: siteUrl,
     socials: {
       github: 'InnovativeDevSolutions/forge'

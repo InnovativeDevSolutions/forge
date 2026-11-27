@@ -1,11 +1,8 @@
-//! Extension configuration: the forge-webapi connection (`[api]`)
-//! and the SurrealDB connection (`[surreal]`).
+//! Extension configuration: the forge-webapi connection (`[api]`).
 //!
-//! The API is the extension's only persistence backend. `[surreal]`
-//! is kept only for the one-time migration of legacy data: the
-//! `Legacy*Repository` types in `storage/` read a legacy row once so
-//! it can be moved into the API, then delete it. Once migration is
-//! confirmed done, the SurrealDB connection can be removed entirely.
+//! The API is the extension's only persistence backend. Unknown
+//! sections (an old `[surreal]` section, or the shared Forge Host
+//! config's extra sections) are ignored.
 
 use serde::Deserialize;
 use std::fs;
@@ -18,8 +15,6 @@ static CONFIG_CACHE: OnceLock<Config> = OnceLock::new();
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
-    #[serde(default)]
-    pub surreal: SurrealConfig,
     #[serde(default)]
     pub api: ApiConfig,
 }
@@ -60,67 +55,6 @@ impl Default for ApiConfig {
         Self {
             base_url: Self::default_base_url(),
             timeout_ms: Self::default_timeout_ms(),
-        }
-    }
-}
-
-/// SurrealDB connection (`[surreal]` in config.toml).
-///
-/// Migration-only: the `Legacy*Repository` types in `storage/` read
-/// legacy rows through this connection so they can be moved into the
-/// API. Nothing else uses it — the extension no longer defines
-/// SurrealDB tables or persists through it.
-#[derive(Debug, Clone, Deserialize)]
-pub struct SurrealConfig {
-    #[serde(default = "SurrealConfig::default_endpoint")]
-    pub endpoint: String,
-    #[serde(default = "SurrealConfig::default_namespace")]
-    pub namespace: String,
-    #[serde(default = "SurrealConfig::default_database")]
-    pub database: String,
-    #[serde(default = "SurrealConfig::default_username")]
-    pub username: Option<String>,
-    #[serde(default = "SurrealConfig::default_password")]
-    pub password: Option<String>,
-    #[serde(default = "SurrealConfig::default_connect_timeout_ms")]
-    pub connect_timeout_ms: Option<u64>,
-}
-
-impl SurrealConfig {
-    fn default_endpoint() -> String {
-        "127.0.0.1:8000".to_string()
-    }
-
-    fn default_namespace() -> String {
-        "forge".to_string()
-    }
-
-    fn default_database() -> String {
-        "main".to_string()
-    }
-
-    fn default_username() -> Option<String> {
-        Some("root".to_string())
-    }
-
-    fn default_password() -> Option<String> {
-        Some("root".to_string())
-    }
-
-    fn default_connect_timeout_ms() -> Option<u64> {
-        Some(5000)
-    }
-}
-
-impl Default for SurrealConfig {
-    fn default() -> Self {
-        Self {
-            endpoint: Self::default_endpoint(),
-            namespace: Self::default_namespace(),
-            database: Self::default_database(),
-            username: Self::default_username(),
-            password: Self::default_password(),
-            connect_timeout_ms: Self::default_connect_timeout_ms(),
         }
     }
 }
@@ -185,20 +119,27 @@ mod tests {
 
     #[test]
     fn partial_api_section_fills_missing_fields_from_defaults() {
-        let config: Config =
-            toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n\n[api]\nbase_url = \"http://127.0.0.1:8080\"\n")
-                .expect("partial [api] section should parse");
-        assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
+        let config: Config = toml::from_str("[api]\nbase_url = \"http://10.0.0.5:8080\"\n")
+            .expect("partial [api] section should parse");
+        assert_eq!(config.api.base_url, "http://10.0.0.5:8080");
         assert_eq!(config.api.timeout_ms, Some(5000));
-        // A partial [surreal] section gets defaults too.
-        assert_eq!(config.surreal.namespace, "forge");
-        assert_eq!(config.surreal.database, "main");
     }
 
     #[test]
     fn missing_api_section_uses_defaults() {
-        let config: Config = toml::from_str("[surreal]\nendpoint = \"127.0.0.1:8000\"\n")
-            .expect("missing [api] section should parse");
+        let config: Config =
+            toml::from_str("").expect("an empty config should parse");
         assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
+    }
+
+    #[test]
+    fn old_surreal_section_is_ignored() {
+        // Configs written for older builds still carry [surreal]; they
+        // must keep parsing instead of falling back to defaults.
+        let config: Config = toml::from_str(
+            "[surreal]\nendpoint = \"127.0.0.1:8000\"\npassword = \"root\"\n\n[api]\nbase_url = \"http://10.0.0.5:8080\"\n",
+        )
+        .expect("an old [surreal] section should be ignored");
+        assert_eq!(config.api.base_url, "http://10.0.0.5:8080");
     }
 }

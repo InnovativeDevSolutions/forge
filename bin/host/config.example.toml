@@ -6,7 +6,8 @@
 #
 # This file intentionally contains:
 # - [server], used by the standalone ICOM hub.
-# - [surreal], used by the Arma server extension.
+# - [api], used by the Arma server extension to reach forge-webapi
+#   (see docs/forge-webapi-setup.md).
 # - [surrealdb], [icom], and [arma], used by Forge Host to manage processes.
 
 [server]
@@ -15,21 +16,13 @@
 host = "0.0.0.0"
 port = 9090
 
-[surreal]
-# SurrealDB HTTP endpoint used by the Arma server extension.
-# Keep this aligned with [surrealdb].args --bind.
-endpoint = "127.0.0.1:8000"
+[api]
+# forge-webapi base URL used by the Arma server extension for persistence.
+# Start the API with `docker compose up` in the forge-webapi repository.
+base_url = "http://127.0.0.1:8080"
 
-# Namespace and database selected after the extension connects.
-namespace = "forge"
-database = "main"
-
-# Local development defaults. Use a real password for shared or public servers.
-username = "root"
-password = "root"
-
-# How long the extension waits for the initial SurrealDB connection.
-connect_timeout_ms = 5000
+# Per-request timeout for API calls from the extension.
+timeout_ms = 5000
 
 [surrealdb]
 # Managed SurrealDB process. Forge Host can install SurrealDB into the user's
@@ -37,8 +30,8 @@ connect_timeout_ms = 5000
 enabled = true
 command = "surreal"
 
-# Persistent local database using RocksDB. The bind address must match
-# [surreal].endpoint and health_host/health_port.
+# Optional local SurrealDB, separate from forge-webapi (which runs its own in
+# docker compose). The bind address must match health_host/health_port.
 args = ["start", "--user", "root", "--pass", "root", "--bind", "127.0.0.1:8000", "rocksdb://forge.db"]
 
 # Relative paths are resolved from the active config.toml directory.

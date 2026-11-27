@@ -1,7 +1,7 @@
 # Phone Usage Guide
 
 The phone module stores contacts, messages, and emails for each UID. It is a
-server-extension state module backed by SurrealDB.
+server-extension state module backed by forge-webapi.
 
 ## Storage Model
 

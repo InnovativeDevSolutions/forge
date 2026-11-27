@@ -19,7 +19,6 @@ forge-shared = { path = "../../../lib/shared" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
-surrealdb = { version = "3", default-features = false, features = ["protocol-http", "rustls"] }
 tokio = { workspace = true }
 toml = "1.1.2"
 uuid = { workspace = true }

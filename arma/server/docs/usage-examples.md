@@ -1,7 +1,7 @@
 # Forge Server Usage Examples
 
 These examples use the domain command surface exposed by the extension.
-Persistence is handled by the server through SurrealDB.
+Persistence is handled by the server through forge-webapi.
 
 ## Status Check
 

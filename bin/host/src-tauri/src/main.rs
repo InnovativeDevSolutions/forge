@@ -33,14 +33,19 @@ struct ServiceConfig {
 struct HostConfig {
     #[serde(default)]
     server: IcomServerConfig,
+    /// The Arma extension's forge-webapi connection (`[api]`).
     #[serde(default)]
-    surreal: ExtensionSurrealConfig,
+    api: ExtensionApiConfig,
     #[serde(default = "default_surrealdb_service")]
     surrealdb: ServiceConfig,
     #[serde(default = "default_icom_service")]
     icom: ServiceConfig,
     #[serde(default = "default_arma_service")]
     arma: ServiceConfig,
+    /// Sections Forge Host does not manage (for example an old
+    /// `[surreal]`), kept as-is so saving never drops them.
+    #[serde(flatten)]
+    extra: toml::Table,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -58,25 +63,21 @@ impl Default for IcomServerConfig {
     }
 }
 
+/// The `[api]` section read by the Arma server extension: where
+/// forge-webapi listens. Mirrors `ApiConfig` in
+/// `arma/server/extension/src/config.rs`.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct ExtensionSurrealConfig {
-    endpoint: String,
-    namespace: String,
-    database: String,
-    username: Option<String>,
-    password: Option<String>,
-    connect_timeout_ms: Option<u64>,
+#[serde(default)]
+struct ExtensionApiConfig {
+    base_url: String,
+    timeout_ms: u64,
 }
 
-impl Default for ExtensionSurrealConfig {
+impl Default for ExtensionApiConfig {
     fn default() -> Self {
         Self {
-            endpoint: "127.0.0.1:8000".to_string(),
-            namespace: "forge".to_string(),
-            database: "main".to_string(),
-            username: Some("root".to_string()),
-            password: Some("root".to_string()),
-            connect_timeout_ms: Some(5000),
+            base_url: "http://127.0.0.1:8080".to_string(),
+            timeout_ms: 5000,
         }
     }
 }
@@ -927,10 +928,11 @@ fn is_arma_server_executable(exe_name: &str) -> bool {
 fn default_config() -> HostConfig {
     HostConfig {
         server: IcomServerConfig::default(),
-        surreal: ExtensionSurrealConfig::default(),
+        api: ExtensionApiConfig::default(),
         surrealdb: default_surrealdb_service(),
         icom: default_icom_service(),
         arma: default_arma_service(),
+        extra: toml::Table::new(),
     }
 }
 
@@ -980,5 +982,68 @@ fn default_arma_service() -> ServiceConfig {
         working_dir: String::new(),
         health_host: "127.0.0.1".to_string(),
         health_port: 2302,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LEGACY: &str = r#"
+[server]
+host = "0.0.0.0"
+port = 9090
+
+[surreal]
+endpoint = "127.0.0.1:8000"
+namespace = "forge"
+
+[api]
+base_url = "http://10.0.0.5:8080"
+timeout_ms = 2500
+
+[custom]
+note = "kept"
+"#;
+
+    #[test]
+    fn save_keeps_api_and_unknown_sections() {
+        let config: HostConfig = toml::from_str(LEGACY).unwrap();
+        assert_eq!(config.api.base_url, "http://10.0.0.5:8080");
+        assert_eq!(config.api.timeout_ms, 2500);
+
+        let text = toml::to_string_pretty(&config).unwrap();
+        let reloaded: toml::Table = toml::from_str(&text).unwrap();
+        assert_eq!(reloaded["api"]["base_url"].as_str(), Some("http://10.0.0.5:8080"));
+        assert_eq!(reloaded["surreal"]["endpoint"].as_str(), Some("127.0.0.1:8000"));
+        assert_eq!(reloaded["custom"]["note"].as_str(), Some("kept"));
+    }
+
+    #[test]
+    fn ui_json_round_trip_keeps_sections() {
+        // The settings UI receives the config as JSON and sends it back.
+        let config: HostConfig = toml::from_str(LEGACY).unwrap();
+        let json = serde_json::to_value(&config).unwrap();
+        let back: HostConfig = serde_json::from_value(json).unwrap();
+        let text = toml::to_string_pretty(&back).unwrap();
+        let reloaded: toml::Table = toml::from_str(&text).unwrap();
+        assert_eq!(reloaded["api"]["timeout_ms"].as_integer(), Some(2500));
+        assert_eq!(reloaded["surreal"]["namespace"].as_str(), Some("forge"));
+        assert_eq!(reloaded["custom"]["note"].as_str(), Some("kept"));
+    }
+
+    #[test]
+    fn missing_api_section_gets_defaults() {
+        let config: HostConfig = toml::from_str("[server]\nhost = \"0.0.0.0\"\nport = 9090\n").unwrap();
+        assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
+        let text = toml::to_string_pretty(&config).unwrap();
+        assert!(text.contains("[api]"));
+    }
+
+    #[test]
+    fn example_config_parses() {
+        let text = include_str!("../../config.example.toml");
+        let config: HostConfig = toml::from_str(text).unwrap();
+        assert_eq!(config.api.base_url, "http://127.0.0.1:8080");
     }
 }

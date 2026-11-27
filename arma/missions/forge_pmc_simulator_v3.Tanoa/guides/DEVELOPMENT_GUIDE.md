@@ -5,9 +5,9 @@ This guide covers the usual path for adding or changing a Forge module.
 ## Local Checks
 
 Before running storage-backed workflows locally, complete
-[SurrealDB Setup](./surrealdb-setup.md). A local or dedicated server launch must
-have SurrealDB running and a `config.toml` beside `forge_server_x64.dll` that
-matches the running database.
+[forge-webapi Setup](./forge-webapi-setup.md). A local or dedicated server
+launch must have forge-webapi running and a `config.toml` beside
+`forge_server_x64.dll` whose `[api] base_url` points at it.
 
 Run these before pushing Rust or extension changes:
 
@@ -31,6 +31,10 @@ Build Arma packages with:
 .\build-arma.ps1
 ```
 
+The default build target now builds the shared mod first, then client and
+server addons. Use `.\build-arma.ps1 -Target mod` when only shared config
+classes changed.
+
 ## Module Boundaries
 
 Keep each layer responsible for one kind of work:
@@ -38,9 +42,10 @@ Keep each layer responsible for one kind of work:
 | Layer | Owns | Avoid |
 | --- | --- | --- |
 | `lib/models` | Data structures, serde defaults, validation helpers. | Database calls, SQF-specific context. |
-| `lib/repositories` | Repository traits and in-memory stores. | SurrealDB-specific code. |
+| `lib/repositories` | Repository traits and in-memory stores. | HTTP or database-specific code. |
 | `lib/services` | Business rules, workflow orchestration, structured results. | Arma engine calls, extension transport details. |
-| `arma/server/extension` | Command parsing, context resolution, SurrealDB implementations, serialization to SQF. | Business rules that belong in services. |
+| `arma/server/extension` | Command parsing, context resolution, forge-webapi repository implementations, serialization to SQF. | Business rules that belong in services. |
+| `arma/mod/addons` | Config classes required by both clients and servers, including mission-facing Eden modules and shared vehicle definitions. | Server-only runtime logic or client-only UI. |
 | `arma/server/addons` | Server SQF lifecycle, game-object integration, calls into `forge_server`. | Direct database logic. |
 | `arma/client/addons` | Client UI, keybinds, local UI events. | Authoritative persistence. |
 
@@ -54,14 +59,15 @@ Keep each layer responsible for one kind of work:
 6. Add service logic in `lib/services/src/<module>.rs`.
 7. Add focused unit tests for service behavior.
 8. Export the service from `lib/services/src/lib.rs`.
-9. Add a SurrealDB schema module under `arma/server/extension/src/schema`.
+9. Add the record, table and endpoints for the module in forge-webapi.
 10. Add the concrete storage adapter under `arma/server/extension/src/storage`.
 11. Register the storage adapter in `arma/server/extension/src/storage.rs`.
 12. Add an extension command group under `arma/server/extension/src/<module>.rs`.
 13. Register the command group in `arma/server/extension/src/lib.rs`.
-14. Add server addon functions under `arma/server/addons/<module>` if SQF needs a module-level API.
-15. Add client addon or browser UI files under `arma/client/addons/<module>` if the module has player-facing UI.
-16. Add documentation in `docs/` and module-level READMEs.
+14. Add shared config under `arma/mod/addons/<module>` if missions, clients, and servers all need the class definitions.
+15. Add server addon functions under `arma/server/addons/<module>` if SQF needs a module-level API.
+16. Add client addon or browser UI files under `arma/client/addons/<module>` if the module has player-facing UI.
+17. Add documentation in `docs/` and module-level READMEs.
 
 ## Extension Command Rules
 
@@ -90,12 +96,13 @@ private _actor = fromJSON _payload;
 
 ## Persistence Rules
 
-SurrealDB is the durable store. Keep database-specific mapping in the extension
-storage adapters, not in services or repository traits.
+forge-webapi is the durable store. Keep API-specific mapping (paths, field
+renames) in the extension storage adapters (`storage/*.rs`, `api.rs`), not in
+services or repository traits.
 
 When changing persisted data:
 
-- Update or add the matching `.surql` schema module.
+- Update the matching forge-webapi record and endpoints.
 - Update the concrete storage adapter.
 - Preserve existing records when possible through serde defaults or migration
   logic.
@@ -110,7 +117,7 @@ session. Hot-state modules usually provide:
 - `init` to load durable state into memory.
 - `get` to read the runtime copy.
 - `override` or focused mutation commands to update the runtime copy.
-- `save` to write the runtime copy back to SurrealDB.
+- `save` to write the runtime copy back to forge-webapi.
 - `remove` to evict the runtime copy.
 
 Do not assume hot state is durable until `save` succeeds.
@@ -129,6 +136,7 @@ server-authoritative decisions in server SQF or Rust services.
 When adding or changing a module, update:
 
 - `docs/MODULE_REFERENCE.md` for framework-level inventory.
+- `arma/mod/README.md` when shared config classes or dependencies change.
 - A module-specific README in the addon directory when SQF or UI usage changes.
 - `arma/server/docs/api-reference.md` when extension commands change.
 - Existing usage guides when payload shapes or workflows change.

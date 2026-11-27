@@ -7,8 +7,6 @@ PREP_RECOMPILE_END;
 private _category = [QUOTE(MOD_NAME), LLSTRING(displayName)];
 #include "initSettings.inc.sqf"
 
-if (isServer) then { "forge_server" callExtension ["surreal:reconnect", []]; };
-
 GVAR(PlayerBootstrapRegistry) = createHashMap;
 
 ["forge_icom_event", {

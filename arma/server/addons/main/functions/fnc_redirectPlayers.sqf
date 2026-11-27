@@ -11,6 +11,13 @@
  * their client is told to connect to the new address
  * (forge_client_common_fnc_redirectToServer).
  *
+ * The saves are queued in the extension's background persistence tasks, so
+ * the redirect waits (in a spawned script, without blocking the server) until
+ * `persistence:pending` reports no queued writes, or until
+ * forge_server_main_flushTimeout runs out. Otherwise the new server could
+ * load the player's data before the last write reached the API. On timeout
+ * the players are still sent and a warning is logged.
+ *
  * The client only accepts the redirect when it is remote executed by the
  * server, which is why this uses remoteExecCall rather than a CBA event
  * (CBA events do not say who sent them). Missions that restrict remote
@@ -25,7 +32,8 @@
  * 4: Timeout in seconds on the client <NUMBER> (default: 60)
  *
  * Return Value:
- * Number of players sent <NUMBER>
+ * Number of players being sent (the redirect itself happens once their
+ * saves have landed) <NUMBER>
  *
  * Example:
  * [group _leader, "203.0.113.10", "2302", "secret"] call forge_server_main_fnc_redirectPlayers;
@@ -70,21 +78,53 @@ if (_players isEqualTo []) exitWith {
     0
 };
 
+// Save before they leave; HandleDisconnect saves again when they drop.
 {
     private _uid = getPlayerUID _x;
-
-    // Save before they leave; HandleDisconnect saves again when they drop.
     if (_uid isNotEqualTo "") then { [_uid, _x] call FUNC(saveHotState); };
-
-    [_address, _port, _password, _timeout] remoteExecCall ["forge_client_common_fnc_redirectToServer", owner _x];
 } forEach _players;
 
 ["INFO", format [
-    "Redirecting %1 player(s) to %2:%3: %4",
+    "Redirecting %1 player(s) to %2:%3 once their saves land: %4",
     count _players,
     _address,
     _port,
     _players apply { name _x }
 ]] call EFUNC(common,log);
+
+// The saves above only queue background writes. Wait for them to reach the
+// API before sending anyone, so the new server never loads stale data. The
+// pending counter covers every queued write on this server, not only these
+// players', so it can wait a little longer than strictly needed.
+[_players, _address, _port, _password, _timeout] spawn {
+    params ["_players", "_address", "_port", "_password", "_timeout"];
+
+    private _waitMs = missionNamespace getVariable [QGVAR(flushTimeout), 10000];
+    private _deadline = diag_tickTime + (_waitMs / 1000);
+    private _pending = "?";
+
+    waitUntil {
+        sleep 0.1;
+        // Called directly rather than through extCall, which logs every call.
+        ("forge_server" callExtension ["persistence:pending", []]) params [["_result", ""], ["_extCode", -1], ["_armaCode", -1]];
+        _pending = _result;
+        (_extCode == 0 && { _result isEqualTo "0" }) || { diag_tickTime >= _deadline }
+    };
+
+    if (_pending isNotEqualTo "0") then {
+        ["WARNING", format [
+            "redirectPlayers: saves did not all land within %1 ms (pending: %2); sending players anyway, the new server may load stale data.",
+            _waitMs,
+            _pending
+        ]] call EFUNC(common,log);
+    };
+
+    {
+        // A player may have left while the saves were landing.
+        if (!isNull _x && { isPlayer _x }) then {
+            [_address, _port, _password, _timeout] remoteExecCall ["forge_client_common_fnc_redirectToServer", owner _x];
+        };
+    } forEach _players;
+};
 
 count _players

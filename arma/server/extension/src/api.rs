@@ -1,12 +1,9 @@
 //! HTTP client for the forge-webapi standalone API.
 //!
-//! The API is the extension's only persistence backend: repository
-//! implementations in `storage/` talk to it instead of SurrealDB.
-//! SurrealDB remains only as a migration-only read path (see
-//! `storage/` — the `Legacy*Repository` types read a legacy row once
-//! so it can be moved into the API, then delete it). There is no
+//! The API is the extension's only persistence backend: the
+//! repository implementations in `storage/` talk to it. There is no
 //! fallback: if the API client cannot be built, repositories fail
-//! loudly on every operation instead of silently switching backends.
+//! loudly on every operation.
 //!
 //! It is a native HTTP client (reqwest) running on the extension's
 //! global Tokio runtime — no browser-style CORS preflight applies
@@ -15,8 +12,9 @@
 //! preflight.
 //!
 //! Requests are synchronous from the caller's point of view (the
-//! repository traits are sync): each method blocks on the runtime,
-//! exactly like the SurrealDB helpers in `storage/common.rs`.
+//! repository traits are sync): each method blocks on the runtime.
+//! Persistence writes run in background tasks
+//! (`enqueue_persistence_task`), so this does not block the game.
 //!
 //! ## Auth (parked)
 //!
@@ -341,19 +339,6 @@ pub(crate) fn org_from_api_record(record: JsonValue) -> Result<ApiOrgRecord, Str
         fleet,
         pending_invites,
     })
-}
-
-/// Serialize a [`PhonePayload`] into the API's `PUT /players/{uid}/phone`
-/// body (`{ uid, contacts, messages, emails }`). The message/email
-/// types are already camelCase; the payload itself carries no `uid`,
-/// so it is supplied separately.
-pub(crate) fn phone_to_api_body(uid: &str, payload: &PhonePayload) -> Result<JsonValue, String> {
-    Ok(serde_json::json!({
-        "uid": uid,
-        "contacts": payload.contacts,
-        "messages": payload.messages,
-        "emails": payload.emails,
-    }))
 }
 
 /// Deserialize an API phone payload (`{ uid, contacts, messages,

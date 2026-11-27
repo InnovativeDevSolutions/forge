@@ -4,7 +4,7 @@ This crate defines repository traits used by the service layer. It also
 provides in-memory implementations for tests and transient server state.
 
 Durable repository implementations live in the server extension because they
-depend on extension configuration and the SurrealDB runtime client.
+depend on extension configuration and the forge-webapi HTTP client.
 
 ## Contents
 

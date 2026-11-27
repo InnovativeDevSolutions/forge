@@ -3,33 +3,17 @@
 # Copy this file to `config.toml` beside `forge_server_x64.dll`, or use the
 # shared config generated from `bin/host/config.example.toml`.
 #
-# The Arma extension reads the [surreal] and [api] sections. Extra host/ICOM sections in a
-# shared config are ignored by the extension.
-
-[surreal]
-# SurrealDB HTTP endpoint. This must match the running SurrealDB --bind value.
-# Migration-only: the extension reads legacy rows through this connection
-# once so they can be moved into the API. Nothing persists through it.
-endpoint = "127.0.0.1:8000"
-
-# Namespace and database selected by the extension after connecting.
-namespace = "forge"
-database = "main"
-
-# Local development defaults. Use a real password for shared or public servers.
-username = "root"
-password = "root"
-
-# Initial connection timeout in milliseconds.
-connect_timeout_ms = 5000
+# The Arma extension reads only the [api] section. Extra host/ICOM sections in
+# a shared config are ignored by the extension.
 
 [api]
-# The standalone forge-webapi — the extension's only persistence
-# backend. All bank, actor, org, phone, garage, locker, virtual
-# garage and virtual locker persistence goes through the API.
-# Make sure the API is running first (in forge-webapi:
-# `docker compose up`, then `curl localhost:8080/health`). If the
-# API is down, persistence operations fail instead of silently
-# falling back to SurrealDB.
+# The standalone forge-webapi: the extension's only persistence backend.
+# All actor, bank, org, phone, garage, locker, virtual garage and virtual
+# locker persistence goes through the API. Make sure the API is running
+# first (in forge-webapi: `docker compose up`, then
+# `curl localhost:8080/health`). If the API is down, saves fail and are
+# logged; nothing is written anywhere else.
 base_url = "http://127.0.0.1:8080"
+
+# Per-request timeout in milliseconds.
 timeout_ms = 5000

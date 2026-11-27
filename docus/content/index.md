@@ -10,13 +10,13 @@ Forge Framework Documentation
 
 #description
 Forge is a persistent Arma 3 framework that combines SQF addons, a Rust
-`arma-rs` extension, SurrealDB persistence, shared domain crates, a shared
+`arma-rs` extension, forge-webapi persistence, shared domain crates, a shared
 mission config addon, and browser-backed player interfaces.
 
 Use these docs to understand the runtime architecture, extension API surface,
 server gameplay modules, and client addon integration patterns.
 
-Server owners and developers must start SurrealDB and place a matching
+Server owners and developers must start forge-webapi and place a matching
 `config.toml` beside `forge_server_x64.dll` before launching a
 Forge-enabled server or local multiplayer test.
 
@@ -73,7 +73,7 @@ What Forge Covers
 
   #description
   The server extension keeps command parsing thin, routes domain requests into
-  services, and persists durable state through SurrealDB.
+  services, and persists durable state through forge-webapi.
   :::
 
   :::u-page-feature

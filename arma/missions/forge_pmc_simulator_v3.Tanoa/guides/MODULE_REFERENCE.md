@@ -5,9 +5,10 @@ This reference lists the main Forge modules and where each layer lives.
 ## Directory Map
 
 ```text
+arma/mod/addons/         Shared config addon built as @forge_mod
 arma/client/addons/      Client-side Arma addons and browser UIs
 arma/server/addons/      Server-side Arma addons and extension bridge
-arma/server/extension/   Rust arma-rs extension and SurrealDB adapters
+arma/server/extension/   Rust arma-rs extension and forge-webapi adapters
 bin/icom/                Interprocess communication helper
 lib/models/              Shared domain data models
 lib/repositories/        Repository traits and in-memory stores
@@ -23,13 +24,15 @@ docs/                    Framework-level documentation
 | --- | --- | --- | --- | --- | --- |
 | Actor | Player identity, loadout, position, status, contact identifiers, and persistent character data. | `arma/client/addons/actor` | `arma/server/addons/actor` | `lib/models/src/actor.rs`, `lib/services/src/actor.rs` | `actor:*` |
 | Bank | Player accounts, cash/bank balances, PIN validation and changes, transfers, checkout charging, and transaction context. | `arma/client/addons/bank` | `arma/server/addons/bank` | `lib/models/src/bank.rs`, `lib/services/src/bank.rs` | `bank:*`, `bank:hot:*` |
-| CAD | Dispatch requests, assignments, orders, activity stream, profiles, groups, and hydrated dispatcher views. | `arma/client/addons/cad` | `arma/server/addons/cad` | `lib/models/src/cad.rs`, `lib/services/src/cad.rs` | `cad:*` |
+| CAD | Contracts, group assignment, accept/decline by the group leader, and group roster, role and status. Contract state lives in the task store. | `arma/client/addons/cad` | `arma/server/addons/cad` | task service (`task:group:*`) | `task:group:*` |
+| Dispatch | Optional dispatcher tooling on top of CAD: dispatch orders, support requests, activity feed, and generated mission requests. | via CAD UI | `arma/server/addons/dispatch` | `lib/models/src/dispatch.rs`, `lib/services/src/dispatch.rs` | `dispatch:*` |
 | Garage | Player vehicle storage with plate IDs, fuel, damage, and hit point state. | `arma/client/addons/garage` | `arma/server/addons/garage` | `lib/models/src/garage.rs`, `lib/services/src/garage.rs` | `garage:*`, `garage:hot:*` |
 | Locker | Player item storage keyed by classname with category and amount. | `arma/client/addons/locker` | `arma/server/addons/locker` | `lib/models/src/locker.rs`, `lib/services/src/locker.rs` | `locker:*`, `locker:hot:*` |
+| Mission Setup | Optional pre-start setup UI for generated mission tuning, opposing faction selection, reward ranges, and mission manager defaults. Generator enablement remains a CBA setting. | `arma/client/addons/mission_setup` | `arma/server/addons/task` | task runtime settings in `missionNamespace` | EventBus `mission.setup.applied` |
 | Organization | Player organizations, membership, treasury, credit lines, shared assets, and fleet data. | `arma/client/addons/org` | `arma/server/addons/org` | `lib/models/src/org.rs`, `lib/services/src/org.rs` | `org:*`, `org:hot:*` |
 | Phone | Contacts, messages, and email state. | `arma/client/addons/phone` | `arma/server/addons/phone` | `lib/models/src/phone.rs`, `lib/services/src/phone.rs` | `phone:*` |
 | Store | Storefront entity setup, catalog hydration, checkout workflows, and checkout charging integration. | `arma/client/addons/store` | `arma/server/addons/store` | `lib/models/src/store.rs`, `lib/services/src/store.rs` | `store:checkout` |
-| Task | Server-owned mission/task flows, catalog, ownership, status, participant tracking, rewards, and defuse counters. | none | `arma/server/addons/task` | `lib/models/src/task.rs`, `lib/services/src/task.rs` | `task:*` |
+| Task | Server-owned mission/task flows, catalog, ownership, status, participant tracking, rewards, and defuse counters. Mission-facing Eden module classes live in `@forge_mod`; runtime execution remains server-owned. | shared module config in `arma/mod/addons/task` | `arma/server/addons/task` | `lib/models/src/task.rs`, `lib/services/src/task.rs` | `task:*` |
 | Owned Garage | Organization or owner-scoped vehicle unlock storage. | via garage/org UI | server extension only | `lib/models/src/v_garage.rs`, `lib/services/src/v_garage.rs` | `owned:garage:*` |
 | Owned Locker | Organization or owner-scoped arsenal unlock storage. | via locker/org UI | server extension only | `lib/models/src/v_locker.rs`, `lib/services/src/v_locker.rs` | `owned:locker:*` |
 
@@ -37,6 +40,8 @@ Server and extension guides:
 [Actor](./ACTOR_USAGE_GUIDE.md),
 [Bank](./BANK_USAGE_GUIDE.md),
 [CAD](./CAD_USAGE_GUIDE.md),
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md),
+[Dispatch](./DISPATCH_USAGE_GUIDE.md),
 [Economy](./ECONOMY_USAGE_GUIDE.md),
 [Garage](./GARAGE_USAGE_GUIDE.md),
 [Locker](./LOCKER_USAGE_GUIDE.md),
@@ -64,6 +69,8 @@ Client guides:
 
 | Module | Purpose | Location |
 | --- | --- | --- |
+| `forge_mod_common` | Shared config classes required by both clients and servers, including the Forge body bag vehicle. | `arma/mod/addons/common` |
+| `forge_mod_task` | Shared Forge task Eden module classes used by missions. Functions still resolve to server-side task handlers at runtime. | `arma/mod/addons/task` |
 | `common` | Shared SQF helpers, base stores, utility functions, and shared UI bridge pieces. | `arma/client/addons/common`, `arma/server/addons/common` |
 | `extension` | Server SQF bridge around `forge_server` extension calls and chunked transport. | `arma/server/addons/extension` |
 | `main` | Mod-level configuration, pre-init wiring, and server/client startup glue. | `arma/client/addons/main`, `arma/server/addons/main` |
@@ -72,7 +79,7 @@ Client guides:
 | `icom` | Rust helper for interprocess communication and event broadcasting. | `bin/icom`, `arma/server/extension/src/icom.rs` |
 | `terrain` | Extension-side terrain export helper. | `arma/server/extension/src/terrain.rs` |
 | `transport` | Chunked request/response handling for large extension payloads. | `arma/server/extension/src/transport.rs` |
-| `surreal` | SurrealDB connection lifecycle and status reporting. | `arma/server/extension/src/surreal.rs` |
+| `api` | forge-webapi HTTP client and status reporting. | `arma/server/extension/src/api.rs` |
 
 ## Extension Command Groups
 
@@ -90,8 +97,10 @@ Nested groups use additional `:` separators, for example
 | Command | Purpose |
 | --- | --- |
 | `version` | Return the extension version string. |
-| `status` | Return SurrealDB connection state. |
-| `surreal:status` | Return SurrealDB connection state directly from the Surreal module. |
+| `status` | Return the persistence (forge-webapi) connection state. |
+| `api:status` | Return the forge-webapi connection state directly from the API module. |
+| `persistence:pending` | Return the number of queued background writes. |
+| `persistence:flush` | Wait for queued background writes to finish. |
 
 ### Actor
 
@@ -160,19 +169,23 @@ See [Org Usage Guide](./ORG_USAGE_GUIDE.md) for examples.
 
 See [Phone Usage Guide](./PHONE_USAGE_GUIDE.md) for examples.
 
-### CAD
+### Dispatch
 
 | Command Group | Purpose |
 | --- | --- |
-| `cad:activity:append`, `cad:activity:recent` | Append and read recent activity. |
-| `cad:assignments:list`, `cad:assignments:assign`, `cad:assignments:acknowledge`, `cad:assignments:decline`, `cad:assignments:upsert`, `cad:assignments:delete` | Manage dispatch assignments. |
-| `cad:orders:list`, `cad:orders:create`, `cad:orders:create_from_context`, `cad:orders:close`, `cad:orders:upsert`, `cad:orders:delete` | Manage orders. |
-| `cad:requests:list`, `cad:requests:submit`, `cad:requests:submit_from_context`, `cad:requests:close`, `cad:requests:upsert`, `cad:requests:delete` | Manage requests. |
-| `cad:profiles:list`, `cad:profiles:update_from_context`, `cad:profiles:upsert`, `cad:profiles:delete` | Manage profiles. |
-| `cad:groups:build` | Build grouped CAD state. |
-| `cad:view:hydrate` | Build the dispatcher view model. |
+| `dispatch:activity:append`, `dispatch:activity:recent` | Append and read recent dispatch activity. |
+| `dispatch:requests:list`, `dispatch:requests:get`, `dispatch:requests:submit`, `dispatch:requests:close` | Manage support requests. |
 
-See [CAD Usage Guide](./CAD_USAGE_GUIDE.md) for examples.
+CAD itself has no extension commands; contract assignment uses the
+`task:group:*` commands below. See [CAD Usage Guide](./CAD_USAGE_GUIDE.md) and
+[Dispatch Usage Guide](./DISPATCH_USAGE_GUIDE.md).
+
+### Persistence
+
+| Command | Purpose |
+| --- | --- |
+| `persistence:pending` | Number of queued database writes that have not finished. |
+| `persistence:flush` | `[timeout_ms]` Waits until every queued write finished (default 10000, max 30000). Returns `OK` or `Error: ...` with the pending count. Called at mission end by `forge_server_main_fnc_saveHotState`. |
 
 ### Task
 
@@ -182,6 +195,7 @@ See [CAD Usage Guide](./CAD_USAGE_GUIDE.md) for examples.
 | `task:catalog:active`, `task:catalog:get`, `task:catalog:upsert`, `task:catalog:delete` | Manage task catalog entries. |
 | `task:ownership:bind`, `task:ownership:release`, `task:ownership:accept`, `task:ownership:reward_context` | Manage task ownership and rewards. |
 | `task:status:set`, `task:status:get`, `task:status:clear` | Manage task status. |
+| `task:group:assign`, `task:group:accept`, `task:group:decline` | Assign a task to a CAD group and let that group accept or decline it. |
 | `task:defuse:increment`, `task:defuse:get` | Manage defuse counters. |
 | `task:clear` | Clear task state. |
 
@@ -217,5 +231,5 @@ See [Owned Storage Usage Guide](./OWNED_STORAGE_USAGE_GUIDE.md) for examples.
 | `forge-repositories` | Repository traits and in-memory implementations. Keep these storage-agnostic. |
 | `forge-services` | Business rules and workflows. Depend on repository traits, not concrete databases. |
 | `forge-shared` | Cross-crate helpers. Keep dependencies light. |
-| `forge-server` | Arma extension crate. Owns command registration, SurrealDB runtime wiring, and concrete storage adapters. |
+| `forge-server` | Arma extension crate. Owns command registration, the forge-webapi HTTP client, and concrete storage adapters. |
 | `forge-icom` | ICom helper binary and client library. |

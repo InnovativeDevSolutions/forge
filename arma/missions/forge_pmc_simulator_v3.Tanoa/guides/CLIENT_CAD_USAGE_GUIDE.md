@@ -1,8 +1,10 @@
 # Client CAD Usage Guide
 
-The client CAD addon provides the map and dispatch UI for groups, active
-tasks, task assignment, dispatch orders, support requests, and task
-acknowledge/decline workflows.
+The client CAD addon provides the map and dispatch UI for contracts, group
+assignment, accept/decline by the group leader, and group roster, role and
+status. When the server runs the [dispatch addon](./DISPATCH_USAGE_GUIDE.md),
+the same UI also shows dispatch orders, support requests, the activity feed and
+generated task requests.
 
 ## Open CAD UI
 
@@ -22,8 +24,9 @@ The native Arma map remains part of the same display.
 ## Repository and Bridge
 
 `forge_client_cad_fnc_initRepository` caches the hydrated CAD payload,
-selected mode, dispatch view, session data, groups, tasks, requests, and
-assignments.
+selected mode, dispatch view, session data, groups, contracts, requests,
+activity, server-provided generated task types, and the `dispatchEnabled`
+flag.
 
 `forge_client_cad_fnc_initUIBridge` owns:
 
@@ -31,10 +34,11 @@ assignments.
 - operations vs dispatch mode
 - board vs map dispatch view
 - hydrate requests
-- task assignment, acknowledge, and decline requests
-- dispatch order create/close requests
-- support request submit/close requests
-- group status, role, and profile requests
+- contract assign, accept, and decline requests (`forge_server_cad`)
+- dispatch order create/close requests (`forge_server_dispatch`)
+- support request submit/close requests (`forge_server_dispatch`)
+- generated task requests (`forge_server_dispatch`)
+- group status, role, and profile requests (all sent as one profile update)
 - map focus actions
 
 ## Map Focus Behavior
@@ -57,9 +61,11 @@ focus uses the member position included in the hydrated group roster.
 | `cad::mode::set` | Switch between operations and dispatch mode. |
 | `cad::dispatchView::set` | Switch dispatch board/map view. |
 | `cad::refresh` | Request fresh CAD hydrate data. |
-| `cad::tasks::assign` | Assign a task to a group. |
-| `cad::tasks::acknowledge` | Acknowledge assigned task. |
-| `cad::tasks::decline` | Decline assigned task. |
+| `cad::generatedTask::request` | Request a server-generated mission task from the selected generator type. |
+| `cad::tasks::assign` | Assign a contract to a group. |
+| `cad::tasks::claim` | Claim an available contract for your group (no dispatcher online). |
+| `cad::tasks::accept` | Accept the contract assigned to your group. |
+| `cad::tasks::decline` | Decline the contract assigned to your group. |
 | `cad::dispatchOrder::create` | Create dispatch order. |
 | `cad::dispatchOrder::close` | Close dispatch order. |
 | `cad::supportRequest::submit` | Submit support request. |
@@ -83,7 +89,7 @@ The bridge pushes:
 | Event | Purpose |
 | --- | --- |
 | `cad::hydrate` | Full hydrated CAD payload to the side panel. |
-| `cad::assignment::response` | Task assignment/acknowledge/decline result. |
+| `cad::assignment::response` | Contract assign/accept/decline and dispatch order result. |
 | `cad::group::response` | Group status/role/profile result. |
 | `cad::request::response` | Support request result. |
 
@@ -93,11 +99,41 @@ calls.
 ## Task Compatibility
 
 CAD task visibility depends on server-side task catalog entries. Tasks created
-through Eden Forge task modules or `forge_task_fnc_startTask` are the
+through Eden Forge task modules or `forge_server_task_fnc_startTask` are the
 normal CAD-compatible task sources because they register task catalog data.
 
 Direct handler or task-function calls only work with CAD when the task catalog
 entry already exists.
+
+The dispatcher-generated task dropdown is hydrated from the server
+`generatedTaskTypes` payload. The UI has a built-in fallback list for loading or
+older payload compatibility, but any hydrate payload that includes
+`generatedTaskTypes` replaces that fallback. An empty hydrated list disables the
+request control. For the built-in provider, this is how
+`forge_server_task_enableGenerator = false` is surfaced client-side.
+
+Custom mission generators can publish tasks into CAD by using the server task
+catalog or by registering a task provider that supplies `generatedTaskTypes` and
+handles generated task requests. See
+[Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md).
+
+## Dispatch Gating
+
+When the hydrate payload has `dispatchEnabled = false` (the server is not
+running the dispatch addon), the side panel hides the Requests and Activity
+tabs, and the dispatcher board hides the order, generated task, request and
+activity controls.
+
+Contracts that were declined show "Declined by <group>" until they are
+reassigned.
+
+## Claiming Without a Dispatcher
+
+When the session has `dispatcherOnline = false`, the ops side lists every
+available contract under a "No dispatcher on duty" notice. If
+`session.canClaim` is true (the player leads a group with no contract), each
+available contract shows a **Claim** button, which assigns and accepts it for
+the group in one step.
 
 ## Authorization Notes
 
@@ -107,5 +143,7 @@ not a dispatcher, the bridge forces the UI back to operations mode.
 ## Related Guides
 
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
+- [Dispatch Usage Guide](./DISPATCH_USAGE_GUIDE.md)
 - [Task Usage Guide](./TASK_USAGE_GUIDE.md)
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md)
 - [Client Common Usage Guide](./CLIENT_COMMON_USAGE_GUIDE.md)

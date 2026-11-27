@@ -6,7 +6,7 @@ organization.
 
 ## Storage Model
 
-Actor data is persisted through SurrealDB by the server extension.
+Actor data is persisted to forge-webapi by the server extension.
 
 ```json
 {

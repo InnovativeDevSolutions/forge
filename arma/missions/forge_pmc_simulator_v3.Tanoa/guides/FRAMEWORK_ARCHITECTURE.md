@@ -10,14 +10,16 @@ handlers, and optional browser UI.
 
 ```text
 Arma client UI or SQF action
+  -> shared config classes from @forge_mod
   -> client addon bridge
   -> server addon function
   -> forge_server callExtension command
   -> extension command group
   -> forge-services domain service
   -> forge-repositories trait
-  -> SurrealDB repository implementation
-  -> SurrealDB
+  -> API repository implementation (arma/server/extension/src/storage)
+  -> forge-webapi HTTP API
+  -> SurrealDB (owned by forge-webapi)
 ```
 
 For small payloads, server SQF calls `forge_server` directly through the
@@ -25,6 +27,17 @@ extension bridge. For large payloads, `arma/server/addons/extension` stages
 request and response chunks through the extension transport module.
 
 ## Main Layers
+
+### Shared Mod
+
+The shared mod lives under `arma/mod` and builds to `@forge_mod`. It contains
+mission-facing config classes that must exist on both clients and servers, such
+as Forge task Eden modules and shared vehicle definitions. Missions should
+depend on these `forge_mod_*` addons when placing Forge modules.
+
+`@forge_mod` does not own server runtime behavior. Task module config can point
+at server-owned functions, but those functions still live in `@forge_server`
+and execute only where the server mod is loaded.
 
 ### Client Addons
 
@@ -40,11 +53,15 @@ initialization, game-object integration, validation near the Arma runtime, and
 calls into the Rust extension. The `extension` addon is the shared bridge for
 `callExtension` and transport handling.
 
+Server addons may require `forge_mod_*` addons for shared class definitions.
+They should keep authoritative logic in `@forge_server` so clients only need
+shared config and client UX packages.
+
 ### Rust Extension
 
 The server extension lives under `arma/server/extension`. It registers the
-`forge_server` command groups, loads configuration, initializes SurrealDB, and
-maps SQF command inputs into service calls.
+`forge_server` command groups, loads configuration, builds the forge-webapi HTTP
+client, and maps SQF command inputs into service calls.
 
 The extension should stay thin:
 
@@ -65,9 +82,15 @@ The `lib` workspace contains reusable Rust crates:
 
 ### Persistence
 
-Durable storage is SurrealDB. Schema modules live under
-`arma/server/extension/src/schema`, and concrete SurrealDB repository
-implementations live under `arma/server/extension/src/storage`.
+Durable storage is forge-webapi, a standalone Rust HTTP API (axum) backed by
+SurrealDB. The extension never talks to SurrealDB itself: the concrete
+repository implementations under `arma/server/extension/src/storage` call the
+API through the client in `arma/server/extension/src/api.rs`, and the API owns
+the database schema. Writes from hot state are queued in the background; use
+`persistence:pending` and `persistence:flush` to wait for them.
+
+Task and CAD state is deliberately kept in memory per mission and is not
+written to the API.
 
 Repository traits stay in `lib/repositories` so service logic remains testable
 without a database.
@@ -114,32 +137,40 @@ server addon fnc_extCall
 
 ## Configuration
 
-The server extension reads `config.toml` next to the extension DLL. The current
+The server extension reads `config.toml` from the server working directory,
+`@forge_server/config.toml`, or beside the extension DLL. When Forge Host is
+used during development, the repo-root `config.toml` can be shared across Forge
+Host, ICOM, and the extension. The extension reads the `[api]` section and
+ignores every other section (including an old `[surreal]` section). The
 persistence section is:
 
 ```toml
-[surreal]
-endpoint = "127.0.0.1:8000"
-namespace = "forge"
-database = "main"
-username = "root"
-password = "root"
-connect_timeout_ms = 5000
+[api]
+base_url = "http://127.0.0.1:8080"
+timeout_ms = 5000
 ```
 
-`config.toml` is a launch prerequisite for server owners and developers. The
-file must exist beside `forge_server_x64.dll`, and SurrealDB must already be
-running at the configured endpoint before starting a Forge-enabled dedicated
-server or local multiplayer test. Clients and mission designers do not run this
-configuration unless they are hosting locally, but the server they connect to
-must have it in place.
+`config.toml` is a launch prerequisite for server owners and developers. Use
+`arma/server/extension/config.example.toml` for an extension-only config, or
+`bin/host/config.example.toml` for the shared host-managed config. forge-webapi
+must already be running at `base_url` before starting a Forge-enabled
+dedicated server or local multiplayer test. Clients and mission designers do not
+run this configuration unless they are hosting locally, but the server they
+connect to must have it in place.
+
+Arma's own dedicated server files remain separate from Forge's TOML config.
+Launch `server.cfg` with `-config` for server rules, mission rotation, passwords,
+and admin settings. Launch `basic.cfg` with `-cfg` for network and performance
+tuning. Forge Host exposes both paths in the Arma Server settings view and can
+create them from `bin/host/server.example.cfg` and
+`bin/host/basic.example.cfg`.
 
 For install links and role-based setup guidance, see
-[SurrealDB Setup](./surrealdb-setup.md).
+[forge-webapi Setup](./forge-webapi-setup.md).
 
 Check persistence readiness before issuing commands that require storage:
 
 ```sqf
 "forge_server" callExtension ["status", []];
-"forge_server" callExtension ["surreal:status", []];
+"forge_server" callExtension ["api:status", []];
 ```

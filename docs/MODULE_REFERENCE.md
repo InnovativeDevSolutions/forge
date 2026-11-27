@@ -8,7 +8,7 @@ This reference lists the main Forge modules and where each layer lives.
 arma/mod/addons/         Shared config addon built as @forge_mod
 arma/client/addons/      Client-side Arma addons and browser UIs
 arma/server/addons/      Server-side Arma addons and extension bridge
-arma/server/extension/   Rust arma-rs extension and SurrealDB adapters
+arma/server/extension/   Rust arma-rs extension and forge-webapi adapters
 bin/icom/                Interprocess communication helper
 lib/models/              Shared domain data models
 lib/repositories/        Repository traits and in-memory stores
@@ -79,7 +79,7 @@ Client guides:
 | `icom` | Rust helper for interprocess communication and event broadcasting. | `bin/icom`, `arma/server/extension/src/icom.rs` |
 | `terrain` | Extension-side terrain export helper. | `arma/server/extension/src/terrain.rs` |
 | `transport` | Chunked request/response handling for large extension payloads. | `arma/server/extension/src/transport.rs` |
-| `surreal` | SurrealDB connection lifecycle and status reporting. | `arma/server/extension/src/surreal.rs` |
+| `api` | forge-webapi HTTP client and status reporting. | `arma/server/extension/src/api.rs` |
 
 ## Extension Command Groups
 
@@ -97,8 +97,10 @@ Nested groups use additional `:` separators, for example
 | Command | Purpose |
 | --- | --- |
 | `version` | Return the extension version string. |
-| `status` | Return SurrealDB connection state. |
-| `surreal:status` | Return SurrealDB connection state directly from the Surreal module. |
+| `status` | Return the persistence (forge-webapi) connection state. |
+| `api:status` | Return the forge-webapi connection state directly from the API module. |
+| `persistence:pending` | Return the number of queued background writes. |
+| `persistence:flush` | Wait for queued background writes to finish. |
 
 ### Actor
 
@@ -229,5 +231,5 @@ See [Owned Storage Usage Guide](./OWNED_STORAGE_USAGE_GUIDE.md) for examples.
 | `forge-repositories` | Repository traits and in-memory implementations. Keep these storage-agnostic. |
 | `forge-services` | Business rules and workflows. Depend on repository traits, not concrete databases. |
 | `forge-shared` | Cross-crate helpers. Keep dependencies light. |
-| `forge-server` | Arma extension crate. Owns command registration, SurrealDB runtime wiring, and concrete storage adapters. |
+| `forge-server` | Arma extension crate. Owns command registration, the forge-webapi HTTP client, and concrete storage adapters. |
 | `forge-icom` | ICom helper binary and client library. |

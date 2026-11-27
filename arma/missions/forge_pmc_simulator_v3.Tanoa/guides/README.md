@@ -1,27 +1,54 @@
 # Forge Documentation
 
-Forge is split into Arma client addons, Arma server addons, a Rust server
-extension, shared Rust domain crates, and web UI build tooling. This directory
-collects framework-level documentation for those pieces.
+Forge is split into a shared Arma addon, Arma client addons, Arma server
+addons, a Rust server extension, shared Rust domain crates, and web UI build
+tooling. This directory collects framework-level documentation for those
+pieces.
+
+## Arma Addon Layout
+
+Forge now ships three Arma addon packages:
+
+- `@forge_mod`: shared client/server config classes required by Forge
+  missions. It owns shared definitions such as Forge task Eden modules and the
+  custom body bag vehicle config.
+- `@forge_client`: client-side UX, browser UIs, keybinds, and local player
+  integrations. It depends on `@forge_mod`.
+- `@forge_server`: server-only runtime systems, extension bridge code, and
+  authoritative mission/task execution. It depends on `@forge_mod` but should
+  not be required by clients.
+
+Mission `requiredAddons` should reference shared mission-facing classes through
+`forge_mod_*` addons, not `forge_server_*`, so clients can load and edit
+missions without installing the server-only mod.
 
 ## Launch Prerequisites
 
 Before starting a Forge-enabled dedicated server or local multiplayer test,
 server owners and developers must:
 
-1. Start SurrealDB.
-2. Place `config.toml` beside `forge_server_x64.dll`.
-3. Keep the `config.toml` SurrealDB endpoint, namespace, database, username,
-   and password aligned with the running database.
+1. Start forge-webapi (`docker compose up` in the forge-webapi repository).
+2. Place a Forge `config.toml` where the extension can find it. Use
+   `arma/server/extension/config.example.toml` for an extension-only config, or
+   use `bin/host/config.example.toml` at the repo root when Forge Host should
+   manage ICOM and the Arma server.
+3. Point the `config.toml` `[api] base_url` at the running forge-webapi.
+4. Load `@forge_mod` with the server's normal mod list and `@forge_server` as
+   a server-only mod.
+5. Start Arma with both dedicated server config files: `server.cfg` through
+   `-config` for server rules and mission rotation, and `basic.cfg` through
+   `-cfg` for network tuning. Forge Host can create both files from
+   `bin/host/server.example.cfg` and `bin/host/basic.example.cfg`.
 
-Mission designers and players do not need to run SurrealDB unless they are
-hosting locally, but the server they join must have these prerequisites ready.
-See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
+Mission designers and players do not need to run forge-webapi unless they are
+hosting locally, but they do need `@forge_mod` for Forge mission config classes.
+Players also load `@forge_client` for player-facing UI. See
+[forge-webapi Setup](./forge-webapi-setup.md) for the full setup path.
 
 ## Start Here
 
 - [Framework Architecture](./FRAMEWORK_ARCHITECTURE.md): how SQF, web UIs,
-  Rust services, repositories, and SurrealDB fit together.
+  Rust services, repositories, and forge-webapi fit together.
 - [Module Reference](./MODULE_REFERENCE.md): module inventory for gameplay
   domains, extension command groups, client addons, server addons, and Rust
   crates.
@@ -30,16 +57,21 @@ See [SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
 - [Mission Designer Guide](./MISSION_DESIGNER_GUIDE.md): how to place Eden
   objects, garage markers, and CAD-compatible task modules for playable
   missions.
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md): how communities
+  and mission developers can create CAD-visible custom generated missions on
+  top of Forge.
 - [Player Guide](./PLAYER_GUIDE.md): how players use CAD, phone, bank, store,
   locker, garage, and economy services during missions.
-- [SurrealDB Setup](./surrealdb-setup.md): where to get SurrealDB or
-  Surrealist and how to connect Forge to it for local or live use.
+- [forge-webapi Setup](./forge-webapi-setup.md): how to run the persistence
+  API, point the extension at it, and inspect stored data.
 
 ## Server and Extension Usage Guides
 
 - [Actor Usage Guide](./ACTOR_USAGE_GUIDE.md)
 - [Bank Usage Guide](./BANK_USAGE_GUIDE.md)
 - [CAD Usage Guide](./CAD_USAGE_GUIDE.md)
+- [Custom Mission Generators](./CUSTOM_MISSION_GENERATORS.md)
+- [Dispatch Usage Guide](./DISPATCH_USAGE_GUIDE.md)
 - [Economy Usage Guide](./ECONOMY_USAGE_GUIDE.md)
 - [Garage Usage Guide](./GARAGE_USAGE_GUIDE.md)
 - [ICOM Usage Guide](./ICOM_USAGE_GUIDE.md)

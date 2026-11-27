@@ -28,8 +28,8 @@ const generatedPages = [
     target: '1.getting-started/5.player-guide.md'
   },
   {
-    source: 'docs/surrealdb-setup.md',
-    target: '1.getting-started/6.surrealdb-setup.md'
+    source: 'docs/forge-webapi-setup.md',
+    target: '1.getting-started/6.forge-webapi-setup.md'
   },
   {
     source: 'docs/CUSTOM_MISSION_GENERATORS.md',
@@ -181,13 +181,13 @@ Forge Framework Documentation
 
 #description
 Forge is a persistent Arma 3 framework that combines SQF addons, a Rust
-\`arma-rs\` extension, SurrealDB persistence, shared domain crates, a shared
+\`arma-rs\` extension, forge-webapi persistence, shared domain crates, a shared
 mission config addon, and browser-backed player interfaces.
 
 Use these docs to understand the runtime architecture, extension API surface,
 server gameplay modules, and client addon integration patterns.
 
-Server owners and developers must start SurrealDB and place a matching
+Server owners and developers must start forge-webapi and place a matching
 \`config.toml\` beside \`forge_server_x64.dll\` before launching a
 Forge-enabled server or local multiplayer test.
 
@@ -244,7 +244,7 @@ What Forge Covers
 
   #description
   The server extension keeps command parsing thin, routes domain requests into
-  services, and persists durable state through SurrealDB.
+  services, and persists durable state through forge-webapi.
   :::
 
   :::u-page-feature
@@ -395,18 +395,18 @@ Forge combines:
 - Arma 3 server addons for mission integration and authoritative flow control
 - a Rust server extension for command routing and persistence
 - shared Rust crates for models, repositories, and services
-- SurrealDB for durable storage
+- forge-webapi (a Rust HTTP API on SurrealDB) for durable storage
 
 ## Launch Prerequisites
 
 Before starting a Forge-enabled dedicated server or local multiplayer test,
-server owners and developers must start SurrealDB and make sure
-\`config.toml\` is beside \`forge_server_x64.dll\`. The config values must match
-the running SurrealDB endpoint, namespace, database, username, and password.
+server owners and developers must start forge-webapi and make sure
+\`config.toml\` is beside \`forge_server_x64.dll\`. Its \`[api] base_url\` must point at
+the running forge-webapi.
 Servers must load \`@forge_mod\` as a normal mod and \`@forge_server\` as a
 server-only mod.
 
-Mission designers and players do not need their own SurrealDB instance unless
+Mission designers and players do not need their own forge-webapi instance unless
 they are hosting locally, but they do need \`@forge_mod\` for shared Forge
 mission classes. Players also load \`@forge_client\` for player-facing UI.
 
@@ -427,7 +427,7 @@ npm run build:webui
   title: Architecture
   to: /getting-started/architecture
   ---
-  Understand how SQF, Rust services, SurrealDB, and browser UIs fit together.
+  Understand how SQF, Rust services, forge-webapi, and browser UIs fit together.
   :::
 
   :::u-page-card
@@ -481,11 +481,11 @@ npm run build:webui
   :::u-page-card
   ---
   icon: i-lucide-database
-  title: SurrealDB Setup
-  to: /getting-started/surrealdb-setup
+  title: forge-webapi Setup
+  to: /getting-started/forge-webapi-setup
   ---
-  Install SurrealDB, match Forge config values, and choose the right setup path
-  for developers or admin-facing roles.
+  Run the forge-webapi stack, point the extension's config at it, and inspect
+  stored data.
   :::
 
   :::u-page-card
@@ -542,7 +542,7 @@ Most modules follow the same shape:
 1. Server SQF gathers game context and validates mission/runtime assumptions.
 2. The \`forge_server\` extension routes the request into the matching command group.
 3. Services apply business rules through storage-agnostic repository traits.
-4. The extension persists durable state through SurrealDB adapters when needed.
+4. The extension persists durable state through forge-webapi API adapters when needed.
 
 ## Gameplay Domains
 

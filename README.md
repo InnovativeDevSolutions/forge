@@ -7,17 +7,15 @@ CAD, stores, and task workflows.
 
 ## Storage
 
-Durable persistence is backed by SurrealDB. The server extension loads schema
-modules at startup and routes domain repositories through the SurrealDB client.
+Durable persistence is handled by forge-webapi, a standalone Rust HTTP API
+backed by SurrealDB. The server extension keeps live player state in memory and
+writes it to the API in the background; it never connects to SurrealDB itself.
+See [forge-webapi Setup](./docs/forge-webapi-setup.md).
 
 ```toml
-[surreal]
-endpoint = "127.0.0.1:8000"
-namespace = "forge"
-database = "main"
-username = "root"
-password = "root"
-connect_timeout_ms = 5000
+[api]
+base_url = "http://127.0.0.1:8080"
+timeout_ms = 5000
 ```
 
 ## Workspace
@@ -62,10 +60,12 @@ clients, and `@forge_server` on the server only.
 
 ```sqf
 "forge_server" callExtension ["status", []];
-"forge_server" callExtension ["surreal:status", []];
+"forge_server" callExtension ["api:status", []];
+"forge_server" callExtension ["persistence:pending", []];
 ```
 
-Both commands report the persistence connection state.
+The first two report the forge-webapi connection state; `persistence:pending`
+reports how many background writes are still queued.
 
 ## Host Control Panel
 
@@ -93,8 +93,13 @@ shared `config.toml`.
 The shared file includes:
 
 - `[server]` for the ICOM hub bind address.
-- `[surreal]` for the Arma extension SurrealDB connection.
+- `[api]` for the Arma extension's forge-webapi connection.
 - `[surrealdb]`, `[icom]`, and `[arma]` for Forge Host managed processes.
+
+Saving keeps `[api]` and any section Forge Host does not manage (such as an
+old `[surreal]`, which the extension ignores). Forge Host does not start
+forge-webapi itself; run it with `docker compose up` in the forge-webapi
+repository.
 
 Forge Host manages the two Arma dedicated server config files separately:
 `server.cfg` is launched with `-config` for server rules, missions, passwords,
@@ -104,4 +109,4 @@ or `bin/host/basic.example.cfg`, then open it in the built-in editor.
 
 Component-specific examples still exist for narrow deployments:
 `bin/icom/config.example.toml` contains only `[server]`, and
-`arma/server/extension/config.example.toml` contains only `[surreal]`.
+`arma/server/extension/config.example.toml` contains only `[api]`.

@@ -27,13 +27,12 @@ missions without installing the server-only mod.
 Before starting a Forge-enabled dedicated server or local multiplayer test,
 server owners and developers must:
 
-1. Start SurrealDB.
+1. Start forge-webapi (`docker compose up` in the forge-webapi repository).
 2. Place a Forge `config.toml` where the extension can find it. Use
    `arma/server/extension/config.example.toml` for an extension-only config, or
    use `bin/host/config.example.toml` at the repo root when Forge Host should
-   manage SurrealDB, ICOM, and the Arma server.
-3. Keep the `config.toml` SurrealDB endpoint, namespace, database, username,
-   and password aligned with the running database.
+   manage ICOM and the Arma server.
+3. Point the `config.toml` `[api] base_url` at the running forge-webapi.
 4. Load `@forge_mod` with the server's normal mod list and `@forge_server` as
    a server-only mod.
 5. Start Arma with both dedicated server config files: `server.cfg` through
@@ -41,15 +40,15 @@ server owners and developers must:
    `-cfg` for network tuning. Forge Host can create both files from
    `bin/host/server.example.cfg` and `bin/host/basic.example.cfg`.
 
-Mission designers and players do not need to run SurrealDB unless they are
+Mission designers and players do not need to run forge-webapi unless they are
 hosting locally, but they do need `@forge_mod` for Forge mission config classes.
 Players also load `@forge_client` for player-facing UI. See
-[SurrealDB Setup](./surrealdb-setup.md) for the full setup path.
+[forge-webapi Setup](./forge-webapi-setup.md) for the full setup path.
 
 ## Start Here
 
 - [Framework Architecture](./FRAMEWORK_ARCHITECTURE.md): how SQF, web UIs,
-  Rust services, repositories, and SurrealDB fit together.
+  Rust services, repositories, and forge-webapi fit together.
 - [Module Reference](./MODULE_REFERENCE.md): module inventory for gameplay
   domains, extension command groups, client addons, server addons, and Rust
   crates.
@@ -63,8 +62,8 @@ Players also load `@forge_client` for player-facing UI. See
   top of Forge.
 - [Player Guide](./PLAYER_GUIDE.md): how players use CAD, phone, bank, store,
   locker, garage, and economy services during missions.
-- [SurrealDB Setup](./surrealdb-setup.md): where to get SurrealDB or
-  Surrealist and how to connect Forge to it for local or live use.
+- [forge-webapi Setup](./forge-webapi-setup.md): how to run the persistence
+  API, point the extension at it, and inspect stored data.
 
 ## Server and Extension Usage Guides
 

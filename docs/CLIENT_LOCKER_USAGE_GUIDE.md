@@ -38,7 +38,7 @@ On container close:
 
 The override only updates the server's in-memory state. It reaches the
 database on autosave, disconnect or mission end; see
-[When Player Data Is Saved](./surrealdb-setup.md#when-player-data-is-saved).
+[When Player Data Is Saved](./forge-webapi-setup.md#when-player-data-is-saved).
 
 Backpacks cannot be put into a local-only box in multiplayer (the engine logs
 "Tried to create local-only container with backpacks"), so stored backpacks do

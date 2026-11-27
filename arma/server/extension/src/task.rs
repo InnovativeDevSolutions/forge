@@ -6,12 +6,16 @@
 //! This state is intentionally transient and is reset during server task-store
 //! initialization so tasks start clean for each server or mission lifecycle.
 //!
-//! TODO(bridge): task/CAD state stays in-memory and is NOT bridged yet.
-//! The API has the lifecycle endpoints (assign/accept/decline/complete)
-//! but no way to seed a contract (`POST /cad/contracts`), so the API
-//! cannot hold the catalog the lifecycle calls need. Once the API gains
-//! a contract upsert, `upsert_catalog_entry` should seed it and the
-//! group/lifecycle commands should mirror to the API.
+//! Task/CAD state is deliberately NOT bridged to forge-webapi. A live
+//! contract is mostly Arma world state (spawned units, waypoints,
+//! vehicles, objectives) that only exists on this server, so persisting
+//! the catalog record alone would leave dead `active` contracts after a
+//! restart. The API's CAD endpoints (`POST /cad/contracts` seed plus
+//! assign/accept/decline/complete) are there for a future cross-server
+//! contract board.
+//!
+//! TODO(bridge): write a completion log (contract, outcome, participants,
+//! payout, server id) to the API from the reward hook.
 
 use arma_rs::Group;
 use forge_repositories::InMemoryTaskRepository;

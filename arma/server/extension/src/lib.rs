@@ -1,9 +1,7 @@
 //! Entry point and runtime bootstrap for the Forge Arma server extension.
 //!
-//! Initializes a global async runtime, registers all command groups,
-//! and asynchronously connects SurrealDB for the one-time migration
-//! of legacy data (see `surreal`). All persistence goes through the
-//! forge-webapi (`api`); there is no SurrealDB fallback.
+//! Initializes a global async runtime and registers all command groups.
+//! All persistence goes through the forge-webapi (`api`).
 //!
 #![allow(future_incompatible)] // Future-incompatible lint is triggered by arma_rs
 
@@ -28,7 +26,6 @@ pub mod org;
 pub mod phone;
 pub mod storage;
 pub mod store;
-pub mod surreal;
 pub mod task;
 pub mod terrain;
 pub mod transport;
@@ -119,12 +116,11 @@ fn wait_for_pending(timeout: Duration) -> String {
 }
 
 #[arma]
-/// Initializes the extension, registers commands/groups, and
-/// asynchronously connects SurrealDB for the one-time legacy-data
-/// migration on the global runtime.
+/// Initializes the extension: loads the config (so a bad config.toml is
+/// logged at startup) and registers commands/groups.
 fn init() -> Extension {
-    let config = config::load();
-    let ext = Extension::build()
+    config::load();
+    Extension::build()
         .command("version", get_version)
         .command("status", get_status)
         .group(
@@ -133,7 +129,6 @@ fn init() -> Extension {
                 .command("pending", pending_persistence)
                 .command("flush", flush_persistence),
         )
-        .group("surreal", surreal::group())
         .group("api", api::group())
         .group("actor", actor::group())
         .group("bank", bank::group())
@@ -153,15 +148,7 @@ fn init() -> Extension {
                 .group("garage", v_garage::group())
                 .group("locker", v_locker::group()),
         )
-        .finish();
-
-    let surreal_config = config.surreal.clone();
-    surreal::prepare();
-    RUNTIME.spawn(async move {
-        surreal::initialize(surreal_config).await;
-    });
-
-    ext
+        .finish()
 }
 
 /// Returns the forge-webapi status: `connected (database: …)` or

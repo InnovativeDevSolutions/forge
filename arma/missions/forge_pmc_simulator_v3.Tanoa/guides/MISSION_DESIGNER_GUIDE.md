@@ -633,7 +633,7 @@ Validation:
 
 - `ExtZone` and `CBRNZone` must be area markers.
 - Hostage and shooter grouping modules should sync to real units only.
-- The hostage timer waits until the assigned group leader acknowledges the
+- The hostage timer waits until the assigned group leader accepts the
   task.
 
 ### HVT Task
@@ -686,7 +686,7 @@ Validation:
 
 - Capture mode requires `ExtZone`; elimination mode does not.
 - `ExtZone` must be an area marker.
-- The HVT timer waits until the assigned group leader acknowledges the task.
+- The HVT timer waits until the assigned group leader accepts the task.
 
 ### Defend Task
 
@@ -818,7 +818,7 @@ Before publishing a mission, verify:
 - Reward funds and rating changes are intentional.
 - Unchained tasks appear in CAD when created.
 - Chained tasks remain hidden until all prerequisite task IDs succeed.
-- Assigned CAD tasks can be acknowledged, declined, and completed.
+- Assigned CAD tasks can be accepted, declined, and completed.
 
 ## Mission Validation Checklist
 

@@ -2,7 +2,7 @@
 
 Forge Server is an arma-rs extension for Arma 3 server-side persistence and
 domain services. It exposes game-facing commands and stores durable state in
-SurrealDB.
+forge-webapi, a standalone Rust HTTP API backed by SurrealDB.
 
 ## Architecture
 
@@ -16,30 +16,26 @@ SQF module
   -> domain command
   -> service layer
   -> repository
-  -> SurrealDB
+  -> forge-webapi (HTTP)
 ```
 
 ## Configuration
 
 Copy `config.example.toml` to `config.toml` next to the extension DLL before
-launching a Forge-enabled server. SurrealDB must also be running before the
-server starts, and the values in `config.toml` must match that database.
+launching a Forge-enabled server. forge-webapi must also be running before the
+server starts, and `base_url` must point at it.
 
 ```toml
-[surreal]
-endpoint = "127.0.0.1:8000"
-namespace = "forge"
-database = "main"
-username = "root"
-password = "root"
-connect_timeout_ms = 5000
+[api]
+base_url = "http://127.0.0.1:8080"
+timeout_ms = 5000
 ```
 
 Players and mission designers do not need this file unless they are hosting
 locally. Server owners and developers do.
 
 For install links and Forge-specific setup steps, see
-[SurrealDB Setup](../../../docs/surrealdb-setup.md).
+[forge-webapi Setup](../../../docs/forge-webapi-setup.md).
 
 ## References
 

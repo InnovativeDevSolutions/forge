@@ -11,13 +11,10 @@ The server addon uses two long-lived module objects:
 
 - `StorefrontStore` is the storefront workflow facade. It builds hydrate
   payloads, validates checkout requests, calls the Rust `store:checkout`
-  command, syncs UI patches, asks related module stores to save hot state, and
-  spawns purchased units at discovered `unit_spawn` markers after the backend
-  charge succeeds.
+  command, syncs UI patches, and asks related module stores to save hot state.
 - `StoreCatalogService` scans configured item and vehicle categories, builds
   catalog responses, resolves checkout entries, and calculates authoritative
-  prices. It also applies the optional mission `CfgStore` filter and overrides
-  before payloads or checkout validation use catalog entries.
+  prices.
 
 Editor-placed store entities are initialized by `fnc_initStore` during store
 post-init. The initializer matches non-null mission namespace objects whose
@@ -74,12 +71,17 @@ class CfgStore {
 };
 ```
 
-`dynamic` keeps the full generated catalog. `allowlist` only shows classnames
-listed for each category. `denylist` removes listed classnames. Overrides are
-server-side and are used by both the UI payload and checkout validation.
-`units[]` follows the same filter behavior and is fulfilled as an immediate
-server-side unit spawn at a discovered `unit_spawn` marker after checkout
-succeeds.
+`modMode` is applied first. After that, any non-empty
+`Categories.<category>[]` array acts as an explicit allowlist for only that
+category, regardless of `mode`. Categories with empty arrays follow `mode`:
+`dynamic` keeps the generated entries and `allowlist` hides the category.
+Overrides are server-side and are used by both the UI payload and checkout
+validation.
+
+Unit catalog responses are additionally filtered to the requesting player's
+side. Unit entries include side and faction metadata so the UI can show the
+available faction before purchase, and checkout validation rejects unit
+classnames from another side.
 
 `modMode` applies before category filtering. `dynamic` means no mod-source
 filtering. `allowlist` only keeps generated entries that match one of the
@@ -98,9 +100,9 @@ modMode = "allowlist";
 mods[] = {"rhs"};
 ```
 
-The matching `class rhs` must exist under `ModSources`. Category `mode` is still
-applied afterward, so leave `mode = "dynamic"` if the mod filter should be the
-only inventory filter.
+The matching `class rhs` must exist under `ModSources`. Category arrays are
+still applied afterward, so leave arrays empty and `mode = "dynamic"` if the mod
+filter should be the only inventory filter.
 
 For Creator DLCs such as RF or WS, prefer both prefixes and DLC labels:
 

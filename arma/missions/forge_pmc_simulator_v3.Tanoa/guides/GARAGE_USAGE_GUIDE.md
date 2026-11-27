@@ -6,7 +6,7 @@ point damage.
 
 ## Storage Model
 
-Garage data is persisted through SurrealDB by the server extension.
+Garage data is persisted to forge-webapi by the server extension.
 
 ```json
 {

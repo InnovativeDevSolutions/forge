@@ -7,7 +7,7 @@ changes.
 
 ## Storage Model
 
-Bank data is persisted through SurrealDB by the server extension.
+Bank data is persisted to forge-webapi by the server extension.
 
 ```json
 {

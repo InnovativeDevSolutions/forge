@@ -33,9 +33,13 @@ Player workflow:
 1. Open CAD from the available interaction path.
 2. Review available or assigned tasks.
 3. If a dispatcher assigns a task to your group, the group leader must
-   acknowledge or decline it.
-4. Once acknowledged, the task becomes active for the assigned group.
-5. Complete the task objective shown by CAD, map task state, and mission
+   accept or decline it.
+4. If no dispatcher is online, CAD shows every available contract under "No
+   dispatcher on duty" and the group leader can **Claim** one for the group.
+   A claim is accepted at once. A group holds one contract at a time, and
+   claiming stops as soon as a dispatcher joins.
+5. Once accepted, the task becomes active for the assigned group.
+6. Complete the task objective shown by CAD, map task state, and mission
    instructions.
 
 Map focus behavior:
@@ -55,7 +59,7 @@ Dispatch workflow:
 2. Use dispatch mode to review groups, open contracts, assigned contracts, and
    support requests.
 3. Assign available contracts to active groups.
-4. Send dispatch orders or close completed orders as needed.
+4. Send dispatch orders or close completed orders as needed (requires the dispatch addon).
 5. Track group status and recent CAD activity.
 
 Dispatch access:
@@ -70,13 +74,14 @@ Dispatch access:
 Important task behavior:
 
 - CAD assignment reserves a task for a group.
-- The task starts after the assigned group leader acknowledges it.
+- The task starts after the assigned group leader accepts it.
 - If the leader declines, the task returns to the open contract board.
-- Some task timers wait for group-leader acknowledgment before counting down.
+- Some task timers wait for group-leader acceptance before counting down.
 
 ## Phone
 
-The phone provides contacts, messages, email, and local utility apps.
+The phone provides contacts, messages, email, mobile bank access, and local
+utility apps.
 
 ![Phone home screen](images/player/phone_home.jpg)
 
@@ -90,29 +95,34 @@ entering recipient details every time.
 
 ### Messages
 
-Messages are short player-to-player conversations.
+Messages are short player-to-player conversations. Use Messages to start or
+continue a conversation with a contact, read incoming messages, mark messages as
+read, or delete messages you no longer need.
 
 ![Phone messages screen](images/player/phone_messages.jpg)
 
-Use Messages to:
-
-- start or continue a conversation with a contact
-- read incoming messages
-- mark messages as read
-- delete messages you no longer need
+![Example phone message conversation](images/player/phone_message_example.jpg)
 
 ### Email
 
-Email is used for longer player-to-player communication.
+Email is used for longer player-to-player communication. Use Email to send a
+subject and body to another player, read incoming mail, mark email as read, or
+delete old email.
 
 ![Phone email screen](images/player/phone_email.jpg)
 
-Use Email to:
+![Example phone email](images/player/phone_email_example.jpg)
 
-- send a subject and body to another player
-- read incoming mail
-- mark email as read
-- delete old email
+### Wallet
+
+Wallet is the phone version of the bank app. Use it to refresh your account
+view, check your available balance, review cash and pending earnings, deposit all
+pending earnings, and pay your organization credit line when payment is due.
+
+![Phone wallet app](images/player/phone_wallet.jpg)
+
+Deposit Earnings deposits the full pending earnings amount. Players do not enter
+a custom amount for that action.
 
 ### Local Phone Apps
 
@@ -245,6 +255,10 @@ Locker rules:
 - Up to 25 items can be stored.
 - The locker saves when the locker container is closed.
 - Over-capacity storage can warn or fail depending on server handling.
+- Multiple locker access points on the map open local copies of the locker
+  object, but all of them use the same personal locker inventory.
+- Store purchases merge granted items into the same personal locker by
+  classname; extra locker objects on the map do not duplicate store grants.
 
 The virtual arsenal is locked down. Players only see gear they have been
 granted or have unlocked through systems such as the store. The virtual arsenal
@@ -326,7 +340,7 @@ If a system does not appear or does not work:
 
 - Move closer to the interaction object.
 - Confirm you are using the correct object type, such as ATM vs bank.
-- Confirm your group leader has acknowledged an assigned CAD task.
+- Confirm your group leader has accepted an assigned CAD task.
 - Confirm the needed store unlock has been purchased before checking VA or VG.
 - Confirm the garage spawn point is clear before using the virtual garage.
 - Confirm your player, cash, bank, or organization funds can cover the service.

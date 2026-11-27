@@ -6,7 +6,7 @@ separate from the virtual arsenal unlock module documented in
 
 ## Storage Model
 
-Locker data is persisted through SurrealDB by the server extension.
+Locker data is persisted to forge-webapi by the server extension.
 
 ```json
 {

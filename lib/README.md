@@ -13,8 +13,8 @@ repository traits, services, and shared helpers.
   phone, store, task, and dispatch workflows.
 - `forge-shared`: validation and cross-crate helpers.
 
-Durable persistence is implemented in the server extension with SurrealDB
-repository implementations.
+Durable persistence is implemented in the server extension with repository
+implementations that call forge-webapi over HTTP.
 
 ## Test
 
