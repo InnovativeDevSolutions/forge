@@ -51,6 +51,30 @@ Plan:
 - Keep `[api] base_url` in line with the API port.
 - Show "Docker not found" when `docker` is missing.
 - Remove the SurrealDB installer, version picker and settings panel.
+- An old `[surrealdb]` section in existing configs is kept (and ignored),
+  since Host keeps sections it does not manage.
 
-Host already keeps config sections it does not manage, so an old
-`[surrealdb]` section is kept (and ignored) after the change.
+### Alternative: embedded API and database (no Docker)
+
+Instead of (or alongside) Docker, Host could run forge-webapi with SurrealDB
+embedded, so Host needs neither Docker nor `surreal.exe`. If this is chosen,
+it changes the "Docker only" decision above; Docker stays the recommended
+production setup.
+
+- forge-webapi: switch `crates/forge-api/src/db.rs` from the HTTP-only engine
+  (`Surreal<Client>`) to `engine::any`, so the address picks the engine:
+  `http://surrealdb:8000` keeps the compose setup, `surrealkv://<folder>`
+  stores data in a local folder (pure Rust, builds on Windows without the C
+  toolchain RocksDB needs). Enable the `kv-surrealkv` feature.
+- forge-webapi: split `forge-api` into a library (`serve(config)`) plus the
+  existing binary.
+- Host, preferred: launch `forge-api.exe` as a bundled sidecar process (like
+  ICOM), so an API crash cannot take down the Host window and the binary also
+  runs on its own. Alternative: call `serve` in-process on Tauri's async
+  runtime (simpler, but the API stops whenever Host closes or crashes).
+- Health from `/health`; data folder set in Host settings.
+
+Trade-offs: only one process can open the data folder, so Surrealist cannot
+connect while the API runs (inspect through the API, or stop it first);
+noticeably longer compile time and a larger binary; two deployment modes to
+test.
