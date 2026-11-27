@@ -24,3 +24,29 @@ give the base addons vanilla fallbacks, and drop `ace_main` from
 Not ACE dependencies (leave as is): the store catalog's `isAceClassName`
 filter, the `AFUNC` / ACE cargo macros, and "ACE/LACE" in dispatch (a report
 format).
+
+## Forge Host: running forge-webapi and SurrealDB
+
+Revisit what Forge Host (`bin/host`) should do now that persistence goes
+through forge-webapi. Today Host still installs and runs its own local
+SurrealDB (`[surrealdb]` service, installer in `src-tauri/src/main.rs`), which
+nothing in Forge uses: forge-webapi runs its own SurrealDB in its
+`docker compose` stack, and Host knows nothing about the API.
+
+Options to decide between:
+
+- **Docker only (leading option):** replace the SurrealDB service with a
+  forge-webapi service. Start `docker compose up -d` and stop
+  `docker compose down` in a configured forge-webapi folder (killing the
+  process does not stop the containers), health from `GET /health`
+  (API vs database state), logs from `docker compose logs -f api`, check that
+  `.env` with `SURREAL_PASSWORD` exists without storing it, keep
+  `[api] base_url` in line with the API port, and show "Docker not found"
+  when `docker` is missing. Remove the SurrealDB installer.
+- **Native mode as well:** Host runs SurrealDB plus `forge-api.exe` itself and
+  passes the env vars. The only case where Host's SurrealDB installer stays
+  useful; roughly doubles the work.
+- **Leave as is:** document that Host's SurrealDB is unused.
+
+Host already keeps config sections it does not manage, so an old
+`[surrealdb]` section survives whichever way this goes.
