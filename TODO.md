@@ -27,26 +27,30 @@ format).
 
 ## Forge Host: running forge-webapi and SurrealDB
 
-Revisit what Forge Host (`bin/host`) should do now that persistence goes
-through forge-webapi. Today Host still installs and runs its own local
+Forge Host (`bin/host`) has to catch up with persistence going through
+forge-webapi. Today Host still installs and runs its own local
 SurrealDB (`[surrealdb]` service, installer in `src-tauri/src/main.rs`), which
 nothing in Forge uses: forge-webapi runs its own SurrealDB in its
 `docker compose` stack, and Host knows nothing about the API.
 
-Options to decide between:
+Decided: Host's SurrealDB portion (the `[surrealdb]` service, the installer
+and version picker, the SurrealDB settings panel) can be removed, but only in
+the same change that adds the forge-webapi service below, so Host is never
+left without a way to run persistence. That means Docker only: Host does not
+run SurrealDB or `forge-api.exe` natively.
 
-- **Docker only (leading option):** replace the SurrealDB service with a
-  forge-webapi service. Start `docker compose up -d` and stop
-  `docker compose down` in a configured forge-webapi folder (killing the
-  process does not stop the containers), health from `GET /health`
-  (API vs database state), logs from `docker compose logs -f api`, check that
-  `.env` with `SURREAL_PASSWORD` exists without storing it, keep
-  `[api] base_url` in line with the API port, and show "Docker not found"
-  when `docker` is missing. Remove the SurrealDB installer.
-- **Native mode as well:** Host runs SurrealDB plus `forge-api.exe` itself and
-  passes the env vars. The only case where Host's SurrealDB installer stays
-  useful; roughly doubles the work.
-- **Leave as is:** document that Host's SurrealDB is unused.
+Plan:
+
+- Replace the SurrealDB service with a forge-webapi service pointed at a
+  configured forge-webapi folder.
+- Start with `docker compose up -d` and stop with `docker compose down`
+  (killing the process does not stop the containers).
+- Health from `GET /health`, showing API and database state separately.
+- Logs from `docker compose logs -f api` in the log panel.
+- Check that `.env` with `SURREAL_PASSWORD` exists, without storing it.
+- Keep `[api] base_url` in line with the API port.
+- Show "Docker not found" when `docker` is missing.
+- Remove the SurrealDB installer, version picker and settings panel.
 
 Host already keeps config sections it does not manage, so an old
-`[surrealdb]` section survives whichever way this goes.
+`[surrealdb]` section is kept (and ignored) after the change.
